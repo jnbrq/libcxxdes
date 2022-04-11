@@ -11,7 +11,6 @@
 #ifndef CXXDES_AWAITABLES_HPP_INCLUDED
 #define CXXDES_AWAITABLES_HPP_INCLUDED
 
-#include "event.h"
 #include "process.hpp"
 #include "environment.hpp"
 

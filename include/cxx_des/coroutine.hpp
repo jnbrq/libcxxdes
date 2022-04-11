@@ -15,7 +15,7 @@
 #include <experimental/coroutine>
 
 namespace std {
-using anemspace experimental;
+using namespace experimental;
 }
 
 #else

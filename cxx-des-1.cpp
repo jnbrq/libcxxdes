@@ -29,7 +29,7 @@ int main() {
     clock(&env, 2, "clock 1");
     clock(&env, 3, "clock 2");
 
-    auto clock_instance = clock_class(7, "clock 3");
+    auto clock_instance = clock_class{7, "clock 3"};
     clock_instance(&env);
 
     while (env.step() && env.now() < 10) ;
