@@ -29,13 +29,14 @@ struct process final {
         std::exception_ptr exception = nullptr;
 
         // function coroutines
-        promise_type(environment *env, ...): env{env} {
+        template <typename ...Args>
+        promise_type(environment *env, Args && ...args): env{env} {
             env->append_event(new event{ 0, -1000, handle_type::from_promise(*this) });
         }
         
         // class coroutines
-        template <typename T>
-        promise_type(T const &, environment *env, ...): promise_type{env} {  }
+        template <typename T, typename ...Args>
+        promise_type(T const &, environment *env, Args && ...args): promise_type{env} {  }
 
         process get_return_object() {
             return process(handle_type::from_promise(*this));
