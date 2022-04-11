@@ -16,7 +16,11 @@
 
 namespace cxx_des {
 
-struct process {
+struct process_class {
+    environment *env = nullptr;
+};
+
+struct process final {
     struct promise_type;
     using handle_type = std::coroutine_handle<promise_type>;
 
@@ -24,9 +28,14 @@ struct process {
         environment *env;
         std::exception_ptr exception = nullptr;
 
+        // function coroutines
         promise_type(environment *env, ...): env{env} {
             env->append_event(new event{ 0, -1000, handle_type::from_promise(*this) });
         }
+        
+        // class coroutines
+        template <typename T>
+        promise_type(T const &, environment *env, ...): promise_type{env} {  }
 
         process get_return_object() {
             return process(handle_type::from_promise(*this));
