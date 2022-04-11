@@ -1,3 +1,27 @@
+#include <cxx_des/cxx_des.hpp>
+#include <iostream>
+#include <string>
+
+using namespace cxx_des;
+
+process clock(environment *env, time_type period, std::string name) {
+    while (true) {
+        std::cout << name << " now = " << env->now() << std::endl;
+        co_await timeout{period};
+    }
+}
+
+int main() {
+    environment env;
+
+    clock(&env, 2, "clock 1");
+    clock(&env, 3, "clock 2");
+
+    while (env.step() && env.now() < 10) ;
+}
+
+#if 0
+
 #include <coroutine>
 #include <cstdint>
 #include <vector>
@@ -10,49 +34,6 @@ enum class event_type {
     none = 0,
     time,
     total
-};
-
-struct event {
-    event(std::coroutine_handle<> ch, priority_type priority): ch_{ch}, priority_{priority} {}
-
-    /**
-     * @brief Supposed to be called by the simulator.
-     * 
-     */
-    virtual void process() {
-        if (!ch_.done())
-            ch_.resume();
-    }
-
-    /**
-     * @brief Returns the event type. Describes how it should be handled.
-     * 
-     * @return event_type 
-     */
-    virtual event_type type() const = 0;
-
-    /**
-     * @brief Returns the priority of an event. Smaller the better.
-     * 
-     * @return priority_type 
-     */
-    priority_type priority() const {
-        return priority_;
-    }
-
-    void priority(priority_type priority) {
-        priority_ = priority;
-    }
-
-    /**
-     * @brief Destroy the event object.
-     * 
-     */
-    virtual ~event() = default;
-
-protected:
-    std::coroutine_handle<> ch_ = nullptr;
-    priority_type priority_ = 0;
 };
 
 struct time_event: event {
@@ -127,7 +108,7 @@ private:
      * 
      */
     struct time_comparator {
-        constexpr bool operator()(time_event *evt_a, time_event *evt_b) const {
+        bool operator()(time_event *evt_a, time_event *evt_b) const {
             return evt_a->time() < evt_b->time();
         }
     };
@@ -152,7 +133,7 @@ struct simulator {
     }
 private:
     struct priority_comparator {
-        constexpr bool operator()(event *evt_a, event *evt_b) const {
+        bool operator()(event *evt_a, event *evt_b) const {
             return evt_a->priority() < evt_b->priority();
         }
     };
@@ -172,3 +153,4 @@ int main() {
 
 }
 
+#endif
