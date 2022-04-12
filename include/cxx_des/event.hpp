@@ -39,11 +39,17 @@ struct event {
     std::coroutine_handle<> coroutine_handle = nullptr;
 
     /**
+     * @brief Flag to skip.
+     * 
+     */
+    bool skip = false;
+
+    /**
      * @brief Processes the event, usually resumes the coroutine.
      * 
      */
     void process() {
-        if (coroutine_handle && !coroutine_handle.done())
+        if (!skip && coroutine_handle && !coroutine_handle.done())
             coroutine_handle.resume();
     }
 };
