@@ -15,5 +15,6 @@
 #include "timeout.hpp"
 #include "environment.hpp"
 #include "process.hpp"
+#include "event_fence.hpp"
 
 #endif // CXX_DES_CXX_DES_HPP_INCLUDED
