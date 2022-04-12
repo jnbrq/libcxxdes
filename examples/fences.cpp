@@ -24,13 +24,21 @@ process p2(environment *env) {
     co_return ;
 }
 
+process p3(environment *env) {
+    co_await fence.wait(8);
+    std::cout << "p3.a now " << env->now() << std::endl;
+    
+    co_return ;
+}
+
 int main() {
     environment env;
 
     p1(&env);
     p2(&env);
+    p3(&env);
 
-    while (env.step() && env.now() < 10) ;
+    while (env.step()) ;
 
     return 0;
 }
