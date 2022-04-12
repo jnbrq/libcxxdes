@@ -4,7 +4,7 @@
  * @brief Universal include file.
  * @date 2022-04-11
  * 
- * @copyright Copyright (c) Canberk Sonmez 2022
+ * @copyright Copyright (c) Canberk Sönmez 2022
  * 
  */
 
