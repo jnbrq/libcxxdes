@@ -42,8 +42,8 @@ struct wait_base {
     void on_resume() {  }
 };
 
-using wake_type = awaitable<wake_base>;
-using wait_type = awaitable<wait_base>;
+using wake_type = wrap_awaitable<wake_base>;
+using wait_type = wrap_awaitable<wait_base>;
 
 struct event_fence {
     wake_type wake(time_type latency = 0, priority_type priority = 0) {

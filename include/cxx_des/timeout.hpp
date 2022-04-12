@@ -31,7 +31,7 @@ struct timeout_base {
 
 };
 
-using timeout = awaitable<detail::timeout_base>;
+using timeout = wrap_awaitable<detail::timeout_base>;
 
 }
 

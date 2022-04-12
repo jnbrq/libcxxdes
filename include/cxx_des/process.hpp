@@ -94,13 +94,19 @@ private:
 };
 
 template <typename T>
-struct awaitable: T {
+concept awaitable = requires(T t, process::promise_type promise, std::coroutine_handle<> handle) {
+    { t.on_suspend(promise, handle) } -> std::convertible_to<event *>;
+    { t.on_resume() };
+};
+
+template <awaitable T>
+struct wrap_awaitable: T {
     
     // C++11 import base class constructors trick
     using T::T;
 
     template <typename ...Args>
-    awaitable(Args && ...args): T{std::forward<Args>(args)...} {  }
+    wrap_awaitable(Args && ...args): T{std::forward<Args>(args)...} {  }
 
     bool await_ready() {
         return false;
