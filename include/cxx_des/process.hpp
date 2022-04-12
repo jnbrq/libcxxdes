@@ -35,12 +35,6 @@ struct process final {
         environment *env;
 
         /**
-         * @brief the event current process is waiting for.
-         * 
-         */
-        event *waited_event;
-
-        /**
          * @brief Unhandled exception.
          * 
          */
@@ -113,7 +107,8 @@ struct awaitable: T {
     }
 
     bool await_suspend(std::coroutine_handle<> handle) {
-        T::on_suspend(process::promise_of(handle), handle);
+        auto &promise = process::promise_of(handle);
+        T::on_suspend(promise, handle);
         return true;
     }
 
@@ -125,4 +120,4 @@ struct awaitable: T {
 
 }
 
-#endif // CXX_DES_PROCESS_HPP_INCLUDED
+#endif /* CXX_DES_PROCESS_HPP_INCLUDED */

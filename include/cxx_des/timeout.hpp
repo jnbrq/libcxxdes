@@ -20,10 +20,10 @@ namespace detail {
 struct timeout_base {
     time_type latency;
 
-    void on_suspend(process::promise_type &promise, std::coroutine_handle<> coroutine_handle) {
-        auto evt = new event{promise.env->now() + latency, 1000, coroutine_handle};
+    event *on_suspend(process::promise_type &promise, std::coroutine_handle<> coroutine_handle) {
+        auto evt = new event(promise.env->now() + latency, 1000, coroutine_handle);
         promise.env->append_event(evt);
-        promise.waited_event = evt;
+        return evt;
     }
 
     void on_resume() {  }
