@@ -12,6 +12,7 @@
 #define CXX_DES_EVENT_HPP_INCLUDED
 
 #include <cstdint>
+#include <concepts>
 #include "coroutine.hpp"
 
 namespace cxx_des {
@@ -19,9 +20,22 @@ namespace cxx_des {
 using priority_type = std::intmax_t;
 using time_type = std::uintmax_t;
 
+struct event;
+
+struct event_handler {
+    virtual void invoke(event *evt);
+    virtual ~event_handler() = default;
+};
+
+extern event_handler default_event_handler;
+
 struct event {
-    event(time_type time, priority_type priority, std::coroutine_handle<> coroutine_handle, bool skip = false):
-        time{time}, priority{priority}, coroutine_handle{coroutine_handle}, skip{skip} {  }
+    event(time_type time, priority_type priority, std::coroutine_handle<> coroutine_handle):
+        time{time},
+        priority{priority},
+        coroutine_handle{coroutine_handle},
+        handler{&default_event_handler},
+        delete_handler{false} {  }
 
     /**
      * @brief Scheduled time of the event.
@@ -42,22 +56,35 @@ struct event {
     std::coroutine_handle<> coroutine_handle = nullptr;
 
     /**
-     * @brief Flag to skip.
+     * @brief Handles the event.
      * 
      */
-    bool skip = false;
+    event_handler *handler = nullptr;
+
+    /**
+     * @brief Whether or not delete the event handler.
+     * 
+     */
+    bool delete_handler = false;
 
     /**
      * @brief Processes the event, usually resumes the coroutine.
      * 
      */
-    virtual void process() {
-        if (!skip && coroutine_handle && !coroutine_handle.done())
-            coroutine_handle.resume();
+    void process() {
+        handler->invoke(this);
     }
 
-    virtual ~event() = default;
+    virtual ~event() {
+        if (delete_handler && handler)
+            delete handler;
+    }
 };
+
+inline void event_handler::invoke(event *evt) {
+    if (evt->coroutine_handle && !evt->coroutine_handle.done())
+        evt->coroutine_handle.resume();
+}
 
 }
 

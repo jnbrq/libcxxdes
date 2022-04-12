@@ -97,7 +97,7 @@ template <typename T>
 struct awaitable: T {
     
     // C++11 import base class constructors trick
-    // using T::T;
+    using T::T;
 
     template <typename ...Args>
     awaitable(Args && ...args): T{std::forward<Args>(args)...} {  }
