@@ -18,10 +18,10 @@ namespace cxx_des {
 namespace detail {
 
 struct timeout_base {
-    time_type delta;
+    time_type latency;
 
     void on_suspend(environment *env, std::coroutine_handle<> coroutine_handle) {
-        env->append_event(new event{env->now() + delta, 1000, coroutine_handle});
+        env->append_event(new event{env->now() + latency, 1000, coroutine_handle});
     }
 
     void on_resume() {}
