@@ -25,8 +25,6 @@ struct timeout_base {
     }
 
     void on_resume() {}
-
-private:
 };
 
 };
