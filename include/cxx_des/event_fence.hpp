@@ -23,7 +23,7 @@ namespace event_fence {
 struct event_fence;
 
 struct wake_base {
-    event_fence *event_fence;
+    event_fence *fence;
     time_type latency;
     priority_type priority;
 
@@ -33,7 +33,7 @@ struct wake_base {
 };
 
 struct wait_base {
-    event_fence *event_fence;
+    event_fence *fence;
     time_type latency;
     priority_type priority;
 
@@ -68,18 +68,18 @@ private:
 };
 
 inline void wake_base::on_suspend(environment *env, std::coroutine_handle<> coroutine_handle) {
-    for (auto evt: event_fence->events_) {
+    for (auto evt: fence->events_) {
         evt->time += env->now();
         env->append_event(evt);
     }
 
-    event_fence->events_.clear();
+    fence->events_.clear();
 
     env->append_event(new event{ env->now() + latency, priority, coroutine_handle });
 }
 
 inline void wait_base::on_suspend(environment *env, std::coroutine_handle<> coroutine_handle) {
-    event_fence->events_.push_back(new event{ latency, priority, coroutine_handle });
+    fence->events_.push_back(new event{ latency, priority, coroutine_handle });
 }
 
 } // namespace event_fence
