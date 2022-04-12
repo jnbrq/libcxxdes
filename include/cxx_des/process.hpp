@@ -11,13 +11,16 @@
 #ifndef CXXDES_PROCESS_HPP_INCLUDED
 #define CXXDES_PROCESS_HPP_INCLUDED
 
+#include <concepts>
+
 #include "event.hpp"
 #include "environment.hpp"
 
 namespace cxx_des {
 
-struct process_class {
-    environment *env = nullptr;
+template <typename T>
+concept process_class = requires(T a) {
+    { a.env } -> std::convertible_to<environment>;
 };
 
 struct process final {
@@ -37,6 +40,10 @@ struct process final {
         // class coroutines
         template <typename T, typename ...Args>
         promise_type(T const &, environment *env, Args && ...args): promise_type{env} {  }
+
+        // class coroutines with event parameters
+        template <process_class T, typename ...Args>
+        promise_type(T const &t, Args && ...args): promise_type{&t.env} {  }
 
         process get_return_object() {
             return process(handle_type::from_promise(*this));
