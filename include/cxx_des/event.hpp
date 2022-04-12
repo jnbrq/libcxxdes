@@ -20,6 +20,9 @@ using priority_type = std::intmax_t;
 using time_type = std::uintmax_t;
 
 struct event {
+    event(time_type time, priority_type priority, std::coroutine_handle<> coroutine_handle, bool skip = false):
+        time{time}, priority{priority}, coroutine_handle{coroutine_handle}, skip{skip} {  }
+
     /**
      * @brief Scheduled time of the event.
      * 
@@ -48,10 +51,12 @@ struct event {
      * @brief Processes the event, usually resumes the coroutine.
      * 
      */
-    void process() {
+    virtual void process() {
         if (!skip && coroutine_handle && !coroutine_handle.done())
             coroutine_handle.resume();
     }
+
+    virtual ~event() = default;
 };
 
 }

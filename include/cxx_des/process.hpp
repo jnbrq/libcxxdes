@@ -28,7 +28,22 @@ struct process final {
     using handle_type = std::coroutine_handle<promise_type>;
 
     struct promise_type {
+        /**
+         * @brief the environment that is associated with the event object.
+         * 
+         */
         environment *env;
+
+        /**
+         * @brief the event current process is waiting for.
+         * 
+         */
+        event *waited_event;
+
+        /**
+         * @brief Unhandled exception.
+         * 
+         */
         std::exception_ptr exception = nullptr;
 
         // function coroutines
@@ -76,6 +91,10 @@ struct process final {
         return false;
     }
 
+    static promise_type &promise_of(std::coroutine_handle<> coroutine_handle) {
+        return process::handle_type::from_address(coroutine_handle.address()).promise();
+    }
+
 private:
     handle_type handle_;
 };
@@ -94,8 +113,8 @@ struct awaitable: T {
     }
 
     bool await_suspend(std::coroutine_handle<> handle) {
-        auto environment = process::handle_type::from_address(handle.address()).promise().env;
-        T::on_suspend(environment, handle);
+        auto &promise = process::promise_of(handle);
+        promise.waited_event = T::on_suspend(promise.env, handle);
         return true;
     }
 
