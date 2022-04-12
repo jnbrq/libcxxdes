@@ -16,5 +16,6 @@
 #include "environment.hpp"
 #include "process.hpp"
 #include "event_fence.hpp"
+#include "any_of.hpp"
 
 #endif // CXX_DES_CXX_DES_HPP_INCLUDED
