@@ -8,8 +8,8 @@
  * 
  */
 
-#ifndef CXXDES_COROUTINE_HPP_INCLUDED
-#define CXXDES_COROUTINE_HPP_INCLUDED
+#ifndef CXX_DES_COROUTINE_HPP_INCLUDED
+#define CXX_DES_COROUTINE_HPP_INCLUDED
 
 #if (defined(__APPLE__) && defined(__clang__) && ___clang_major__ <= 13) || (defined(__clang__) && __clang_major__ <= 13)
 #include <experimental/coroutine>
@@ -24,4 +24,4 @@ using namespace experimental;
 
 #include <exception>
 
-#endif // CXXDES_COROUTINE_HPP_INCLUDED
+#endif // CXX_DES_COROUTINE_HPP_INCLUDED

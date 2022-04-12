@@ -8,8 +8,8 @@
  * 
  */
 
-#ifndef CXXDES_ENVIRONMENT_HPP_INCLUDED
-#define CXXDES_ENVIRONMENT_HPP_INCLUDED
+#ifndef CXX_DES_ENVIRONMENT_HPP_INCLUDED
+#define CXX_DES_ENVIRONMENT_HPP_INCLUDED
 
 #include "event.hpp"
 #include <queue>
@@ -71,4 +71,4 @@ private:
 
 }
 
-#endif // CXXDES_ENVIRONMENT_HPP_INCLUDED
+#endif // CXX_DES_ENVIRONMENT_HPP_INCLUDED

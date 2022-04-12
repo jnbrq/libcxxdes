@@ -8,12 +8,12 @@
  * 
  */
 
-#ifndef CXXDES_CXX_DES_HPP_INCLUDED
-#define CXXDES_CXX_DES_HPP_INCLUDED
+#ifndef CXX_DES_CXX_DES_HPP_INCLUDED
+#define CXX_DES_CXX_DES_HPP_INCLUDED
 
 #include "event.hpp"
 #include "awaitables.hpp"
 #include "environment.hpp"
 #include "process.hpp"
 
-#endif // CXXDES_CXX_DES_HPP_INCLUDED
+#endif // CXX_DES_CXX_DES_HPP_INCLUDED

@@ -8,8 +8,8 @@
  * 
  */
 
-#ifndef CXXDES_EVENT_HPP_INCLUDED
-#define CXXDES_EVENT_HPP_INCLUDED
+#ifndef CXX_DES_EVENT_HPP_INCLUDED
+#define CXX_DES_EVENT_HPP_INCLUDED
 
 #include <cstdint>
 #include "coroutine.hpp"
@@ -56,4 +56,4 @@ struct event {
 
 }
 
-#endif // CXXDES_EVENT_HPP_INCLUDED
+#endif // CXX_DES_EVENT_HPP_INCLUDED

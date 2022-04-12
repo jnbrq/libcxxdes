@@ -8,8 +8,8 @@
  * 
  */
 
-#ifndef CXXDES_AWAITABLES_HPP_INCLUDED
-#define CXXDES_AWAITABLES_HPP_INCLUDED
+#ifndef CXX_DES_AWAITABLES_HPP_INCLUDED
+#define CXX_DES_AWAITABLES_HPP_INCLUDED
 
 #include "process.hpp"
 #include "environment.hpp"
@@ -37,4 +37,4 @@ using timeout = awaitable<detail::timeout_base>;
 
 }
 
-#endif // CXXDES_AWAITABLES_HPP_INCLUDED
+#endif // CXX_DES_AWAITABLES_HPP_INCLUDED
