@@ -47,11 +47,28 @@ using wait_type = awaitable<wait_base>;
 
 struct event_fence {
     wake_type wake(time_type latency = 0, priority_type priority = 0) {
+        if (waken_) {
+            throw std::runtime_error("cannot wake up a waken fence!");
+        }
+
         return wake_type{this, latency, priority};
     }
 
     wait_type wait(time_type latency = 0, priority_type priority = 0) {
         return wait_type{this, latency, priority};
+    }
+
+    bool is_waken() const {
+        return waken_;
+    }
+
+    void reset() {
+        if (waken_) {
+            waken_ = false;
+        }
+        else {
+            throw std::runtime_error("cannot reset a not awaken fence!");
+        }
     }
 
     ~event_fence() {
@@ -63,6 +80,8 @@ struct event_fence {
 private:
     friend class wake_base;
     friend class wait_base;
+
+    bool waken_ = false;
 
     std::vector<event *> events_;
 };
@@ -77,12 +96,21 @@ inline event *wake_base::on_suspend(process::promise_type &promise, std::corouti
 
     auto evt = new event{ promise.env->now() + latency, priority, coroutine_handle };
     promise.env->append_event(evt);
+
+    fence->waken_ = true;
+
     return evt;
 }
 
 inline event *wait_base::on_suspend(process::promise_type &promise, std::coroutine_handle<> coroutine_handle) {
-    auto evt = new event{ latency, priority, coroutine_handle };
-    fence->events_.push_back(evt);
+    event *evt = new event{ latency, priority, coroutine_handle };
+    if (fence->waken_) {
+        evt->time += promise.env->now();
+        promise.env->append_event(evt);
+    }
+    else {
+        fence->events_.push_back(evt);
+    }
     return evt;
 }
 
