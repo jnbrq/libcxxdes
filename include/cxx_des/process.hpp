@@ -113,8 +113,7 @@ struct awaitable: T {
     }
 
     bool await_suspend(std::coroutine_handle<> handle) {
-        auto &promise = process::promise_of(handle);
-        promise.waited_event = T::on_suspend(promise.env, handle);
+        T::on_suspend(process::promise_of(handle), handle);
         return true;
     }
 
