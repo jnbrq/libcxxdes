@@ -102,8 +102,9 @@ concept awaitable = requires(T t, process::promise_type promise, std::coroutine_
 template <awaitable T>
 struct wrap_awaitable: T {
     
+    // TODO: should I uncomment the following line?
     // C++11 import base class constructors trick
-    using T::T;
+    // using T::T;
 
     template <typename ...Args>
     wrap_awaitable(Args && ...args): T{std::forward<Args>(args)...} {  }
