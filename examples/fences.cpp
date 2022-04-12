@@ -31,12 +31,25 @@ process p3(environment *env) {
     co_return ;
 }
 
+process p4(environment *env) {
+    std::cout << "p4.a now " << env->now() << std::endl;
+    co_await timeout(20u);
+    std::cout << "p4.b now " << env->now() << std::endl;
+    co_await fence.wait(); // wakes up immediately
+    std::cout << "p4.c now " << env->now() << std::endl;
+    co_await fence.wait(2);
+    std::cout << "p4.d now " << env->now() << std::endl;
+
+    co_return ;
+}
+
 int main() {
     environment env;
 
     p1(&env);
     p2(&env);
     p3(&env);
+    p4(&env);
 
     while (env.step()) ;
 

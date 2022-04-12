@@ -75,7 +75,7 @@ struct event {
         handler->invoke(this);
     }
 
-    virtual ~event() {
+    ~event() {
         if (delete_handler && handler)
             delete handler;
     }
