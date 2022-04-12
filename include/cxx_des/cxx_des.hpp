@@ -12,7 +12,7 @@
 #define CXX_DES_CXX_DES_HPP_INCLUDED
 
 #include "event.hpp"
-#include "awaitables.hpp"
+#include "timeout.hpp"
 #include "environment.hpp"
 #include "process.hpp"
 

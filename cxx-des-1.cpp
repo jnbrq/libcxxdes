@@ -11,7 +11,7 @@ struct clock_class {
     process operator()(environment *env) {
         while (true) {
             std::cout << name << " now = " << env->now() << std::endl;
-            co_await timeout{period};
+            co_await timeout(period);
         }
     }
 };
@@ -19,7 +19,7 @@ struct clock_class {
 process clock(environment *env, time_type period, std::string name) {
     while (true) {
         std::cout << name << " now = " << env->now() << std::endl;
-        co_await timeout{period};
+        co_await timeout(period);
     }
 }
 
