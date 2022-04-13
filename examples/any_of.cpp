@@ -7,6 +7,7 @@ using namespace cxx_des;
 process p1(environment *env) {
     std::cout << "p1.a now " << env->now() << std::endl;
     co_await (timeout(1000) || timeout(5) || timeout(5));
+    std::cout << "p1.b now " << env->now() << std::endl;
     
     /*
     std::cout << "p1.a now " << env->now() << std::endl;

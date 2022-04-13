@@ -12,6 +12,4 @@
 
 namespace cxx_des {
 
-event_handler default_event_handler;
-
 }

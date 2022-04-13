@@ -23,19 +23,30 @@ using time_type = std::uintmax_t;
 struct event;
 
 struct event_handler {
-    virtual void invoke(event *evt);
+    /**
+     * @brief Invoke *can* set evt->handler to null.
+     * 
+     * @param evt 
+     */
+    virtual void invoke(event *evt) = 0;
     virtual ~event_handler() = default;
 };
 
-extern event_handler default_event_handler;
-
+/**
+ * @brief There are two types of events:
+ * 
+ *   * Resuming events: event->handler == nullptr
+ *     co_await A is valid only if A.on_suspend() returns a resuming event.
+ *   * Non-resuming events: event->handler != nullptr
+ *     Cannot be used for co_await's. They might trigger generation of other events.
+ * 
+ */
 struct event {
     event(time_type time, priority_type priority, std::coroutine_handle<> coroutine_handle):
         time{time},
         priority{priority},
         coroutine_handle{coroutine_handle},
-        handler{&default_event_handler},
-        cleanup_handler{false} {  }
+        handler{nullptr} {  }
 
     /**
      * @brief Scheduled time of the event.
@@ -62,30 +73,23 @@ struct event {
     event_handler *handler = nullptr;
 
     /**
-     * @brief Whether or not delete the event handler.
-     * 
-     */
-    bool cleanup_handler = false;
-
-    /**
      * @brief Processes the event, usually resumes the coroutine.
      * 
      */
     void process() {
         if (handler != nullptr)
             handler->invoke(this);
+        else {
+            if (coroutine_handle && !coroutine_handle.done())
+                coroutine_handle.resume();
+        }
     }
 
     ~event() {
-        if (cleanup_handler && handler)
+        if (handler)
             delete handler;
     }
 };
-
-inline void event_handler::invoke(event *evt) {
-    if (evt->coroutine_handle && !evt->coroutine_handle.done())
-        evt->coroutine_handle.resume();
-}
 
 }
 

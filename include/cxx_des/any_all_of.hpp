@@ -23,48 +23,32 @@ namespace any_all_of {
 
 template <typename Condition>
 struct giant {
-    struct modified_handler: event_handler, Condition {
-        struct shared_data_type {
-            bool done;
-            std::size_t remaining;
-            event *output_event;
-            environment *env;
-        };
-
-        // to be restored
-        event_handler *old_handler;
-        bool old_cleanup_handler;
-
-        shared_data_type *shared_data;
+    struct new_handler: event_handler, Condition {
+        bool done = false;
+        std::size_t remaining = 0;
+        event *output_event = nullptr;
+        environment *env = nullptr;
 
         void invoke(event *evt) override {
-            --(shared_data->remaining);
+            --remaining;
+
+            // we do not want to be deleted while in use
+            evt->handler = nullptr;
             
-            if (!shared_data->done) {
-                if (Condition::operator()(shared_data->remaining)) {
+            if (!done) {
+                if (Condition::operator()(remaining)) {
                     // inherit the output_event features
-                    shared_data->output_event->time = evt->time;
-                    shared_data->output_event->priority = 1; //evt->priority;
-                    shared_data->output_event->coroutine_handle = evt->coroutine_handle;
-                    shared_data->output_event->handler = old_handler; // overwrite the event handler modified by the outer operator
-                    shared_data->output_event->cleanup_handler = old_cleanup_handler;
-
-                    old_cleanup_handler = false; // do not destroy in the destructor
-
-                    shared_data->env->append_event(shared_data->output_event);
-
-                    shared_data->done = true;
+                    output_event->time = evt->time;
+                    output_event->priority = evt->priority; //evt->priority;
+                    output_event->coroutine_handle = evt->coroutine_handle;
+                    env->append_event(output_event);
+                    done = true;
                 }
             }
 
-            if (shared_data->remaining == 0) {
-                delete shared_data;
+            if (remaining == 0) {
+                evt->handler = this;
             }
-        }
-
-        ~modified_handler() override {
-            if (old_cleanup_handler)
-                delete old_handler;
         }
     };
 
@@ -73,23 +57,13 @@ struct giant {
         using std::tuple<As...>::tuple;
 
         event *on_suspend(process::promise_type promise, std::coroutine_handle<> coroutine_handle) {
-            auto output_event = new event{0, 0, coroutine_handle};
-            auto shared_data = new typename modified_handler::shared_data_type{ false, sizeof...(As), output_event, promise.env };
-
-            // output_event shall not allocate memory for handler by default
-
-            auto overwrite = [&](event *evt) {
-                auto handler = new modified_handler;
-                handler->old_handler = evt->handler;
-                handler->old_cleanup_handler = evt->cleanup_handler;
-                handler->shared_data = shared_data;
-
-                evt->handler = handler;
-                evt->cleanup_handler = true;
-            };
-
-            std::apply([&](As & ...as) { (overwrite(as.on_suspend(promise, coroutine_handle)), ...); }, (std::tuple<As...> &)(*this));
-            return output_event;
+            auto handler = new new_handler;
+            handler->done = false;
+            handler->remaining = sizeof...(As);
+            handler->output_event = new event{0, 0, coroutine_handle};
+            handler->env = promise.env;
+            std::apply([&](As & ...as) { ((as.on_suspend(promise, coroutine_handle)->handler = handler), ...); }, (std::tuple<As...> &)(*this));
+            return handler->output_event;
         }
 
         void on_resume() {
