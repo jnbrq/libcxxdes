@@ -94,11 +94,13 @@ struct all_of_condition {
 };
 
 template <typename ...Ts>
+[[nodiscard("expected usage: co_await any_of(awaitables...)")]]
 auto any_of(Ts && ...ts) {
     return giant<any_of_condition>::result_type<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
 }
 
 template <typename ...Ts>
+[[nodiscard("expected usage: co_await all_of(awaitables...)")]]
 auto all_of(Ts && ...ts) {
     return giant<all_of_condition>::result_type<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
 }

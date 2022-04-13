@@ -44,6 +44,7 @@ struct wait_type {
 };
 
 struct event_fence {
+    [[nodiscard("expected usage: co_await fence.wake()")]]
     wake_type wake(time_type latency = 0, priority_type priority = 0) {
         if (waken_) {
             throw std::runtime_error("cannot wake up a waken fence!");
@@ -52,6 +53,7 @@ struct event_fence {
         return wake_type{this, latency, priority};
     }
 
+    [[nodiscard("expected usage: co_await fence.wait()")]]
     wait_type wait(time_type latency = 0, priority_type priority = 0) {
         return wait_type{this, latency, priority};
     }

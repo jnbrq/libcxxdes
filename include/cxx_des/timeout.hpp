@@ -16,6 +16,9 @@
 
 namespace cxx_des {
 
+namespace detail {
+namespace timeout {
+
 struct timeout {
     timeout(time_type latency): latency{latency} {  }
 
@@ -30,6 +33,15 @@ struct timeout {
     void on_resume() {  }
 };
 
+} // namespace timeout
+} // namespace detail
+
+
+[[nodiscard("expected usage: co_await timeout(latency)")]]
+auto timeout(time_type latency) {
+    return detail::timeout::timeout(latency);
 }
+
+} // namespace cxx_des
 
 #endif // CXX_DES_AWAITABLES_HPP_INCLUDED
