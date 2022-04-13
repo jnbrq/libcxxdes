@@ -12,6 +12,7 @@
 #define CXX_DES_EVENT_FENCE_HPP_INCLUDED
 
 #include <vector>
+#include <stdexcept>
 
 #include "process.hpp"
 
