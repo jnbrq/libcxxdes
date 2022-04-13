@@ -45,11 +45,15 @@ process co_main(environment *env) {
     std::cout << "Example 1: p1 and p2 working together. now = " << env->now() << std::endl;
     co_await all_of(p1(env), p2(env));
 
-    std::cout << "Example 1: p3 working alone. now = " << env->now() << std::endl;
+    std::cout << "Example 2: p3 working alone. now = " << env->now() << std::endl;
     co_await p3(env);
 
-    std::cout << "Example 1: p4 working alone. now = " << env->now() << std::endl;
+    std::cout << "Example 3: p4 working alone. now = " << env->now() << std::endl;
     co_await p4(env, 20);
+
+    std::cout << "Example 4: same thing with control flow expressions. now = " << env->now() << std::endl;
+    fence.reset();
+    co_await ((p1(env) && p2(env)), p3(env), p4(env, 20));
 }
 
 int main() {
