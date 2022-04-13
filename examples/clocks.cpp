@@ -5,12 +5,13 @@
 using namespace cxx_des;
 
 struct clock_class {
+    environment &env;
     time_type period;
     std::string name;
 
-    process operator()(environment *env) {
+    process operator()() {
         while (true) {
-            std::cout << name << " now = " << env->now() << std::endl;
+            std::cout << name << " now = " << env.now() << std::endl;
             co_await timeout(period);
         }
     }
@@ -29,8 +30,8 @@ int main() {
     clock(&env, 2, "clock 1");
     clock(&env, 3, "clock 2");
 
-    auto clock_instance = clock_class{7, "clock 3"};
-    clock_instance(&env);
+    auto clock_instance = clock_class{env, 7, "clock 3"};
+    clock_instance();
 
     while (env.step() && env.now() < 10) ;
 }
