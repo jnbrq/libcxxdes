@@ -35,7 +35,7 @@ struct event {
         priority{priority},
         coroutine_handle{coroutine_handle},
         handler{&default_event_handler},
-        delete_handler{false} {  }
+        cleanup_handler{false} {  }
 
     /**
      * @brief Scheduled time of the event.
@@ -65,7 +65,7 @@ struct event {
      * @brief Whether or not delete the event handler.
      * 
      */
-    bool delete_handler = false;
+    bool cleanup_handler = false;
 
     /**
      * @brief Processes the event, usually resumes the coroutine.
@@ -76,7 +76,7 @@ struct event {
     }
 
     ~event() {
-        if (delete_handler && handler)
+        if (cleanup_handler && handler)
             delete handler;
     }
 };
