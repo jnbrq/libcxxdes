@@ -78,8 +78,8 @@ struct event_fence {
         events_.clear();
     }
 private:
-    friend class wake_awaitable;
-    friend class wait_awaitable;
+    friend struct wake_awaitable;
+    friend struct wait_awaitable;
 
     bool waken_ = false;
 
