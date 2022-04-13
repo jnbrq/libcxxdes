@@ -27,7 +27,7 @@ concept process_class = requires(T a) {
     { a.env };
 };
 
-struct process final {
+struct process {
     struct promise_type;
     using handle_type = std::coroutine_handle<promise_type>;
 
@@ -85,8 +85,7 @@ struct process final {
         auto await_transform(T &&a);
     };
 
-    process(handle_type handle): handle_{handle} {
-    }
+    process(handle_type handle): handle_{handle} {  }
 
     bool done() {
         return handle_.done();
@@ -109,7 +108,17 @@ struct process final {
         return process::handle_type::from_address(coroutine_handle.address()).promise();
     }
 
+    // process is also awaitable
+    event *on_suspend(promise_type &promise, std::coroutine_handle<> other_handle) {
+        auto &this_promise = promise_of(handle_);
+        event *completion_evt = new event{ 0, 1000, other_handle };
+        this_promise.completion_evt = completion_evt;
+        return completion_evt;
+    }
 
+    void on_resume() {  }
+
+private:
     handle_type handle_;
 };
 
@@ -150,12 +159,6 @@ template <typename T>
 inline auto process::promise_type::await_transform(T &&t) {
     return wrap_awaitable<std::unwrap_ref_decay_t<T>>(std::forward<T>(t));
 }
-
-/*
-inline auto process::promise_type::await_transform(process &&other) {
-    
-}*/
-
 
 } // namespace ns_process
 } // namespace detail
