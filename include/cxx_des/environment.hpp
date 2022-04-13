@@ -28,6 +28,10 @@ struct environment {
         events_.push(evt);
     }
 
+    void register_coroutine(std::coroutine_handle<> handle) {
+        coroutine_handles_.push_back(handle);
+    }
+
     bool step() {
         if (events_.empty())
             return false;
@@ -47,12 +51,12 @@ struct environment {
         while (!events_.empty()) {
             auto evt = events_.top();
             events_.pop();
-
-            // TODO check if this is the correct way to manage the lifetime
-            if (!evt->coroutine_handle.done()) {
-                evt->coroutine_handle.destroy();
-            }
             delete evt;
+        }
+
+        for (auto handle: coroutine_handles_) {
+            if (handle)
+                handle.destroy();
         }
     }
 
@@ -67,6 +71,7 @@ private:
     };
 
     std::priority_queue<event *, std::vector<event *>, event_comp> events_;
+    std::vector<std::coroutine_handle<>> coroutine_handles_;
 };
 
 }

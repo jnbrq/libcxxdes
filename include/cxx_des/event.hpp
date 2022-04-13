@@ -72,7 +72,8 @@ struct event {
      * 
      */
     void process() {
-        handler->invoke(this);
+        if (handler != nullptr)
+            handler->invoke(this);
     }
 
     ~event() {

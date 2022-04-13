@@ -27,6 +27,7 @@ struct giant {
         struct shared_data_type {
             bool done;
             std::size_t remaining;
+            event *output_event;
             environment *env;
         };
 
@@ -35,31 +36,35 @@ struct giant {
         bool old_cleanup_handler;
 
         shared_data_type *shared_data;
-        event *output_event;
 
-        void invoke(event *evt) {
+        void invoke(event *evt) override {
             --(shared_data->remaining);
-
+            
             if (!shared_data->done) {
                 if (Condition::operator()(shared_data->remaining)) {
                     // inherit the output_event features
-                    output_event->time = evt->time;
-                    output_event->priority = evt->priority;
-                    output_event->coroutine_handle = evt->coroutine_handle;
-                    output_event->handler = old_handler;
-                    output_event->cleanup_handler = old_cleanup_handler;
+                    shared_data->output_event->time = evt->time;
+                    shared_data->output_event->priority = 1; //evt->priority;
+                    shared_data->output_event->coroutine_handle = evt->coroutine_handle;
+                    shared_data->output_event->handler = old_handler; // overwrite the event handler modified by the outer operator
+                    shared_data->output_event->cleanup_handler = old_cleanup_handler;
 
-                    shared_data->env->append_event(output_event);
+                    old_cleanup_handler = false; // do not destroy in the destructor
+
+                    shared_data->env->append_event(shared_data->output_event);
 
                     shared_data->done = true;
                 }
-
             }
 
             if (shared_data->remaining == 0) {
                 delete shared_data;
-                evt->cleanup_handler = true;
             }
+        }
+
+        ~modified_handler() override {
+            if (old_cleanup_handler)
+                delete old_handler;
         }
     };
 
@@ -68,15 +73,16 @@ struct giant {
         using std::tuple<As...>::tuple;
 
         event *on_suspend(process::promise_type promise, std::coroutine_handle<> coroutine_handle) {
-            auto shared_data = new typename modified_handler::shared_data_type{ false, sizeof...(As), promise.env };
             auto output_event = new event{0, 0, coroutine_handle};
+            auto shared_data = new typename modified_handler::shared_data_type{ false, sizeof...(As), output_event, promise.env };
+
+            // output_event shall not allocate memory for handler by default
 
             auto overwrite = [&](event *evt) {
                 auto handler = new modified_handler;
                 handler->old_handler = evt->handler;
                 handler->old_cleanup_handler = evt->cleanup_handler;
                 handler->shared_data = shared_data;
-                handler->output_event = output_event;
 
                 evt->handler = handler;
                 evt->cleanup_handler = true;
@@ -92,8 +98,13 @@ struct giant {
         }
     };
 
+    // GCC complains that a deduction guide should be declared in the namespace scope
+    // Clang complains that you cannot have a deduction guide for using statements
+    // I am very confused :(
+    /*
     template <typename ...T>
     result_type(T && ...) -> result_type<std::unwrap_ref_decay_t<T>...>;
+    */
 };
 
 struct any_of_condition {
@@ -108,14 +119,14 @@ struct all_of_condition {
     }
 };
 
-template <typename ...T>
-auto any_of(T && ...t) {
-    return giant<any_of_condition>::result_type{ std::forward<T>(t)... };
+template <typename ...Ts>
+auto any_of(Ts && ...ts) {
+    return giant<any_of_condition>::result_type<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
 }
 
-template <typename ...T>
-auto all_of(T && ...t) {
-    return giant<all_of_condition>::result_type{ std::forward<T>(t)... };
+template <typename ...Ts>
+auto all_of(Ts && ...ts) {
+    return giant<all_of_condition>::result_type<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
 }
 
 } // namespace any_all_of

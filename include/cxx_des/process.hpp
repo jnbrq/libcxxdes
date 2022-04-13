@@ -43,7 +43,9 @@ struct process final {
         // function coroutines
         template <typename ...Args>
         promise_type(environment *env, Args && ...args): env{env} {
-            env->append_event(new event{ 0, -1000, handle_type::from_promise(*this) });
+            auto handle = handle_type::from_promise(*this);
+            env->register_coroutine(handle);
+            env->append_event(new event{ 0, -1000, handle });
         }
         
         // class coroutines
@@ -92,7 +94,7 @@ struct process final {
         return process::handle_type::from_address(coroutine_handle.address()).promise();
     }
 
-private:
+
     handle_type handle_;
 };
 
