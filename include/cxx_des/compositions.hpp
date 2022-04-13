@@ -13,9 +13,6 @@
 
 #include <tuple>
 
-#include <iostream>
-#include "timeout.hpp"
-
 #include "process.hpp"
 #include "environment.hpp"
 
@@ -112,10 +109,6 @@ struct giant2 {
     struct result_type: std::tuple<As...> {
         using std::tuple<As...>::tuple;
 
-        static process p1(environment *env) {
-            co_await timeout(10);
-        }
-
         static process p(environment *env, As & ...as) {
             ((co_await as), ...);
             co_return ;
@@ -125,6 +118,7 @@ struct giant2 {
             event *output_event = new event{ 0, 1000, coroutine_handle };
             auto pp = std::apply([&](As & ...as) { return p(promise->env, as...); }, (std::tuple<As...> &)(*this));
             process::promise_of(pp.handle())->completion_evt = output_event;
+            pp.start();
             return output_event;
         }
 

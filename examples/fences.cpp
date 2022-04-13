@@ -46,10 +46,10 @@ process p4(environment *env) {
 int main() {
     environment env;
 
-    p1(&env);
-    p2(&env);
-    p3(&env);
-    p4(&env);
+    p1(&env).start();
+    p2(&env).start();
+    p3(&env).start();
+    p4(&env).start();
 
     while (env.step()) ;
 

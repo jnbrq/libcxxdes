@@ -50,20 +50,28 @@ struct process {
          */
         event *completion_evt = nullptr;
 
+        bool started = false;
+
         // function coroutines
         template <typename ...Args>
-        promise_type(environment *env, Args && ...args): env{env} {
-            auto handle = handle_type::from_promise(*this);
-            env->register_coroutine(handle);
-            env->append_event(new event{ 0, -1000, handle });
-        }
+        promise_type(environment *env, Args && ...args): env{env} {  }
 
         // class coroutines
-        // TODO there is a problem here, we cannot pass a non-const class for some reason.
-        // If we do that, it fails to find the correct method.
         template <typename ...Args>
         promise_type(process_class auto& t, Args && ...args): promise_type{&t.env} {  }
 
+        event *start() {
+            if (!started) {
+                auto handle = handle_type::from_promise(*this);
+                env->register_coroutine(handle);
+                auto evt = new event{ 0, -1000, handle };
+                env->append_event(evt);
+                started = true;
+                return evt;
+            }
+            return nullptr;
+        }
+        
         process get_return_object() {
             return process(handle_type::from_promise(*this));
         }
@@ -93,6 +101,7 @@ struct process {
         return handle_;
     }
 
+    [[deprecated]]
     bool operator()() {
         if (done())
             return true;
@@ -113,12 +122,22 @@ struct process {
     // process is also awaitable
     event *on_suspend(promise_type *promise, std::coroutine_handle<> other_handle) {
         auto this_promise = promise_of(handle_);
+
+        // start if deferred
+        this_promise->start();
+
+        // in case of completion, trigger the currently paused coroutine
         event *completion_evt = new event{ 0, 1000, other_handle };
         this_promise->completion_evt = completion_evt;
         return completion_evt;
     }
 
     void on_resume() {  }
+
+    auto &start() {
+        promise_of(handle_)->start();
+        return *this;
+    }
 
 private:
     handle_type handle_;

@@ -76,4 +76,4 @@ private:
 
 }
 
-#endif // CXX_DES_ENVIRONMENT_HPP_INCLUDED
+#endif /* CXX_DES_ENVIRONMENT_HPP_INCLUDED */

@@ -27,11 +27,11 @@ process clock(environment *env, time_type period, std::string name) {
 int main() {
     environment env;
 
-    clock(&env, 2, "clock 1");
-    clock(&env, 3, "clock 2");
+    clock(&env, 2, "clock 1").start();
+    clock(&env, 3, "clock 2").start();
 
     auto clock_instance = clock_class{env, 7, "clock 3"};
-    clock_instance();
+    clock_instance().start();
 
     while (env.step() && env.now() < 10) ;
 }

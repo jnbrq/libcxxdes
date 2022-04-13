@@ -18,7 +18,7 @@ process p1(environment *env) {
 int main() {
     environment env;
 
-    auto p = p1(&env);
+    p1(&env).start();
 
     while (env.step()) ;
 
