@@ -24,7 +24,7 @@ namespace ns_process {
 
 template <typename T>
 concept process_class = requires(T a) {
-    { a.env };
+    { &a.env } -> std::same_as<environment *>;
 };
 
 struct process {
@@ -57,14 +57,12 @@ struct process {
             env->register_coroutine(handle);
             env->append_event(new event{ 0, -1000, handle });
         }
-        
-        // class coroutines
-        template <typename T, typename ...Args>
-        promise_type(T const &, environment *env, Args && ...args): promise_type{env} {  }
 
-        // class coroutines with event parameters
-        template <process_class T, typename ...Args>
-        promise_type(T const &t, Args && ...args): promise_type{&t.env} {  }
+        // class coroutines
+        // TODO there is a problem here, we cannot pass a non-const class for some reason.
+        // If we do that, it fails to find the correct method.
+        template <typename ...Args>
+        promise_type(process_class auto& t, Args && ...args): promise_type{&t.env} {  }
 
         process get_return_object() {
             return process(handle_type::from_promise(*this));
@@ -104,15 +102,15 @@ struct process {
         return false;
     }
 
-    static promise_type &promise_of(std::coroutine_handle<> coroutine_handle) {
-        return process::handle_type::from_address(coroutine_handle.address()).promise();
+    static promise_type *promise_of(std::coroutine_handle<> coroutine_handle) {
+        return &(process::handle_type::from_address(coroutine_handle.address()).promise());
     }
 
     // process is also awaitable
-    event *on_suspend(promise_type &promise, std::coroutine_handle<> other_handle) {
-        auto &this_promise = promise_of(handle_);
+    event *on_suspend(promise_type *promise, std::coroutine_handle<> other_handle) {
+        auto this_promise = promise_of(handle_);
         event *completion_evt = new event{ 0, 1000, other_handle };
-        this_promise.completion_evt = completion_evt;
+        this_promise->completion_evt = completion_evt;
         return completion_evt;
     }
 
@@ -123,7 +121,7 @@ private:
 };
 
 template <typename T>
-concept awaitable = requires(T t, process::promise_type promise, std::coroutine_handle<> handle) {
+concept awaitable = requires(T t, process::promise_type *promise, std::coroutine_handle<> handle) {
     { t.on_suspend(promise, handle) } -> std::convertible_to<event *>;
     { t.on_resume() };
 };
@@ -139,7 +137,7 @@ struct wrap_awaitable: T {
     }
 
     bool await_suspend(std::coroutine_handle<> handle) {
-        auto &promise = process::promise_of(handle);
+        auto promise = process::promise_of(handle);
         auto e = T::on_suspend(promise, handle);
         #ifdef CXX_DES_DEBUG
         if (e->handler) {

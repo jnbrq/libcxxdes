@@ -1,15 +1,15 @@
 /**
- * @file any_all_of.hpp
+ * @file compositions.hpp
  * @author Canberk Sönmez (canberk.sonmez.409@gmail.com)
- * @brief operator|| and operator&& for awaitables.
+ * @brief operator||, operator&& and operator, for awaitables.
  * @date 2022-04-13
  * 
  * Copyright (c) Canberk Sönmez 2022
  * 
  */
 
-#ifndef CXX_DES_ANY_ALL_OF_HPP_INCLUDED
-#define CXX_DES_ANY_ALL_OF_HPP_INCLUDED
+#ifndef CXX_DES_COMPOSITIONS_HPP_INCLUDED
+#define CXX_DES_COMPOSITIONS_HPP_INCLUDED
 
 #include <tuple>
 
@@ -19,10 +19,10 @@
 namespace cxx_des {
 
 namespace detail {
-namespace ns_any_all_of {
+namespace ns_compositions {
 
 template <typename Condition>
-struct giant {
+struct giant1 {
     struct new_handler: event_handler, Condition {
         bool done = false;
         std::size_t remaining = 0;
@@ -56,12 +56,12 @@ struct giant {
     struct result_type: std::tuple<As...> {
         using std::tuple<As...>::tuple;
 
-        event *on_suspend(process::promise_type promise, std::coroutine_handle<> coroutine_handle) {
+        event *on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle) {
             auto handler = new new_handler;
             handler->done = false;
             handler->remaining = sizeof...(As);
             handler->output_event = new event{0, 0, coroutine_handle};
-            handler->env = promise.env;
+            handler->env = promise->env;
             std::apply([&](As & ...as) { ((as.on_suspend(promise, coroutine_handle)->handler = handler), ...); }, (std::tuple<As...> &)(*this));
             return handler->output_event;
         }
@@ -69,6 +69,14 @@ struct giant {
         void on_resume() {
             // call on_resume on each awaitable
             std::apply([](As & ...as) { (as.on_resume(), ...); }, (std::tuple<As...> &)(*this));
+        }
+    };
+
+    struct functor {
+        template <typename ...Ts>
+        [[nodiscard("expected usage: co_await any_of(awaitables...) or all_of(awaitables...)")]]
+        constexpr auto operator()(Ts && ...ts) const {
+            return result_type<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
         }
     };
 
@@ -93,23 +101,39 @@ struct all_of_condition {
     }
 };
 
-template <typename ...Ts>
-[[nodiscard("expected usage: co_await any_of(awaitables...)")]]
-auto any_of(Ts && ...ts) {
-    return giant<any_of_condition>::result_type<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
-}
+constexpr giant1<any_of_condition>::functor any_of;
+constexpr giant1<all_of_condition>::functor all_of;
+
+struct giant2 {
+    template <awaitable ...As>
+    struct result_type: std::tuple<As...> {
+        using std::tuple<As...>::tuple;
+
+        struct new_handler {
+
+        };
+
+        event *on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle) {
+
+        }
+
+        void on_resume() {
+            // call on_resume on each awaitable
+            std::apply([](As & ...as) { (as.on_resume(), ...); }, (std::tuple<As...> &)(*this));
+        }
+    };
+};
 
 template <typename ...Ts>
-[[nodiscard("expected usage: co_await all_of(awaitables...)")]]
-auto all_of(Ts && ...ts) {
-    return giant<all_of_condition>::result_type<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
+auto sequential(Ts && ...ts) {
+    return giant2::result_type<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
 }
 
-} // namespace ns_any_all_of
+} // namespace ns_compositions
 } // namespace detail
 
-using detail::ns_any_all_of::any_of;
-using detail::ns_any_all_of::all_of;
+using detail::ns_compositions::any_of;
+using detail::ns_compositions::all_of;
 
 template <awaitable A1, awaitable A2>
 auto operator||(A1 &&a1, A2 &&a2) {
@@ -124,4 +148,4 @@ auto operator&&(A1 &&a1, A2 &&a2) {
 } // namespace cxx_des
 
 
-#endif /* CXX_DES_ANY_ALL_OF_HPP_INCLUDED */
+#endif /* CXX_DES_COMPOSITIONS_HPP_INCLUDED */

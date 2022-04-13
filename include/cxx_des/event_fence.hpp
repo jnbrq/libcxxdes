@@ -28,7 +28,7 @@ struct wake_awaitable {
     time_type latency;
     priority_type priority;
 
-    event *on_suspend(process::promise_type &promise, std::coroutine_handle<> coroutine_handle);
+    event *on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle);
 
     void on_resume() {  }
 };
@@ -38,7 +38,7 @@ struct wait_awaitable {
     time_type latency;
     priority_type priority;
 
-    event *on_suspend(process::promise_type &promise, std::coroutine_handle<> coroutine_handle);
+    event *on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle);
 
     void on_resume() {  }
 };
@@ -87,27 +87,27 @@ private:
     std::vector<event *> events_;
 };
 
-inline event *wake_awaitable::on_suspend(process::promise_type &promise, std::coroutine_handle<> coroutine_handle) {
+inline event *wake_awaitable::on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle) {
     for (auto evt: fence->events_) {
-        evt->time += promise.env->now();
-        promise.env->append_event(evt);
+        evt->time += promise->env->now();
+        promise->env->append_event(evt);
     }
 
     fence->events_.clear();
 
-    auto evt = new event{ promise.env->now() + latency, priority, coroutine_handle };
-    promise.env->append_event(evt);
+    auto evt = new event{ promise->env->now() + latency, priority, coroutine_handle };
+    promise->env->append_event(evt);
 
     fence->waken_ = true;
 
     return evt;
 }
 
-inline event *wait_awaitable::on_suspend(process::promise_type &promise, std::coroutine_handle<> coroutine_handle) {
+inline event *wait_awaitable::on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle) {
     event *evt = new event{ latency, priority, coroutine_handle };
     if (fence->waken_) {
-        evt->time += promise.env->now();
-        promise.env->append_event(evt);
+        evt->time += promise->env->now();
+        promise->env->append_event(evt);
     }
     else {
         fence->events_.push_back(evt);
