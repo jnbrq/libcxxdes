@@ -21,7 +21,7 @@ namespace cxx_des {
 
 template <typename T>
 concept process_class = requires(T a) {
-    { a.env } -> std::convertible_to<environment>;
+    { a.env };
 };
 
 struct process final {
