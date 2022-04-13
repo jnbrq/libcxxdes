@@ -1,7 +1,7 @@
 /**
  * @file event_fence.hpp
  * @author Canberk Sönmez (canberk.sonmez.409@gmail.com)
- * @brief 
+ * @brief Event fence.
  * @date 2022-04-12
  * 
  * Copyright (c) Canberk Sönmez 2022
@@ -23,7 +23,7 @@ namespace ns_event_fence {
 
 struct event_fence;
 
-struct wake_type {
+struct wake_awaitable {
     event_fence *fence;
     time_type latency;
     priority_type priority;
@@ -33,7 +33,7 @@ struct wake_type {
     void on_resume() {  }
 };
 
-struct wait_type {
+struct wait_awaitable {
     event_fence *fence;
     time_type latency;
     priority_type priority;
@@ -45,19 +45,20 @@ struct wait_type {
 
 struct event_fence {
     [[nodiscard("expected usage: co_await fence.wake()")]]
-    wake_type wake(time_type latency = 0, priority_type priority = 0) {
+    wake_awaitable wake(time_type latency = 0, priority_type priority = 0) {
         if (waken_) {
             throw std::runtime_error("cannot wake up a waken fence!");
         }
 
-        return wake_type{this, latency, priority};
+        return {this, latency, priority};
     }
 
     [[nodiscard("expected usage: co_await fence.wait()")]]
-    wait_type wait(time_type latency = 0, priority_type priority = 0) {
-        return wait_type{this, latency, priority};
+    wait_awaitable wait(time_type latency = 0, priority_type priority = 0) {
+        return {this, latency, priority};
     }
 
+    [[nodiscard]]
     bool is_waken() const {
         return waken_;
     }
@@ -78,15 +79,15 @@ struct event_fence {
         events_.clear();
     }
 private:
-    friend class wake_type;
-    friend class wait_type;
+    friend struct wake_awaitable;
+    friend struct wait_awaitable;
 
     bool waken_ = false;
 
     std::vector<event *> events_;
 };
 
-inline event *wake_type::on_suspend(process::promise_type &promise, std::coroutine_handle<> coroutine_handle) {
+inline event *wake_awaitable::on_suspend(process::promise_type &promise, std::coroutine_handle<> coroutine_handle) {
     for (auto evt: fence->events_) {
         evt->time += promise.env->now();
         promise.env->append_event(evt);
@@ -102,7 +103,7 @@ inline event *wake_type::on_suspend(process::promise_type &promise, std::corouti
     return evt;
 }
 
-inline event *wait_type::on_suspend(process::promise_type &promise, std::coroutine_handle<> coroutine_handle) {
+inline event *wait_awaitable::on_suspend(process::promise_type &promise, std::coroutine_handle<> coroutine_handle) {
     event *evt = new event{ latency, priority, coroutine_handle };
     if (fence->waken_) {
         evt->time += promise.env->now();

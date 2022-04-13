@@ -24,7 +24,7 @@ namespace ns_process {
 
 template <typename T>
 concept process_class = requires(T a) {
-    { a.env } -> std::convertible_to<environment>;
+    { a.env };
 };
 
 struct process final {
