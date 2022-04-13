@@ -12,6 +12,7 @@
 #define CXX_DES_PROCESS_HPP_INCLUDED
 
 #include <concepts>
+#include <stdexcept>
 
 #include "event.hpp"
 #include "environment.hpp"
@@ -116,7 +117,12 @@ struct wrap_awaitable: T {
 
     bool await_suspend(std::coroutine_handle<> handle) {
         auto &promise = process::promise_of(handle);
-        T::on_suspend(promise, handle);
+        auto e = T::on_suspend(promise, handle);
+        #ifdef CXX_DES_DEBUG
+        if (e->handler) {
+            throw std::runtime_error("a resuming event is required!");
+        }
+        #endif
         return true;
     }
 
