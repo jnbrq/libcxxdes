@@ -19,7 +19,7 @@
 namespace cxx_des {
 
 namespace detail {
-namespace event_fence {
+namespace ns_event_fence {
 
 struct event_fence;
 
@@ -114,10 +114,10 @@ inline event *wait_type::on_suspend(process::promise_type &promise, std::corouti
     return evt;
 }
 
-} // namespace event_fence
+} // namespace ns_event_fence
 } // namespace detail
 
-using detail::event_fence::event_fence;
+using detail::ns_event_fence::event_fence;
 
 } // namespace cxx_des
 

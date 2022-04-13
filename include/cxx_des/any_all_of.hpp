@@ -19,7 +19,7 @@
 namespace cxx_des {
 
 namespace detail {
-namespace any_all_of {
+namespace ns_any_all_of {
 
 template <typename Condition>
 struct giant {
@@ -105,11 +105,11 @@ auto all_of(Ts && ...ts) {
     return giant<all_of_condition>::result_type<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
 }
 
-} // namespace any_all_of
+} // namespace ns_any_all_of
 } // namespace detail
 
-using detail::any_all_of::any_of;
-using detail::any_all_of::all_of;
+using detail::ns_any_all_of::any_of;
+using detail::ns_any_all_of::all_of;
 
 template <awaitable A1, awaitable A2>
 auto operator||(A1 &&a1, A2 &&a2) {

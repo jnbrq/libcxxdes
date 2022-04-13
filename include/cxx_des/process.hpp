@@ -19,6 +19,9 @@
 
 namespace cxx_des {
 
+namespace detail {
+namespace ns_process {
+
 template <typename T>
 concept process_class = requires(T a) {
     { a.env } -> std::convertible_to<environment>;
@@ -40,6 +43,12 @@ struct process final {
          * 
          */
         std::exception_ptr exception = nullptr;
+
+        /**
+         * @brief Event scheduled when this process returns.
+         * 
+         */
+        event *completion_evt = nullptr;
 
         // function coroutines
         template <typename ...Args>
@@ -65,10 +74,15 @@ struct process final {
         std::suspend_always final_suspend() noexcept { return {}; }
         void unhandled_exception() { exception = std::current_exception(); }
 
-        void return_void() {}
+        void return_void() {
+            if (completion_evt) {
+                completion_evt->time += env->now();
+                env->append_event(completion_evt);
+            }
+        }
 
-        template <typename A>
-        auto await_transform(A &&a);
+        template <typename T>
+        auto await_transform(T &&a);
     };
 
     process(handle_type handle): handle_{handle} {
@@ -132,11 +146,24 @@ struct wrap_awaitable: T {
 
 };
 
-template <typename A>
-inline auto process::promise_type::await_transform(A &&a) {
-    return wrap_awaitable<std::unwrap_ref_decay_t<A>>(std::forward<A>(a));
+template <typename T>
+inline auto process::promise_type::await_transform(T &&t) {
+    return wrap_awaitable<std::unwrap_ref_decay_t<T>>(std::forward<T>(t));
 }
 
-}
+/*
+inline auto process::promise_type::await_transform(process &&other) {
+    
+}*/
+
+
+} // namespace ns_process
+} // namespace detail
+
+using detail::ns_process::process;
+using detail::ns_process::awaitable;
+using detail::ns_process::process_class;
+
+} // namespace cxx_des
 
 #endif /* CXX_DES_PROCESS_HPP_INCLUDED */
