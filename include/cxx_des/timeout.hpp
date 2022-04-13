@@ -15,9 +15,8 @@
 #include "environment.hpp"
 
 namespace cxx_des {
-namespace detail {
 
-struct timeout_base {
+struct timeout {
     time_type latency;
 
     event *on_suspend(process::promise_type &promise, std::coroutine_handle<> coroutine_handle) {
@@ -28,10 +27,6 @@ struct timeout_base {
 
     void on_resume() {  }
 };
-
-};
-
-using timeout = wrap_awaitable<detail::timeout_base>;
 
 }
 

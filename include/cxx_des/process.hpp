@@ -63,6 +63,9 @@ struct process final {
         void unhandled_exception() { exception = std::current_exception(); }
 
         void return_void() {}
+
+        template <typename A>
+        auto await_transform(A &&a);
     };
 
     process(handle_type handle): handle_{handle} {
@@ -102,12 +105,8 @@ concept awaitable = requires(T t, process::promise_type promise, std::coroutine_
 template <awaitable T>
 struct wrap_awaitable: T {
     
-    // TODO: should I uncomment the following line?
-    // C++11 import base class constructors trick
-    // using T::T;
-
-    template <typename ...Args>
-    wrap_awaitable(Args && ...args): T{std::forward<Args>(args)...} {  }
+    template <typename ...U>
+    wrap_awaitable(U && ...u): T{std::forward<U>(u)...} {  }
 
     bool await_ready() {
         return false;
@@ -124,6 +123,11 @@ struct wrap_awaitable: T {
     }
 
 };
+
+template <typename A>
+inline auto process::promise_type::await_transform(A &&a) {
+    return wrap_awaitable<std::unwrap_ref_decay_t<A>>(std::forward<A>(a));
+}
 
 }
 

@@ -22,7 +22,7 @@ namespace event_fence {
 
 struct event_fence;
 
-struct wake_base {
+struct wake_type {
     event_fence *fence;
     time_type latency;
     priority_type priority;
@@ -32,7 +32,7 @@ struct wake_base {
     void on_resume() {  }
 };
 
-struct wait_base {
+struct wait_type {
     event_fence *fence;
     time_type latency;
     priority_type priority;
@@ -41,9 +41,6 @@ struct wait_base {
 
     void on_resume() {  }
 };
-
-using wake_type = wrap_awaitable<wake_base>;
-using wait_type = wrap_awaitable<wait_base>;
 
 struct event_fence {
     wake_type wake(time_type latency = 0, priority_type priority = 0) {
@@ -78,15 +75,15 @@ struct event_fence {
         events_.clear();
     }
 private:
-    friend class wake_base;
-    friend class wait_base;
+    friend class wake_type;
+    friend class wait_type;
 
     bool waken_ = false;
 
     std::vector<event *> events_;
 };
 
-inline event *wake_base::on_suspend(process::promise_type &promise, std::coroutine_handle<> coroutine_handle) {
+inline event *wake_type::on_suspend(process::promise_type &promise, std::coroutine_handle<> coroutine_handle) {
     for (auto evt: fence->events_) {
         evt->time += promise.env->now();
         promise.env->append_event(evt);
@@ -102,7 +99,7 @@ inline event *wake_base::on_suspend(process::promise_type &promise, std::corouti
     return evt;
 }
 
-inline event *wait_base::on_suspend(process::promise_type &promise, std::coroutine_handle<> coroutine_handle) {
+inline event *wait_type::on_suspend(process::promise_type &promise, std::coroutine_handle<> coroutine_handle) {
     event *evt = new event{ latency, priority, coroutine_handle };
     if (fence->waken_) {
         evt->time += promise.env->now();
