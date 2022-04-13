@@ -17,6 +17,8 @@
 namespace cxx_des {
 
 struct timeout {
+    timeout(time_type latency): latency{latency} {  }
+
     time_type latency;
 
     event *on_suspend(process::promise_type &promise, std::coroutine_handle<> coroutine_handle) {

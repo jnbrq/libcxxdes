@@ -16,7 +16,7 @@ process p1(environment *env) {
 
 process p2(environment *env) {
     std::cout << "p2.a now " << env->now() << std::endl;
-    co_await timeout{5u};
+    co_await timeout(5u);
     std::cout << "p2.b now " << env->now() << std::endl;
     co_await fence.wake(2);
     std::cout << "p2.c now " << env->now() << std::endl;
@@ -33,7 +33,7 @@ process p3(environment *env) {
 
 process p4(environment *env) {
     std::cout << "p4.a now " << env->now() << std::endl;
-    co_await timeout{20u};
+    co_await timeout(20u);
     std::cout << "p4.b now " << env->now() << std::endl;
     co_await fence.wait(); // wakes up immediately
     std::cout << "p4.c now " << env->now() << std::endl;
