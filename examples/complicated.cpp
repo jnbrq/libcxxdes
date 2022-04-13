@@ -24,6 +24,8 @@ process p2(environment *env) {
     std::cout << "p2.b now " << env->now() << std::endl;
     co_await p0(env);
     std::cout << "p2.c now " << env->now() << std::endl;
+    // co_await sequential(p0(env), p0(env));
+    // std::cout << "p2.d now " << env->now() << std::endl;
     co_return ;
 }
 

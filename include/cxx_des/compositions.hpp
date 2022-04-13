@@ -13,6 +13,9 @@
 
 #include <tuple>
 
+#include <iostream>
+#include "timeout.hpp"
+
 #include "process.hpp"
 #include "environment.hpp"
 
@@ -109,12 +112,20 @@ struct giant2 {
     struct result_type: std::tuple<As...> {
         using std::tuple<As...>::tuple;
 
-        struct new_handler {
+        static process p1(environment *env) {
+            co_await timeout(10);
+        }
 
-        };
-
+        static process p(environment *env, As & ...as) {
+            ((co_await as), ...);
+            co_return ;
+        }
+        
         event *on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle) {
-
+            event *output_event = new event{ 0, 1000, coroutine_handle };
+            auto pp = std::apply([&](As & ...as) { return p(promise->env, as...); }, (std::tuple<As...> &)(*this));
+            process::promise_of(pp.handle())->completion_evt = output_event;
+            return output_event;
         }
 
         void on_resume() {
@@ -122,18 +133,25 @@ struct giant2 {
             std::apply([](As & ...as) { (as.on_resume(), ...); }, (std::tuple<As...> &)(*this));
         }
     };
+
+    struct functor {
+        template <typename ...Ts>
+        [[nodiscard("expected usage: co_await sequential(awaitables...)")]]
+        constexpr auto operator()(Ts && ...ts) const {
+            return result_type<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
+        }
+    };
 };
 
-template <typename ...Ts>
-auto sequential(Ts && ...ts) {
-    return giant2::result_type<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
-}
+constexpr giant2::functor sequential;
+
 
 } // namespace ns_compositions
 } // namespace detail
 
 using detail::ns_compositions::any_of;
 using detail::ns_compositions::all_of;
+using detail::ns_compositions::sequential;
 
 template <awaitable A1, awaitable A2>
 auto operator||(A1 &&a1, A2 &&a2) {
@@ -143,6 +161,11 @@ auto operator||(A1 &&a1, A2 &&a2) {
 template <awaitable A1, awaitable A2>
 auto operator&&(A1 &&a1, A2 &&a2) {
     return all_of(std::move(a1), std::move(a2));
+}
+
+template <awaitable A1, awaitable A2>
+auto operator,(A1 &&a1, A2 &&a2) {
+    return sequential(std::move(a1), std::move(a2));
 }
 
 } // namespace cxx_des

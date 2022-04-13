@@ -89,6 +89,10 @@ struct process {
         return handle_.done();
     }
 
+    std::coroutine_handle<> handle() {
+        return handle_;
+    }
+
     bool operator()() {
         if (done())
             return true;
