@@ -50,30 +50,33 @@ struct process {
          */
         event *completion_evt = nullptr;
 
-        bool started = false;
+        /**
+         * @brief Event schedule for starting the process. nullptr if scheduled.
+         * 
+         */
+        event *start_event = nullptr;
 
         // function coroutines
         template <typename ...Args>
-        promise_type(environment *env, Args && ...args): env{env} {  }
+        promise_type(environment *env, Args && ...args): env{env} {
+            handle_ = handle_type::from_promise(*this);
+            start_event = new event{0, -1000, handle_};
+        }
 
         // class coroutines
         template <typename ...Args>
         promise_type(process_class auto& t, Args && ...args): promise_type{&t.env} {  }
 
-        event *start() {
-            if (!started) {
-                auto handle = handle_type::from_promise(*this);
-                env->register_coroutine(handle);
-                auto evt = new event{ 0, -1000, handle };
-                env->append_event(evt);
-                started = true;
-                return evt;
+        void start() {
+            if (start_event) {
+                env->register_coroutine(handle_);
+                env->append_event(start_event);
+                start_event = nullptr;
             }
-            return nullptr;
         }
         
         process get_return_object() {
-            return process(handle_type::from_promise(*this));
+            return process(handle_);
         }
 
         std::suspend_always initial_suspend() { return {}; }
@@ -84,11 +87,19 @@ struct process {
             if (completion_evt) {
                 completion_evt->time += env->now();
                 env->append_event(completion_evt);
+                completion_evt = nullptr;
             }
         }
 
         template <typename T>
         auto await_transform(T &&a);
+
+        ~promise_type() {
+            if (start_event) delete start_event;
+        }
+
+    private:
+        handle_type handle_;
     };
 
     process(handle_type handle): handle_{handle} {  }
@@ -119,28 +130,52 @@ struct process {
         return &(process::handle_type::from_address(coroutine_handle.address()).promise());
     }
 
+    promise_type *this_promise() const {
+        if (!promise_)
+            promise_ = promise_of(handle_);
+        
+        return promise_;
+    }
+
     // process is also awaitable
     event *on_suspend(promise_type *promise, std::coroutine_handle<> other_handle) {
-        auto this_promise = promise_of(handle_);
-
         // start if deferred
-        this_promise->start();
+        this_promise()->start();
 
         // in case of completion, trigger the currently paused coroutine
         event *completion_evt = new event{ 0, 1000, other_handle };
-        this_promise->completion_evt = completion_evt;
+        this_promise()->completion_evt = completion_evt;
         return completion_evt;
     }
 
     void on_resume() {  }
 
     auto &start() {
-        promise_of(handle_)->start();
+        this_promise()->start();
+        return *this;
+    }
+
+    auto &priority(priority_type priority) {
+        #ifdef CXX_DES_DEBUG
+        if (!this_promise()->start_event)
+            throw std::runtime_error("cannot change the priority of a started process");
+        #endif
+        this_promise()->start_event->priority = priority;
+        return *this;
+    }
+
+    auto &latency(time_type latency) {
+        #ifdef CXX_DES_DEBUG
+        if (!this_promise()->start_event)
+            throw std::runtime_error("cannot change the latency of a started process");
+        #endif
+        this_promise()->start_event->time = latency;
         return *this;
     }
 
 private:
-    handle_type handle_;
+    handle_type handle_ = nullptr;
+    mutable promise_type *promise_ = nullptr;
 };
 
 template <typename T>

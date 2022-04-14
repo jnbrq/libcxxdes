@@ -59,7 +59,7 @@ process co_main(environment *env) {
 int main() {
     environment env;
 
-    co_main(&env).start();
+    co_main(&env).latency(100).start();
 
     while (env.step()) ;
 
