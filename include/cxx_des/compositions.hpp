@@ -118,7 +118,7 @@ struct giant2 {
             event *output_event = new event{ 0, 1000, coroutine_handle };
             auto pp = std::apply([&](As & ...as) { return p(promise->env, as...); }, (std::tuple<As...> &)(*this));
             process::promise_of(pp.handle())->completion_evt = output_event;
-            pp.start();
+            pp.start(*(promise->env));
             return output_event;
         }
 

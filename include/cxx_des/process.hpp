@@ -56,19 +56,15 @@ struct process {
          */
         event *start_event = nullptr;
 
-        // function coroutines
         template <typename ...Args>
-        promise_type(environment *env, Args && ...args): env{env} {
+        promise_type(Args && ...args): env{env} {
             handle_ = handle_type::from_promise(*this);
             start_event = new event{0, -1000, handle_};
         }
 
-        // class coroutines
-        template <typename ...Args>
-        promise_type(process_class auto& t, Args && ...args): promise_type{&t.env} {  }
-
-        void start() {
+        void start(environment *env) {
             if (start_event) {
+                this->env = env;
                 env->register_coroutine(handle_);
                 env->append_event(start_event);
                 start_event = nullptr;
@@ -140,7 +136,7 @@ struct process {
     // process is also awaitable
     event *on_suspend(promise_type *promise, std::coroutine_handle<> other_handle) {
         // start if deferred
-        this_promise()->start();
+        this_promise()->start(promise->env);
 
         // in case of completion, trigger the currently paused coroutine
         event *completion_evt = new event{ 0, 1000, other_handle };
@@ -150,13 +146,13 @@ struct process {
 
     void on_resume() {  }
 
-    auto &start() {
-        this_promise()->start();
+    auto &start(environment &env) {
+        this_promise()->start(&env);
         return *this;
     }
 
     auto &priority(priority_type priority) {
-        #ifdef CXX_DES_DEBUG
+        #ifdef CXX_DES_SAFE
         if (!this_promise()->start_event)
             throw std::runtime_error("cannot change the priority of a started process");
         #endif
@@ -165,7 +161,7 @@ struct process {
     }
 
     auto &latency(time_type latency) {
-        #ifdef CXX_DES_DEBUG
+        #ifdef CXX_DES_SAFE
         if (!this_promise()->start_event)
             throw std::runtime_error("cannot change the latency of a started process");
         #endif
@@ -197,7 +193,7 @@ struct wrap_awaitable: T {
     bool await_suspend(std::coroutine_handle<> handle) {
         auto promise = process::promise_of(handle);
         auto e = T::on_suspend(promise, handle);
-        #ifdef CXX_DES_DEBUG
+        #ifdef CXX_DES_SAFE
         if (e->handler) {
             throw std::runtime_error("a resuming event is required!");
         }
