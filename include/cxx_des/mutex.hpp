@@ -12,6 +12,7 @@
 #define CXX_DES_MUTEX_HPP_INCLUDED
 
 #include "process.hpp"
+#include <queue>
 
 namespace cxx_des {
 
@@ -58,8 +59,14 @@ private:
     friend struct acquire_awaitable;
     friend struct release_awaitable;
 
+    struct event_comp {
+        bool operator()(event *evt_a, event *evt_b) const {
+            return (evt_a->priority > evt_b->priority);
+        }
+    };
+
     std::coroutine_handle<> coroutine_handle_ = nullptr;
-    std::vector<event *> events_;
+    std::priority_queue<event *, std::vector<event *>, event_comp> events_;
 };
 
 inline event *release_awaitable::on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle) {
@@ -69,18 +76,22 @@ inline event *release_awaitable::on_suspend(process::promise_type *promise, std:
     }
     #endif
 
-    for (auto evt: mtx->events_) {
+    // next process to wake up
+    if (mtx->events_.size() > 0) {
+        auto evt = mtx->events_.top();
+        mtx->events_.pop();
+        mtx->coroutine_handle_ = evt->coroutine_handle;
         evt->time += promise->env->now();
         promise->env->append_event(evt);
     }
+    else {
+        mtx->coroutine_handle_ = nullptr;
+    }
 
-    mtx->events_.clear();
-
+    // resume the current process
     auto evt = new event{ promise->env->now() + latency, priority, coroutine_handle };
     promise->env->append_event(evt);
-
-    mtx->coroutine_handle_ = nullptr;
-
+    
     return evt;
 }
 
@@ -100,7 +111,7 @@ inline event *acquire_awaitable::on_suspend(process::promise_type *promise, std:
     }
     else {
         // locked mutex, block until we are done
-        mtx->events_.push_back(evt);
+        mtx->events_.push(evt);
     }
     return evt;
 }
