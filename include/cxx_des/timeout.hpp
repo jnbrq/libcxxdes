@@ -38,7 +38,7 @@ struct timeout {
 
 
 [[nodiscard("expected usage: co_await timeout(latency)")]]
-auto timeout(time_type latency) {
+inline auto timeout(time_type latency) {
     return detail::ns_timeout::timeout(latency);
 }
 
