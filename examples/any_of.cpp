@@ -2,7 +2,6 @@
 #include <iostream>
 
 using namespace cxxdes;
-using namespace cxxdes::core;
 
 CXXDES_SIMULATION(any_of_example) {
     process co_main() {

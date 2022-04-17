@@ -3,7 +3,6 @@
 #include <string>
 
 using namespace cxxdes;
-using namespace cxxdes::core;
 
 environment env;
 sync::event_fence fence;

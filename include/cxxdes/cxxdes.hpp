@@ -11,6 +11,7 @@
 #ifndef CXXDES_CXX_DES_HPP_INCLUDED
 #define CXXDES_CXX_DES_HPP_INCLUDED
 
+// core
 #include <cxxdes/core/event.hpp>
 #include <cxxdes/core/timeout.hpp>
 #include <cxxdes/core/environment.hpp>
@@ -18,7 +19,14 @@
 #include <cxxdes/core/compositions.hpp>
 #include <cxxdes/core/simulation.hpp>
 
+// sync
 #include <cxxdes/sync/event_fence.hpp>
 #include <cxxdes/sync/mutex.hpp>
+
+namespace cxxdes {
+
+using namespace core;
+
+}
 
 #endif /* CXXDES_CXX_DES_HPP_INCLUDED */

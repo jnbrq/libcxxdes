@@ -2,7 +2,6 @@
 #include <iostream>
 
 using namespace cxxdes;
-using namespace cxxdes::core;
 
 CXXDES_SIMULATION(complicated_example) {
     sync::event_fence fence;

@@ -3,7 +3,6 @@
 #include <string>
 
 using namespace cxxdes;
-using namespace cxxdes::core;
 
 CXXDES_SIMULATION(mutex_example)
 {
