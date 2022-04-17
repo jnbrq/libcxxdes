@@ -4,7 +4,7 @@
 using namespace cxxdes;
 
 CXXDES_SIMULATION(complicated_example) {
-    sync::event_fence fence;
+    sync::event evt;
 
     process p0() {
         co_await timeout(5);
@@ -12,12 +12,12 @@ CXXDES_SIMULATION(complicated_example) {
 
     process p1() {
         co_await timeout(5);
-        co_await fence.wake();
+        co_await evt.wake();
     }
 
     process p2() {
         std::cout << "p2.a now " << env.now() << std::endl;
-        co_await (fence.wait() || timeout(8));
+        co_await (evt.wait() || timeout(8));
         std::cout << "p2.b now " << env.now() << std::endl;
         co_await p0();
         std::cout << "p2.c now " << env.now() << std::endl;
@@ -53,7 +53,7 @@ CXXDES_SIMULATION(complicated_example) {
         co_await p4(20);
 
         std::cout << "Example 4: same thing with control flow expressions. now = " << env.now() << std::endl;
-        fence.reset();
+        evt.reset();
         co_await ((p1() && p2()), p3(), p4(20));
     }
 };

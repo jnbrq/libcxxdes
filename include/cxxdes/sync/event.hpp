@@ -1,15 +1,15 @@
 /**
- * @file event_fence.hpp
+ * @file event.hpp
  * @author Canberk Sönmez (canberk.sonmez.409@gmail.com)
- * @brief Event fence.
+ * @brief Synchronization primitice event.
  * @date 2022-04-12
  * 
  * Copyright (c) Canberk Sönmez 2022
  * 
  */
 
-#ifndef CXXDES_SYNC_EVENT_FENCE_HPP_INCLUDED
-#define CXXDES_SYNC_EVENT_FENCE_HPP_INCLUDED
+#ifndef CXXDES_SYNC_EVENT_HPP_INCLUDED
+#define CXXDES_SYNC_EVENT_HPP_INCLUDED
 
 #include <vector>
 #include <stdexcept>
@@ -20,36 +20,35 @@ namespace cxxdes {
 namespace sync {
 
 namespace detail {
-namespace ns_event_fence {
+namespace ns_event {
 
 using core::time_type;
 using core::priority_type;
-using core::event;
 using core::process;
 
-struct event_fence;
+struct event;
 
 struct wake_awaitable {
-    event_fence *fence;
+    event *fence;
     time_type latency;
     priority_type priority;
 
-    event *on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle);
+    core::event *on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle);
 
     void on_resume() {  }
 };
 
 struct wait_awaitable {
-    event_fence *fence;
+    event *fence;
     time_type latency;
     priority_type priority;
 
-    event *on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle);
+    core::event *on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle);
 
     void on_resume() {  }
 };
 
-struct event_fence {
+struct event {
     [[nodiscard("expected usage: co_await fence.wake()")]]
     wake_awaitable wake(time_type latency = 0, priority_type priority = 0) {
         if (waken_) {
@@ -78,7 +77,7 @@ struct event_fence {
         }
     }
 
-    ~event_fence() {
+    ~event() {
         for (auto e: events_)
             delete e;
         
@@ -90,10 +89,10 @@ private:
 
     bool waken_ = false;
 
-    std::vector<event *> events_;
+    std::vector<core::event *> events_;
 };
 
-inline event *wake_awaitable::on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle) {
+inline core::event *wake_awaitable::on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle) {
     for (auto evt: fence->events_) {
         evt->time += promise->env->now();
         promise->env->append_event(evt);
@@ -101,7 +100,7 @@ inline event *wake_awaitable::on_suspend(process::promise_type *promise, std::co
 
     fence->events_.clear();
 
-    auto evt = new event{ promise->env->now() + latency, priority, coroutine_handle };
+    auto evt = new core::event{ promise->env->now() + latency, priority, coroutine_handle };
     promise->env->append_event(evt);
 
     fence->waken_ = true;
@@ -109,8 +108,8 @@ inline event *wake_awaitable::on_suspend(process::promise_type *promise, std::co
     return evt;
 }
 
-inline event *wait_awaitable::on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle) {
-    event *evt = new event{ latency, priority, coroutine_handle };
+inline core::event *wait_awaitable::on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle) {
+    core::event *evt = new core::event{ latency, priority, coroutine_handle };
     if (fence->waken_) {
         evt->time += promise->env->now();
         promise->env->append_event(evt);
@@ -121,12 +120,12 @@ inline event *wait_awaitable::on_suspend(process::promise_type *promise, std::co
     return evt;
 }
 
-} // namespace ns_event_fence
+} // namespace ns_event
 } // namespace detail
 
-using detail::ns_event_fence::event_fence;
+using detail::ns_event::event;
 
 } // namespace sync
 } // namespace cxxdes
 
-#endif /* CXXDES_SYNC_EVENT_FENCE_HPP_INCLUDED */
+#endif /* CXXDES_SYNC_EVENT_HPP_INCLUDED */

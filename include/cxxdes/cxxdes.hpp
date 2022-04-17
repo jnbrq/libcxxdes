@@ -8,8 +8,8 @@
  * 
  */
 
-#ifndef CXXDES_CXX_DES_HPP_INCLUDED
-#define CXXDES_CXX_DES_HPP_INCLUDED
+#ifndef CXXDES_CXXDES_HPP_INCLUDED
+#define CXXDES_CXXDES_HPP_INCLUDED
 
 // core
 #include <cxxdes/core/event.hpp>
@@ -20,7 +20,7 @@
 #include <cxxdes/core/simulation.hpp>
 
 // sync
-#include <cxxdes/sync/event_fence.hpp>
+#include <cxxdes/sync/event.hpp>
 #include <cxxdes/sync/mutex.hpp>
 
 namespace cxxdes {
@@ -29,4 +29,4 @@ using namespace core;
 
 }
 
-#endif /* CXXDES_CXX_DES_HPP_INCLUDED */
+#endif /* CXXDES_CXXDES_HPP_INCLUDED */

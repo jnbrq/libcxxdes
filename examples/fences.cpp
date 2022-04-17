@@ -5,11 +5,11 @@
 using namespace cxxdes;
 
 environment env;
-sync::event_fence fence;
+sync::event evt;
 
 process p1() {
     std::cout << "p1.a now " << env.now() << std::endl;
-    co_await fence.wait(2, -100);
+    co_await evt.wait(2, -100);
     std::cout << "p1.b now " << env.now() << std::endl;
 
     co_return ;
@@ -19,14 +19,14 @@ process p2() {
     std::cout << "p2.a now " << env.now() << std::endl;
     co_await timeout(5u);
     std::cout << "p2.b now " << env.now() << std::endl;
-    co_await fence.wake(2);
+    co_await evt.wake(2);
     std::cout << "p2.c now " << env.now() << std::endl;
 
     co_return ;
 }
 
 process p3() {
-    co_await fence.wait(8);
+    co_await evt.wait(8);
     std::cout << "p3.a now " << env.now() << std::endl;
     
     co_return ;
@@ -36,9 +36,9 @@ process p4() {
     std::cout << "p4.a now " << env.now() << std::endl;
     co_await timeout(20u);
     std::cout << "p4.b now " << env.now() << std::endl;
-    co_await fence.wait(); // wakes up immediately
+    co_await evt.wait(); // wakes up immediately
     std::cout << "p4.c now " << env.now() << std::endl;
-    co_await fence.wait(2);
+    co_await evt.wait(2);
     std::cout << "p4.d now " << env.now() << std::endl;
 
     co_return ;
