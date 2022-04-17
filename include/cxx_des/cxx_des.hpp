@@ -17,5 +17,7 @@
 #include "process.hpp"
 #include "event_fence.hpp"
 #include "compositions.hpp"
+#include "mutex.hpp"
+#include "simulation.hpp"
 
 #endif // CXX_DES_CXX_DES_HPP_INCLUDED
