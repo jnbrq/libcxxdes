@@ -7,7 +7,7 @@ struct systolic_array_basic {
     environment env;
     bool done = false;
 
-    process p() {
+    process<> p() {
         while (!done) {
             auto instr = co_await queue_instr.pop();
 
@@ -45,7 +45,7 @@ class systolic_array_double_buffered {
     environment env;
     bool done = false;
 
-    process p1() {
+    process<> p1() {
         while (!done) {
             auto instr = co_await queue_instr_1.pop();
 
@@ -61,7 +61,7 @@ class systolic_array_double_buffered {
         }
     }
 
-    process p2() { /* same */ }
+    process<> p2() { /* same */ }
 
     // rest...
 };

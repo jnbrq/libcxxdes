@@ -41,7 +41,7 @@ struct giant1 {
                     // inherit the output_event features
                     output_event->time = evt->time;
                     output_event->priority = evt->priority; //evt->priority;
-                    output_event->coroutine_handle = evt->coroutine_handle;
+                    output_event->coro = evt->coro;
                     env->append_event(output_event);
                     done = true;
                 }
@@ -57,13 +57,13 @@ struct giant1 {
     struct result_type: std::tuple<As...> {
         using std::tuple<As...>::tuple;
 
-        event *on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle) {
+        event *on_suspend(promise_base *promise, coro_handle coro) {
             auto handler = new new_handler;
             handler->done = false;
             handler->remaining = sizeof...(As);
-            handler->output_event = new event{0, 0, coroutine_handle};
+            handler->output_event = new event{0, 0, coro};
             handler->env = promise->env;
-            std::apply([&](As & ...as) { ((as.on_suspend(promise, coroutine_handle)->handler = handler), ...); }, (std::tuple<As...> &)(*this));
+            std::apply([&](As & ...as) { ((as.on_suspend(promise, coro)->handler = handler), ...); }, (std::tuple<As...> &)(*this));
             return handler->output_event;
         }
 
@@ -110,15 +110,15 @@ struct giant2 {
     struct result_type: std::tuple<As...> {
         using std::tuple<As...>::tuple;
 
-        static process p(environment *env, As & ...as) {
+        static process<> p(environment *env, As & ...as) {
             ((co_await as), ...);
             co_return ;
         }
         
-        event *on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle) {
-            event *output_event = new event{ 0, 1000, coroutine_handle };
+        event *on_suspend(promise_base *promise, coro_handle coro) {
+            event *output_event = new event{ 0, 1000, coro };
             auto pp = std::apply([&](As & ...as) { return p(promise->env, as...); }, (std::tuple<As...> &)(*this));
-            process::promise_of(pp.handle())->completion_evt = output_event;
+            pp.this_promise()->completion_evt = output_event;
             pp.start(*(promise->env));
             return output_event;
         }

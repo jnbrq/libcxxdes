@@ -6,16 +6,16 @@ using namespace cxxdes;
 CXXDES_SIMULATION(complicated_example) {
     sync::event evt;
 
-    process p0() {
+    process<> p0() {
         co_await timeout(5);
     }
 
-    process p1() {
+    process<> p1() {
         co_await timeout(5);
         co_await evt.wake();
     }
 
-    process p2() {
+    process<> p2() {
         std::cout << "p2.a now " << env.now() << std::endl;
         co_await (evt.wait() || timeout(8));
         std::cout << "p2.b now " << env.now() << std::endl;
@@ -26,14 +26,14 @@ CXXDES_SIMULATION(complicated_example) {
     }
 
     // A very bad example
-    process p3() {
+    process<> p3() {
         co_await sequential(timeout(5), timeout(10), p0());
         // do *not* use p0(env).start()!
         std::cout << "p3.a now " << env.now() << std::endl;
     }
 
     // Recursion example
-    process p4(unsigned k) {
+    process<> p4(unsigned k) {
         if (k == 0)
             co_return ;
         
@@ -42,7 +42,7 @@ CXXDES_SIMULATION(complicated_example) {
         co_await p4(k - 1);
     }
 
-    process co_main() {
+    process<> co_main() {
         std::cout << "Example 1: p1 and p2 working together. now = " << env.now() << std::endl;
         co_await all_of(p1(), p2());
 

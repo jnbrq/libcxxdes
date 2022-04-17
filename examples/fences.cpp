@@ -7,7 +7,7 @@ using namespace cxxdes;
 environment env;
 sync::event evt;
 
-process p1() {
+process<> p1() {
     std::cout << "p1.a now " << env.now() << std::endl;
     co_await evt.wait(2, -100);
     std::cout << "p1.b now " << env.now() << std::endl;
@@ -15,7 +15,7 @@ process p1() {
     co_return ;
 }
 
-process p2() {
+process<> p2() {
     std::cout << "p2.a now " << env.now() << std::endl;
     co_await timeout(5u);
     std::cout << "p2.b now " << env.now() << std::endl;
@@ -25,14 +25,14 @@ process p2() {
     co_return ;
 }
 
-process p3() {
+process<> p3() {
     co_await evt.wait(8);
     std::cout << "p3.a now " << env.now() << std::endl;
     
     co_return ;
 }
 
-process p4() {
+process<> p4() {
     std::cout << "p4.a now " << env.now() << std::endl;
     co_await timeout(20u);
     std::cout << "p4.b now " << env.now() << std::endl;
@@ -45,7 +45,7 @@ process p4() {
 }
 
 int main() {
-    []() -> process {
+    []() -> process<> {
         co_await all_of(p1(), p2(), p3(), p4());
     }().start(env);
     /*

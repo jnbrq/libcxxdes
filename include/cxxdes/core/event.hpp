@@ -43,10 +43,10 @@ struct event_handler {
  * 
  */
 struct event {
-    event(time_type time, priority_type priority, std::coroutine_handle<> coroutine_handle):
+    event(time_type time, priority_type priority, coro_handle coro):
         time{time},
         priority{priority},
-        coroutine_handle{coroutine_handle},
+        coro{coro},
         handler{nullptr} {  }
 
     /**
@@ -65,7 +65,7 @@ struct event {
      * @brief Corresponding coroutine.
      * 
      */
-    std::coroutine_handle<> coroutine_handle = nullptr;
+    coro_handle coro = nullptr;
 
     /**
      * @brief Handles the event.
@@ -81,8 +81,8 @@ struct event {
         if (handler != nullptr)
             handler->invoke(this);
         else {
-            if (coroutine_handle && !coroutine_handle.done())
-                coroutine_handle.resume();
+            if (coro && !coro.done())
+                coro.resume();
         }
     }
 

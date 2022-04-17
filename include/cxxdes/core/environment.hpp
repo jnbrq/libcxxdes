@@ -29,8 +29,8 @@ struct environment {
         events_.push(evt);
     }
 
-    void register_coroutine(std::coroutine_handle<> handle) {
-        coroutine_handles_.push_back(handle);
+    void register_coroutine(coro_handle handle) {
+        coros_.push_back(handle);
     }
 
     bool step() {
@@ -55,7 +55,7 @@ struct environment {
             delete evt;
         }
 
-        for (auto handle: coroutine_handles_) {
+        for (auto handle: coros_) {
             if (handle)
                 handle.destroy();
         }
@@ -72,7 +72,7 @@ private:
     };
 
     std::priority_queue<event *, std::vector<event *>, event_comp> events_;
-    std::vector<std::coroutine_handle<>> coroutine_handles_;
+    std::vector<coro_handle> coros_;
 };
 
 } // namespace core

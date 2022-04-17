@@ -24,4 +24,12 @@ using namespace experimental;
 
 #include <exception>
 
+namespace cxxdes {
+namespace core {
+
+using coro_handle = std::coroutine_handle<>;
+
+} // namespace core
+} // namespace cxxdes
+
 #endif /* CXXDES_CORE_COROUTINE_HPP_INCLUDED */

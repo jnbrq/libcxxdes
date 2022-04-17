@@ -22,7 +22,8 @@ namespace ns_mutex {
 
 using core::time_type;
 using core::priority_type;
-using core::event;
+using core::coro_handle;
+using core::promise_base;
 using core::process;
 
 struct mutex;
@@ -32,7 +33,7 @@ struct release_awaitable {
     time_type latency;
     priority_type priority;
 
-    event *on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle);
+    core::event *on_suspend(promise_base *promise, coro_handle coro);
     void on_resume() {  }
 };
 
@@ -41,7 +42,7 @@ struct acquire_awaitable {
     time_type latency;
     priority_type priority;
 
-    event *on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle);
+    core::event *on_suspend(promise_base *promise, coro_handle coro);
     void on_resume() {  }
 };
 
@@ -58,7 +59,7 @@ struct mutex {
 
     [[nodiscard]]
     bool is_acquired() const {
-        return !coroutine_handle_;
+        return !coro_;
     }
 
 private:
@@ -66,18 +67,18 @@ private:
     friend struct release_awaitable;
 
     struct event_comp {
-        bool operator()(event *evt_a, event *evt_b) const {
+        bool operator()(core::event *evt_a, core::event *evt_b) const {
             return (evt_a->priority > evt_b->priority);
         }
     };
 
-    std::coroutine_handle<> coroutine_handle_ = nullptr;
-    std::priority_queue<event *, std::vector<event *>, event_comp> events_;
+    coro_handle coro_ = nullptr;
+    std::priority_queue<core::event *, std::vector<core::event *>, event_comp> events_;
 };
 
-inline event *release_awaitable::on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle) {
-    #if CXX_DES_SAFE
-    if (mtx->coroutine_handle_ != coroutine_handle) {
+inline core::event *release_awaitable::on_suspend(promise_base *promise, coro_handle coro) {
+    #if CXXDES_SAFE
+    if (mtx->coro_ != coro) {
         throw std::runtime_error("cannot release a mutex from a different process.");
     }
     #endif
@@ -86,34 +87,34 @@ inline event *release_awaitable::on_suspend(process::promise_type *promise, std:
     if (mtx->events_.size() > 0) {
         auto evt = mtx->events_.top();
         mtx->events_.pop();
-        mtx->coroutine_handle_ = evt->coroutine_handle;
+        mtx->coro_ = evt->coro;
         evt->time += promise->env->now();
         promise->env->append_event(evt);
     }
     else {
-        mtx->coroutine_handle_ = nullptr;
+        mtx->coro_ = nullptr;
     }
 
     // resume the current process
-    auto evt = new event{ promise->env->now() + latency, priority, coroutine_handle };
+    auto evt = new core::event{ promise->env->now() + latency, priority, coro };
     promise->env->append_event(evt);
     
     return evt;
 }
 
-inline event *acquire_awaitable::on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle) {
-    #ifdef CXX_DES_SAFE
-    if (mtx->coroutine_handle_ == coroutine_handle) {
+inline core::event *acquire_awaitable::on_suspend(promise_base *promise, coro_handle coro) {
+    #ifdef CXXDES_SAFE
+    if (mtx->coro_ == coro) {
         throw std::runtime_error("cannot recursively acquire a mutex from the same process.");
     }
     #endif
     
-    event *evt = new event{ latency, priority, coroutine_handle };
-    if (!mtx->coroutine_handle_) {
+    core::event *evt = new core::event{ latency, priority, coro };
+    if (!mtx->coro_) {
         // free mutex
         evt->time += promise->env->now();
         promise->env->append_event(evt);
-        mtx->coroutine_handle_ = coroutine_handle;
+        mtx->coro_ = coro;
     }
     else {
         // locked mutex, block until we are done

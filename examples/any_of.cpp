@@ -4,7 +4,7 @@
 using namespace cxxdes;
 
 CXXDES_SIMULATION(any_of_example) {
-    process co_main() {
+    process<> co_main() {
         std::cout << "p1.a now " << env.now() << std::endl;
         co_await ((timeout(1000) && timeout(5)) || (timeout(100) && timeout(1)));
         std::cout << "p1.b now " << env.now() << std::endl;

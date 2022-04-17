@@ -25,8 +25,8 @@ struct timeout {
 
     time_type latency;
 
-    event *on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle) {
-        auto evt = new event(promise->env->now() + latency, 1000, coroutine_handle);
+    event *on_suspend(promise_base *promise, coro_handle coro) {
+        auto evt = new event(promise->env->now() + latency, 1000, coro);
         promise->env->append_event(evt);
         return evt;
     }

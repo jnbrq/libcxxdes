@@ -23,6 +23,9 @@
 #include <cxxdes/sync/event.hpp>
 #include <cxxdes/sync/mutex.hpp>
 
+// queue
+#include <cxxdes/queue/queue.hpp>
+
 namespace cxxdes {
 
 using namespace core;

@@ -24,6 +24,8 @@ namespace ns_event {
 
 using core::time_type;
 using core::priority_type;
+using core::coro_handle;
+using core::promise_base;
 using core::process;
 
 struct event;
@@ -33,7 +35,7 @@ struct wake_awaitable {
     time_type latency;
     priority_type priority;
 
-    core::event *on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle);
+    core::event *on_suspend(promise_base *promise, coro_handle coro);
 
     void on_resume() {  }
 };
@@ -43,7 +45,7 @@ struct wait_awaitable {
     time_type latency;
     priority_type priority;
 
-    core::event *on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle);
+    core::event *on_suspend(promise_base *promise, coro_handle coro);
 
     void on_resume() {  }
 };
@@ -92,7 +94,7 @@ private:
     std::vector<core::event *> events_;
 };
 
-inline core::event *wake_awaitable::on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle) {
+inline core::event *wake_awaitable::on_suspend(promise_base *promise, coro_handle coro) {
     for (auto evt: fence->events_) {
         evt->time += promise->env->now();
         promise->env->append_event(evt);
@@ -100,7 +102,7 @@ inline core::event *wake_awaitable::on_suspend(process::promise_type *promise, s
 
     fence->events_.clear();
 
-    auto evt = new core::event{ promise->env->now() + latency, priority, coroutine_handle };
+    auto evt = new core::event{ promise->env->now() + latency, priority, coro };
     promise->env->append_event(evt);
 
     fence->waken_ = true;
@@ -108,8 +110,8 @@ inline core::event *wake_awaitable::on_suspend(process::promise_type *promise, s
     return evt;
 }
 
-inline core::event *wait_awaitable::on_suspend(process::promise_type *promise, std::coroutine_handle<> coroutine_handle) {
-    core::event *evt = new core::event{ latency, priority, coroutine_handle };
+inline core::event *wait_awaitable::on_suspend(promise_base *promise, coro_handle coro) {
+    core::event *evt = new core::event{ latency, priority, coro };
     if (fence->waken_) {
         evt->time += promise->env->now();
         promise->env->append_event(evt);

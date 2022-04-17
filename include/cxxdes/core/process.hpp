@@ -13,6 +13,7 @@
 
 #include <concepts>
 #include <stdexcept>
+#include <optional>
 
 #include <cxxdes/core/event.hpp>
 #include <cxxdes/core/environment.hpp>
@@ -23,111 +24,90 @@ namespace core {
 namespace detail {
 namespace ns_process {
 
-template <typename T>
-concept process_class = requires(T a) {
-    { &a.env } -> std::same_as<environment *>;
+struct promise_base {
+    /**
+     * @brief the environment that is associated with the event object.
+     * 
+     */
+    environment *env;
+
+    /**
+     * @brief Event scheduled when this process returns.
+     * 
+     */
+    event *completion_evt = nullptr;
+
+    /**
+     * @brief Event schedule for starting the process. nullptr if scheduled.
+     * 
+     */
+    event *start_event = nullptr;
+
+    promise_base() {
+        start_event = new event{0, -1000, nullptr};
+    }
+
+    void start(environment *env) {
+        if (start_event) {
+            this->env = env;
+            start_event->coro = coro_;
+            env->register_coroutine(coro_);
+            env->append_event(start_event);
+            start_event = nullptr;
+        }
+    }
+
+    std::suspend_always initial_suspend() {
+        return {};
+    }
+
+    std::suspend_always final_suspend() noexcept {
+        return {};
+    }
+
+    void unhandled_exception() {
+        std::rethrow_exception(std::current_exception());
+    }
+
+    void return_void() {
+        if (completion_evt) {
+            completion_evt->time += env->now();
+            env->append_event(completion_evt);
+            completion_evt = nullptr;
+        }
+    }
+
+    template <typename T>
+    auto await_transform(T &&a);
+
+    ~promise_base() {
+        if (start_event) delete start_event;
+    }
+
+protected:
+    coro_handle coro_;
 };
 
-struct process {
-    struct promise_type;
-    using handle_type = std::coroutine_handle<promise_type>;
-
-    struct promise_type {
-        /**
-         * @brief the environment that is associated with the event object.
-         * 
-         */
-        environment *env;
-
-        /**
-         * @brief Event scheduled when this process returns.
-         * 
-         */
-        event *completion_evt = nullptr;
-
-        /**
-         * @brief Event schedule for starting the process. nullptr if scheduled.
-         * 
-         */
-        event *start_event = nullptr;
-
-        template <typename ...Args>
-        promise_type(Args && ...args): env{env} {
-            handle_ = handle_type::from_promise(*this);
-            start_event = new event{0, -1000, handle_};
-        }
-
-        void start(environment *env) {
-            if (start_event) {
-                this->env = env;
-                env->register_coroutine(handle_);
-                env->append_event(start_event);
-                start_event = nullptr;
-            }
-        }
-        
-        process get_return_object() {
-            return process(handle_);
-        }
-
-        std::suspend_always initial_suspend() { return {}; }
-        std::suspend_always final_suspend() noexcept { return {}; }
-        void unhandled_exception() {
-            std::rethrow_exception(std::current_exception());
-        }
-
-        void return_void() {
-            if (completion_evt) {
-                completion_evt->time += env->now();
-                env->append_event(completion_evt);
-                completion_evt = nullptr;
-            }
-        }
-
-        template <typename T>
-        auto await_transform(T &&a);
-
-        ~promise_type() {
-            if (start_event) delete start_event;
-        }
-
-    private:
-        handle_type handle_;
-    };
-
-    process(handle_type handle): handle_{handle} {  }
+struct process_base {
+    process_base(coro_handle coro, promise_base *promise):
+        coro_{coro},
+        promise_{promise} {
+    }
 
     bool done() {
-        return handle_.done();
+        return coro_.done();
     }
 
-    std::coroutine_handle<> handle() {
-        return handle_;
+    coro_handle get_coro_handle() {
+        return coro_;
     }
 
-    [[deprecated]]
-    bool operator()() {
-        if (done())
-            return true;
-        
-        handle_();
-
-        return false;
-    }
-
-    static promise_type *promise_of(std::coroutine_handle<> coroutine_handle) {
-        return &(process::handle_type::from_address(coroutine_handle.address()).promise());
-    }
-
-    promise_type *this_promise() const {
-        if (!promise_)
-            promise_ = promise_of(handle_);
-        
+    promise_base *this_promise() const {
         return promise_;
     }
 
     // process is also awaitable
-    event *on_suspend(promise_type *promise, std::coroutine_handle<> other_handle) {
+    event *on_suspend(promise_base *promise, coro_handle other_handle) {
         // start if deferred
         this_promise()->start(promise->env);
 
@@ -137,15 +117,13 @@ struct process {
         return completion_evt;
     }
 
-    void on_resume() {  }
-
     auto &start(environment &env) {
         this_promise()->start(&env);
         return *this;
     }
 
     auto &priority(priority_type priority) {
-        #ifdef CXX_DES_SAFE
+        #ifdef CXXDES_SAFE
         if (!this_promise()->start_event)
             throw std::runtime_error("cannot change the priority of a started process");
         #endif
@@ -154,7 +132,7 @@ struct process {
     }
 
     auto &latency(time_type latency) {
-        #ifdef CXX_DES_SAFE
+        #ifdef CXXDES_SAFE
         if (!this_promise()->start_event)
             throw std::runtime_error("cannot change the latency of a started process");
         #endif
@@ -162,31 +140,96 @@ struct process {
         return *this;
     }
 
-private:
-    handle_type handle_ = nullptr;
-    mutable promise_type *promise_ = nullptr;
+protected:
+    coro_handle coro_ = nullptr;
+    mutable promise_base *promise_ = nullptr;
+};
+
+template <typename T = void>
+struct process: process_base {
+    using process_base::process_base;
+
+    struct promise_type;
+
+    using handle_type = std::coroutine_handle<promise_type>;
+
+    struct promise_type: promise_base {
+        using promise_base::promise_base;
+
+        template <typename ...Args>
+        promise_type(Args && ...): promise_base() {
+            coro_ = handle_type::from_promise(*this);
+        };
+
+        std::optional<T> return_object;
+
+        process get_return_object() {
+            return process(coro_, this);
+        }
+
+        void return_value(const T& t) {
+            return_object = t;
+        }
+    };
+
+    T on_resume() {
+        auto promise = (promise_type *) this_promise();
+        #ifdef CXXDES_SAFE
+        if (!promise->return_object) {
+            throw std::runtime_error("no return value from the process!");
+        }
+        #endif
+
+        return *promise->return_object;
+    }
+};
+
+template <>
+struct process<void>: process_base {
+    using process_base::process_base;
+
+    struct promise_type;
+
+    using handle_type = std::coroutine_handle<promise_type>;
+
+    struct promise_type: promise_base {
+        using promise_base::promise_base;
+
+        template <typename ...Args>
+        promise_type(Args && ...): promise_base() {
+            coro_ = handle_type::from_promise(*this);
+        };
+
+        process get_return_object() {
+            return process(coro_, this);
+        }
+    };
+
+    void on_resume() {
+    }
 };
 
 template <typename T>
-concept awaitable = requires(T t, process::promise_type *promise, std::coroutine_handle<> handle) {
+concept awaitable = requires(T t, promise_base *promise, coro_handle handle) {
     { t.on_suspend(promise, handle) } -> std::convertible_to<event *>;
     { t.on_resume() };
 };
 
 template <awaitable T>
 struct wrap_awaitable: T {
-    
     template <typename ...U>
-    wrap_awaitable(U && ...u): T{std::forward<U>(u)...} {  }
+    wrap_awaitable(promise_base *promise, U && ...u):
+        promise_{promise},
+        T{std::forward<U>(u)...} {
+    }
 
     bool await_ready() {
         return false;
     }
 
-    bool await_suspend(std::coroutine_handle<> handle) {
-        auto promise = process::promise_of(handle);
-        auto e = T::on_suspend(promise, handle);
-        #ifdef CXX_DES_SAFE
+    bool await_suspend(coro_handle coro) {
+        auto e = T::on_suspend(promise_, coro);
+        #ifdef CXXDES_SAFE
         if (e->handler) {
             throw std::runtime_error("a resuming event is required!");
         }
@@ -198,19 +241,21 @@ struct wrap_awaitable: T {
         return T::on_resume();
     }
 
+private:
+    promise_base *promise_ = nullptr;
 };
 
 template <typename T>
-inline auto process::promise_type::await_transform(T &&t) {
-    return wrap_awaitable<std::unwrap_ref_decay_t<T>>(std::forward<T>(t));
+inline auto promise_base::await_transform(T &&t) {
+    return wrap_awaitable<std::unwrap_ref_decay_t<T>>(this, std::forward<T>(t));
 }
 
 } // namespace ns_process
 } // namespace detail
 
+using detail::ns_process::promise_base;
 using detail::ns_process::process;
 using detail::ns_process::awaitable;
-using detail::ns_process::process_class;
 
 } // namespace core
 } // namespace cxxdes
