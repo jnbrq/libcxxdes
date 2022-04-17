@@ -1,26 +1,22 @@
-#include <cxx_des/cxx_des.hpp>
+#include <cxxdes/cxxdes.hpp>
 #include <iostream>
 
-using namespace cxx_des;
+using namespace cxxdes;
+using namespace cxxdes::core;
 
-static environment env;
-
-process p1() {
-    std::cout << "p1.a now " << env.now() << std::endl;
-    co_await ((timeout(1000) && timeout(5)) || (timeout(100) && timeout(1)));
-    std::cout << "p1.b now " << env.now() << std::endl;
-    co_await all_of(timeout(10), timeout(20));
-    std::cout << "p1.c now " << env.now() << std::endl;
-    co_await any_of(timeout(10), timeout(20));
-    std::cout << "p1.d now " << env.now() << std::endl;
-
-    co_return ;
-}
+CXXDES_SIMULATION(any_of_example) {
+    process co_main() {
+        std::cout << "p1.a now " << env.now() << std::endl;
+        co_await ((timeout(1000) && timeout(5)) || (timeout(100) && timeout(1)));
+        std::cout << "p1.b now " << env.now() << std::endl;
+        co_await all_of(timeout(10), timeout(20));
+        std::cout << "p1.c now " << env.now() << std::endl;
+        co_await any_of(timeout(10), timeout(20));
+        std::cout << "p1.d now " << env.now() << std::endl;
+    }
+};
 
 int main() {
-    p1().start(env);
-
-    while (env.step()) ;
-
+    any_of_example{}.run();
     return 0;
 }

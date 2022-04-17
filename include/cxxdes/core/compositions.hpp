@@ -8,15 +8,16 @@
  * 
  */
 
-#ifndef CXX_DES_COMPOSITIONS_HPP_INCLUDED
-#define CXX_DES_COMPOSITIONS_HPP_INCLUDED
+#ifndef CXXDES_CORE_COMPOSITIONS_HPP_INCLUDED
+#define CXXDES_CORE_COMPOSITIONS_HPP_INCLUDED
 
 #include <tuple>
 
-#include "process.hpp"
-#include "environment.hpp"
+#include <cxxdes/core/process.hpp>
+#include <cxxdes/core/environment.hpp>
 
-namespace cxx_des {
+namespace cxxdes {
+namespace core {
 
 namespace detail {
 namespace ns_compositions {
@@ -162,7 +163,8 @@ auto operator,(A1 &&a1, A2 &&a2) {
     return sequential(std::move(a1), std::move(a2));
 }
 
-} // namespace cxx_des
+} // namespace core
+} // namespace cxxdes
 
 
-#endif /* CXX_DES_COMPOSITIONS_HPP_INCLUDED */
+#endif /* CXXDES_CORE_COMPOSITIONS_HPP_INCLUDED */

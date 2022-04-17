@@ -8,19 +8,20 @@
  * 
  */
 
-#ifndef CXX_DES_TIMEOUT_HPP_INCLUDED
-#define CXX_DES_TIMEOUT_HPP_INCLUDED
+#ifndef CXXDES_CORE_TIMEOUT_HPP_INCLUDED
+#define CXXDES_CORE_TIMEOUT_HPP_INCLUDED
 
-#include "process.hpp"
-#include "environment.hpp"
+#include <cxxdes/core/process.hpp>
+#include <cxxdes/core/environment.hpp>
 
-namespace cxx_des {
+namespace cxxdes {
+namespace core {
 
 namespace detail {
 namespace ns_timeout {
 
 struct timeout {
-    timeout(time_type latency): latency{latency} {  }
+    constexpr timeout(time_type latency): latency{latency} {  }
 
     time_type latency;
 
@@ -42,6 +43,10 @@ inline auto timeout(time_type latency) {
     return detail::ns_timeout::timeout(latency);
 }
 
-} // namespace cxx_des
+[[nodiscard("expected usage: co_await yield")]]
+constexpr auto yield = detail::ns_timeout::timeout{0};
 
-#endif // CXX_DES_AWAITABLES_HPP_INCLUDED
+} // namespace core
+} // namespace cxxdes
+
+#endif /* CXXDES_CORE_TIMEOUT_HPP_INCLUDED */

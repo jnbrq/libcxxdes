@@ -1,12 +1,13 @@
-#include <cxx_des/cxx_des.hpp>
+#include <cxxdes/cxxdes.hpp>
 #include <iostream>
 #include <string>
 
-using namespace cxx_des;
+using namespace cxxdes;
+using namespace cxxdes::core;
 
-CXX_DES_SIMULATION(mutex_sim)
+CXXDES_SIMULATION(mutex_example)
 {
-    mutex m;
+    sync::mutex m;
 
     template <typename A = const char *>
     void print_time(A &&a = "") {
@@ -39,6 +40,6 @@ CXX_DES_SIMULATION(mutex_sim)
 };
 
 int main() {
-    mutex_sim{}.run();
+    mutex_example{}.run();
     return 0;
 }

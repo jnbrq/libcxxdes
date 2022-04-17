@@ -8,16 +8,22 @@
  * 
  */
 
-#ifndef CXX_DES_MUTEX_HPP_INCLUDED
-#define CXX_DES_MUTEX_HPP_INCLUDED
+#ifndef CXXDES_SYNC_MUTEX_HPP_INCLUDED
+#define CXXDES_SYNC_MUTEX_HPP_INCLUDED
 
-#include "process.hpp"
+#include <cxxdes/core/process.hpp>
 #include <queue>
 
-namespace cxx_des {
+namespace cxxdes {
+namespace sync {
 
 namespace detail {
-namespace mutex {
+namespace ns_mutex {
+
+using core::time_type;
+using core::priority_type;
+using core::event;
+using core::process;
 
 struct mutex;
 
@@ -116,11 +122,12 @@ inline event *acquire_awaitable::on_suspend(process::promise_type *promise, std:
     return evt;
 }
 
-} // namespace mutex
+} // namespace ns_mutex
 } // namespace detail
 
-using detail::mutex::mutex;
+using detail::ns_mutex::mutex;
 
-} // namespace cxx_des
+} // namespace sync
+} // namespace cxxdes
 
-#endif /* CXX_DES_MUTEX_HPP_INCLUDED */
+#endif /* CXXDES_SYNC_MUTEX_HPP_INCLUDED */

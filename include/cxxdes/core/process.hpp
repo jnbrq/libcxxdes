@@ -8,16 +8,17 @@
  * 
  */
 
-#ifndef CXX_DES_PROCESS_HPP_INCLUDED
-#define CXX_DES_PROCESS_HPP_INCLUDED
+#ifndef CXXDES_CORE_PROCESS_HPP_INCLUDED
+#define CXXDES_CORE_PROCESS_HPP_INCLUDED
 
 #include <concepts>
 #include <stdexcept>
 
-#include "event.hpp"
-#include "environment.hpp"
+#include <cxxdes/core/event.hpp>
+#include <cxxdes/core/environment.hpp>
 
-namespace cxx_des {
+namespace cxxdes {
+namespace core {
 
 namespace detail {
 namespace ns_process {
@@ -211,6 +212,7 @@ using detail::ns_process::process;
 using detail::ns_process::awaitable;
 using detail::ns_process::process_class;
 
-} // namespace cxx_des
+} // namespace core
+} // namespace cxxdes
 
-#endif /* CXX_DES_PROCESS_HPP_INCLUDED */
+#endif /* CXXDES_CORE_PROCESS_HPP_INCLUDED */

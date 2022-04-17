@@ -1,8 +1,9 @@
-#include <cxx_des/cxx_des.hpp>
+#include <cxxdes/cxxdes.hpp>
 #include <iostream>
 #include <string>
 
-using namespace cxx_des;
+using namespace cxxdes;
+using namespace cxxdes::core;
 
 environment env;
 

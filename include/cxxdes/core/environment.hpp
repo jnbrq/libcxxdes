@@ -8,13 +8,14 @@
  * 
  */
 
-#ifndef CXX_DES_ENVIRONMENT_HPP_INCLUDED
-#define CXX_DES_ENVIRONMENT_HPP_INCLUDED
+#ifndef CXXDES_CORE_ENVIRONMENT_HPP_INCLUDED
+#define CXXDES_CORE_ENVIRONMENT_HPP_INCLUDED
 
-#include "event.hpp"
+#include <cxxdes/core/event.hpp>
 #include <queue>
 
-namespace cxx_des {
+namespace cxxdes {
+namespace core {
 
 struct environment {
 
@@ -74,6 +75,7 @@ private:
     std::vector<std::coroutine_handle<>> coroutine_handles_;
 };
 
-}
+} // namespace core
+} // namespace cxxdes
 
-#endif /* CXX_DES_ENVIRONMENT_HPP_INCLUDED */
+#endif /* CXXDES_CORE_ENVIRONMENT_HPP_INCLUDED */

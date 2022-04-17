@@ -8,14 +8,15 @@
  * 
  */
 
-#ifndef CXX_DES_EVENT_HPP_INCLUDED
-#define CXX_DES_EVENT_HPP_INCLUDED
+#ifndef CXXDES_CORE_EVENT_HPP_INCLUDED
+#define CXXDES_CORE_EVENT_HPP_INCLUDED
 
 #include <cstdint>
 #include <concepts>
-#include "coroutine.hpp"
+#include <cxxdes/core/coroutine.hpp>
 
-namespace cxx_des {
+namespace cxxdes {
+namespace core {
 
 using priority_type = std::intmax_t;
 using time_type = std::uintmax_t;
@@ -91,6 +92,7 @@ struct event {
     }
 };
 
-}
+} // namespace core
+} // namespace cxxdes
 
-#endif // CXX_DES_EVENT_HPP_INCLUDED
+#endif /* CXXDES_CORE_EVENT_HPP_INCLUDED */

@@ -1,7 +1,20 @@
-#ifndef CXX_DES_SIMULATION_HPP_INCLUDED
-#define CXX_DES_SIMULATION_HPP_INCLUDED
+/**
+ * @file simulation.hpp
+ * @author Canberk Sönmez (canberk.sonmez.409@gmail.com)
+ * @brief Simulation comodity class.
+ * @date 2022-04-17
+ * 
+ * @copyright Copyright (c) Canberk Sönmez 2022
+ * 
+ */
 
-namespace cxx_des {
+#ifndef CXXDES_CORE_SIMULATION_HPP_INCLUDED
+#define CXXDES_CORE_SIMULATION_HPP_INCLUDED
+
+#include <cxxdes/core/environment.hpp>
+
+namespace cxxdes {
+namespace core {
 
 template <typename T>
 concept startable = requires(T t, environment env) {
@@ -45,8 +58,9 @@ struct simulation {
     }
 };
 
-#define CXX_DES_SIMULATION(name) struct name : simulation < name >
+#define CXXDES_SIMULATION(name) struct name : cxxdes::core::simulation < name >
 
-}
+} // namespace core
+} // namespace cxxdes
 
-#endif /* CXX_DES_SIMULATION_HPP_INCLUDED */
+#endif /* CXXDES_CORE_SIMULATION_HPP_INCLUDED */

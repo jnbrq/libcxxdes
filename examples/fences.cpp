@@ -1,11 +1,12 @@
-#include <cxx_des/cxx_des.hpp>
+#include <cxxdes/cxxdes.hpp>
 #include <iostream>
 #include <string>
 
-using namespace cxx_des;
+using namespace cxxdes;
+using namespace cxxdes::core;
 
 environment env;
-event_fence fence;
+sync::event_fence fence;
 
 process p1() {
     std::cout << "p1.a now " << env.now() << std::endl;

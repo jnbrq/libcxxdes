@@ -8,18 +8,24 @@
  * 
  */
 
-#ifndef CXX_DES_EVENT_FENCE_HPP_INCLUDED
-#define CXX_DES_EVENT_FENCE_HPP_INCLUDED
+#ifndef CXXDES_SYNC_EVENT_FENCE_HPP_INCLUDED
+#define CXXDES_SYNC_EVENT_FENCE_HPP_INCLUDED
 
 #include <vector>
 #include <stdexcept>
 
-#include "process.hpp"
+#include <cxxdes/core/process.hpp>
 
-namespace cxx_des {
+namespace cxxdes {
+namespace sync {
 
 namespace detail {
 namespace ns_event_fence {
+
+using core::time_type;
+using core::priority_type;
+using core::event;
+using core::process;
 
 struct event_fence;
 
@@ -120,6 +126,7 @@ inline event *wait_awaitable::on_suspend(process::promise_type *promise, std::co
 
 using detail::ns_event_fence::event_fence;
 
-} // namespace cxx_des
+} // namespace sync
+} // namespace cxxdes
 
-#endif /* CXX_DES_EVENT_FENCE_HPP_INCLUDED */
+#endif /* CXXDES_SYNC_EVENT_FENCE_HPP_INCLUDED */
