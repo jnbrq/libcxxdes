@@ -90,8 +90,7 @@ inline core::event *wake_awaitable::on_suspend(promise_base *promise, coro_handl
 
 inline core::event *wait_awaitable::on_suspend(promise_base *promise, coro_handle coro) {
     core::event *evt = new core::event{ latency, priority, coro };
-    evt->time += promise->env->now();
-    promise->env->append_event(evt);
+    fence->events_.push_back(evt);
     return evt;
 }
 

@@ -27,7 +27,6 @@ struct queue {
             co_await mutex_.acquire();
             if (max_size_ == 0 || q_.size() < max_size_)
                 break ;
-            co_await timeout(1);
             co_await (mutex_.release() && event_.wait());
         }
         q_.emplace(std::forward<Args>(args)...);
@@ -39,7 +38,6 @@ struct queue {
             co_await mutex_.acquire();
             if (q_.size() > 0)
                 break ;
-            co_await timeout(1);
             co_await (mutex_.release() && event_.wait());
         }
         auto v = q_.front();
