@@ -22,17 +22,21 @@ private:
 
 using exponent_rv = random_variable<std::exponential_distribution<>>;
 
+inline auto rand_seed() {
+    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+}
+
 using namespace cxxdes;
 
 CXXDES_SIMULATION(producer_consumer_example) {
     double scale = 1.0e3; // 1000 simulation cycles is one second
 
     sync::queue<int> q;
-    std::size_t total = 1000;
+    std::size_t total = 100000;
     double total_latency = 0;
 
-    exponent_rv lambda{ 675 /* seed */, 4.0 /* lambda */ };
-    exponent_rv mu{ 690 /* seed */, 4.0 /* mu */ };
+    exponent_rv lambda{ rand_seed() /* seed */, 4.0 /* lambda */ };
+    exponent_rv mu{ rand_seed() /* seed */, 10.0 /* mu */ };
     
     process<> producer() {
         for (std::size_t i = 0; i < total; ++i) {
