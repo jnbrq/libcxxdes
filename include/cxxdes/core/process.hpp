@@ -69,14 +69,6 @@ struct promise_base {
         std::rethrow_exception(std::current_exception());
     }
 
-    void return_void() {
-        if (completion_evt) {
-            completion_evt->time += env->now();
-            env->append_event(completion_evt);
-            completion_evt = nullptr;
-        }
-    }
-
     template <typename T>
     auto await_transform(T &&a);
 
@@ -85,6 +77,14 @@ struct promise_base {
     }
 
 protected:
+    void do_return() {
+        if (completion_evt) {
+            completion_evt->time += env->now();
+            env->append_event(completion_evt);
+            completion_evt = nullptr;
+        }
+    }
+
     coro_handle coro_;
 };
 
@@ -167,6 +167,7 @@ struct process: process_base {
 
         void return_value(const T& t) {
             return_object = t;
+            do_return();
         }
     };
 
@@ -198,6 +199,10 @@ struct process<void>: process_base {
 
         process get_return_object() {
             return process(coro_, this);
+        }
+
+        void return_void() {
+            do_return();
         }
     };
 
