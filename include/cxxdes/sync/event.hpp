@@ -53,30 +53,12 @@ struct wait_awaitable {
 struct event {
     [[nodiscard("expected usage: co_await event.wake()")]]
     wake_awaitable wake(time_type latency = 0, priority_type priority = 0) {
-        if (waken_) {
-            throw std::runtime_error("cannot wake up a waken fence!");
-        }
-
         return {this, latency, priority};
     }
 
     [[nodiscard("expected usage: co_await event.wait()")]]
     wait_awaitable wait(time_type latency = 0, priority_type priority = 0) {
         return {this, latency, priority};
-    }
-
-    [[nodiscard]]
-    bool is_waken() const {
-        return waken_;
-    }
-
-    void reset() {
-        if (waken_) {
-            waken_ = false;
-        }
-        else {
-            throw std::runtime_error("cannot reset a not awaken fence!");
-        }
     }
 
     ~event() {
@@ -88,8 +70,6 @@ struct event {
 private:
     friend struct wake_awaitable;
     friend struct wait_awaitable;
-
-    bool waken_ = false;
 
     std::vector<core::event *> events_;
 };
@@ -105,20 +85,13 @@ inline core::event *wake_awaitable::on_suspend(promise_base *promise, coro_handl
     auto evt = new core::event{ promise->env->now() + latency, priority, coro };
     promise->env->append_event(evt);
 
-    fence->waken_ = true;
-
     return evt;
 }
 
 inline core::event *wait_awaitable::on_suspend(promise_base *promise, coro_handle coro) {
     core::event *evt = new core::event{ latency, priority, coro };
-    if (fence->waken_) {
-        evt->time += promise->env->now();
-        promise->env->append_event(evt);
-    }
-    else {
-        fence->events_.push_back(evt);
-    }
+    evt->time += promise->env->now();
+    promise->env->append_event(evt);
     return evt;
 }
 

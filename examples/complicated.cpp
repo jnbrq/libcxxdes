@@ -53,7 +53,6 @@ CXXDES_SIMULATION(complicated_example) {
         co_await p4(20);
 
         std::cout << "Example 4: same thing with control flow expressions. now = " << env.now() << std::endl;
-        evt.reset();
         co_await ((p1() && p2()), p3(), p4(20));
     }
 };
