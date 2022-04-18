@@ -154,8 +154,6 @@ struct process: process_base {
     using handle_type = std::coroutine_handle<promise_type>;
 
     struct promise_type: promise_base {
-        using promise_base::promise_base;
-
         template <typename ...Args>
         promise_type(Args && ...): promise_base() {
             coro_ = handle_type::from_promise(*this);
@@ -193,8 +191,6 @@ struct process<void>: process_base {
     using handle_type = std::coroutine_handle<promise_type>;
 
     struct promise_type: promise_base {
-        using promise_base::promise_base;
-
         template <typename ...Args>
         promise_type(Args && ...): promise_base() {
             coro_ = handle_type::from_promise(*this);
