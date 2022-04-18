@@ -29,7 +29,7 @@ struct queue {
             co_await (mutex_.release() && event_.wait());
         }
         q_.emplace(std::forward<Args>(args)...);
-        co_await mutex_.release();
+        co_await (mutex_.release() && event_.wake());
     }
 
     process<T> pop() {
@@ -41,7 +41,7 @@ struct queue {
         }
         auto v = q_.front();
         q_.pop();
-        co_await mutex_.release();
+        co_await (mutex_.release() && event_.wake());
         co_return v;
     }
     
