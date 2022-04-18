@@ -22,9 +22,7 @@
 // sync
 #include <cxxdes/sync/event.hpp>
 #include <cxxdes/sync/mutex.hpp>
-
-// queue
-#include <cxxdes/queue/queue.hpp>
+#include <cxxdes/sync/queue.hpp>
 
 namespace cxxdes {
 
