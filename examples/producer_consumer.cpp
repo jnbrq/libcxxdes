@@ -52,7 +52,7 @@ CXXDES_SIMULATION(producer_consumer_example) {
             ++n;
 
             if (n == total) {
-                fmt::print("Average latency = {} seconds.", total_latency / total);
+                fmt::print("Average latency = {} seconds.\n", total_latency / total);
                 co_return ;
             }
             
