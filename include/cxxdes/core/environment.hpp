@@ -75,7 +75,7 @@ private:
     std::vector<coro_handle> coros_;
 };
 
-} // namespace core
-} // namespace cxxdes
+} /* namespace core */
+} /* namespace cxxdes */
 
 #endif /* CXXDES_CORE_ENVIRONMENT_HPP_INCLUDED */

@@ -60,7 +60,7 @@ struct simulation {
 
 #define CXXDES_SIMULATION(name) struct name : cxxdes::core::simulation < name >
 
-} // namespace core
-} // namespace cxxdes
+} /* namespace core */
+} /* namespace cxxdes */
 
 #endif /* CXXDES_CORE_SIMULATION_HPP_INCLUDED */

@@ -29,7 +29,7 @@ namespace core {
 
 using coro_handle = std::coroutine_handle<>;
 
-} // namespace core
-} // namespace cxxdes
+} /* namespace core */
+} /* namespace cxxdes */
 
 #endif /* CXXDES_CORE_COROUTINE_HPP_INCLUDED */

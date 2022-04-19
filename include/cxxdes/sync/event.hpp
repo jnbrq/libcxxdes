@@ -94,12 +94,12 @@ inline core::event *wait_awaitable::on_suspend(promise_base *promise, coro_handl
     return evt;
 }
 
-} // namespace ns_event
-} // namespace detail
+} /* namespace ns_event */
+} /* namespace detail */
 
 using detail::ns_event::event;
 
-} // namespace sync
-} // namespace cxxdes
+} /* namespace sync */
+} /* namespace cxxdes */
 
 #endif /* CXXDES_SYNC_EVENT_HPP_INCLUDED */

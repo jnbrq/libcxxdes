@@ -141,8 +141,8 @@ struct giant2 {
 constexpr giant2::functor sequential;
 
 
-} // namespace ns_compositions
-} // namespace detail
+} /* namespace ns_compositions */
+} /* namespace detail */
 
 using detail::ns_compositions::any_of;
 using detail::ns_compositions::all_of;
@@ -163,8 +163,8 @@ auto operator,(A1 &&a1, A2 &&a2) {
     return sequential(std::move(a1), std::move(a2));
 }
 
-} // namespace core
-} // namespace cxxdes
+} /* namespace core */
+} /* namespace cxxdes */
 
 
 #endif /* CXXDES_CORE_COMPOSITIONS_HPP_INCLUDED */

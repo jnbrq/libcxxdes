@@ -92,7 +92,7 @@ struct event {
     }
 };
 
-} // namespace core
-} // namespace cxxdes
+} /* namespace core */
+} /* namespace cxxdes */
 
 #endif /* CXXDES_CORE_EVENT_HPP_INCLUDED */

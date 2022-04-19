@@ -243,14 +243,14 @@ inline auto promise_base::await_transform(T &&t) {
     return wrap_awaitable<std::unwrap_ref_decay_t<T>>(this, std::forward<T>(t));
 }
 
-} // namespace ns_process
-} // namespace detail
+} /* namespace ns_process */
+} /* namespace detail */
 
 using detail::ns_process::promise_base;
 using detail::ns_process::process;
 using detail::ns_process::awaitable;
 
-} // namespace core
-} // namespace cxxdes
+} /* namespace core */
+} /* namespace cxxdes */
 
 #endif /* CXXDES_CORE_PROCESS_HPP_INCLUDED */

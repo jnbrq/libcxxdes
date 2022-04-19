@@ -123,12 +123,12 @@ inline core::event *acquire_awaitable::on_suspend(promise_base *promise, coro_ha
     return evt;
 }
 
-} // namespace ns_mutex
-} // namespace detail
+} /* namespace ns_mutex */
+} /* namespace detail */
 
 using detail::ns_mutex::mutex;
 
-} // namespace sync
-} // namespace cxxdes
+} /* namespace sync */
+} /* namespace cxxdes */
 
 #endif /* CXXDES_SYNC_MUTEX_HPP_INCLUDED */

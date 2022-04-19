@@ -34,8 +34,8 @@ struct timeout {
     void on_resume() {  }
 };
 
-} // namespace ns_timeout
-} // namespace detail
+} /* namespace ns_timeout */
+} /* namespace detail */
 
 
 [[nodiscard("expected usage: co_await timeout(latency)")]]
@@ -46,7 +46,7 @@ inline auto timeout(time_type latency) {
 [[nodiscard("expected usage: co_await yield")]]
 constexpr auto yield = detail::ns_timeout::timeout{0};
 
-} // namespace core
-} // namespace cxxdes
+} /* namespace core */
+} /* namespace cxxdes */
 
 #endif /* CXXDES_CORE_TIMEOUT_HPP_INCLUDED */

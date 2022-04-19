@@ -71,11 +71,11 @@ private:
     sync::mutex mutex_;
 };
 
-} // namespace detail
+} /* namespace detail */
 
 using detail::queue;
 
-} // namespace sync
-} // namespace cxxdes
+} /* namespace sync */
+} /* namespace cxxdes */
 
 #endif /* CXXDES_SYNC_QUEUE_HPP_INCLUDED */
