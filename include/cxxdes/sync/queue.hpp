@@ -1,3 +1,13 @@
+/**
+ * @file queue.hpp
+ * @author Canberk Sönmez (canberk.sonmez.409@gmail.com)
+ * @brief Queue class.
+ * @date 2022-04-17
+ * 
+ * Copyright (c) Canberk Sönmez 2022
+ * 
+ */
+
 #ifndef CXXDES_SYNC_QUEUE_HPP_INCLUDED
 #define CXXDES_SYNC_QUEUE_HPP_INCLUDED
 
@@ -45,7 +55,14 @@ struct queue {
         co_await (mutex_.release() && event_.wake());
         co_return v;
     }
-    
+
+    std::size_t size() const {
+        return q_.size();
+    }
+
+    const std::queue<T> &underlying_queue() const {
+        return q_;
+    }
 private:
     std::size_t max_size_;
     std::queue<T> q_;

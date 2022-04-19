@@ -1,7 +1,7 @@
 /**
  * @file event.hpp
  * @author Canberk Sönmez (canberk.sonmez.409@gmail.com)
- * @brief Synchronization primitice event.
+ * @brief Synchronization primitive event.
  * @date 2022-04-12
  * 
  * Copyright (c) Canberk Sönmez 2022
