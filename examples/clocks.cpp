@@ -1,5 +1,5 @@
 #include <cxxdes/cxxdes.hpp>
-#include <iostream>
+#include <fmt/core.h>
 #include <string>
 
 using namespace cxxdes;
@@ -12,7 +12,7 @@ struct clock_class {
 
     process<> operator()() {
         while (true) {
-            std::cout << name << " now = " << env.now() << std::endl;
+            fmt::print("{}: now = {}\n", name, env.now());
             co_await timeout(period);
         }
     }
@@ -20,7 +20,7 @@ struct clock_class {
 
 process<> clock(time_type period, std::string name) {
     while (true) {
-        std::cout << name << " now = " << env.now() << std::endl;
+        fmt::print("{}: now = {}\n", name, env.now());
         co_await timeout(period);
     }
 }

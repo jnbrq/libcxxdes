@@ -1,8 +1,7 @@
 #include <cxxdes/cxxdes.hpp>
-
+#include <fmt/core.h>
 #include <random>
 #include <chrono>
-#include <iostream>
 
 template <typename Distribution, typename Engine = std::mt19937_64>
 struct random_variable {
@@ -50,11 +49,10 @@ CXXDES_SIMULATION(producer_consumer_example) {
 
         while (true) {
             auto x = co_await q.pop();
-            // std::cout << "t1 = " << x << " t2 = " << now() << std::endl;
             ++n;
 
             if (n == total) {
-                std::cout << "Average latency = " << (total_latency / total) << " seconds.\n";
+                fmt::print("Average latency = {} seconds.", total_latency / total);
                 co_return ;
             }
             

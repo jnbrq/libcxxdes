@@ -1,5 +1,5 @@
 #include <cxxdes/cxxdes.hpp>
-#include <iostream>
+#include <fmt/core.h>
 
 using namespace cxxdes;
 
@@ -8,7 +8,7 @@ CXXDES_SIMULATION(queue_example) {
     
     process<> p1() {
         auto r = co_await q.pop();
-        std::cout << "p1, r = " << r << ", now = " << now() << "\n";
+        fmt::print("p1: r = {}, now = {}\n", r, now());
     }
 
     process<> p2() {

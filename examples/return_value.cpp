@@ -1,5 +1,5 @@
 #include <cxxdes/cxxdes.hpp>
-#include <iostream>
+#include <fmt/core.h>
 
 using namespace cxxdes;
 
@@ -11,7 +11,7 @@ CXXDES_SIMULATION(any_of_example) {
 
     process<> co_main() {
         auto result = co_await test();
-        std::cout << "now = " << now() << " value = " << result << std::endl;
+        fmt::print("now = {}, value = {}\n", now(), result);
     }
 };
 

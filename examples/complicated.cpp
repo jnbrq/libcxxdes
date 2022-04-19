@@ -1,5 +1,5 @@
 #include <cxxdes/cxxdes.hpp>
-#include <iostream>
+#include <fmt/core.h>
 
 using namespace cxxdes;
 
@@ -16,20 +16,20 @@ CXXDES_SIMULATION(complicated_example) {
     }
 
     process<> p2() {
-        std::cout << "p2.a now " << env.now() << std::endl;
+        fmt::print("p2.a now = {}\n", env.now());
         co_await (evt.wait() || timeout(8));
-        std::cout << "p2.b now " << env.now() << std::endl;
+        fmt::print("p2.b now = {}\n", env.now());
         co_await p0();
-        std::cout << "p2.c now " << env.now() << std::endl;
+        fmt::print("p2.c now = {}\n", env.now());
         co_await sequential(timeout(5), timeout(5));
-        std::cout << "p2.d now " << env.now() << std::endl;
+        fmt::print("p2.d now = {}\n", env.now());
     }
 
     // A very bad example
     process<> p3() {
         co_await sequential(timeout(5), timeout(10), p0());
-        // do *not* use p0(env).start()!
-        std::cout << "p3.a now " << env.now() << std::endl;
+        // do *not* use p0().start()!
+        fmt::print("p3.a now = {}\n", env.now());
     }
 
     // Recursion example
@@ -38,21 +38,21 @@ CXXDES_SIMULATION(complicated_example) {
             co_return ;
         
         co_await timeout(5);
-        std::cout << "k = " << k << " now = " << env.now() << std::endl;
+        fmt::print("p4.a k = {}, now = {}\n", k, env.now());
         co_await p4(k - 1);
     }
 
     process<> co_main() {
-        std::cout << "Example 1: p1 and p2 working together. now = " << env.now() << std::endl;
+        fmt::print("Example 1: p1 and p2 working together. now = {}\n", env.now());
         co_await all_of(p1(), p2());
 
-        std::cout << "Example 2: p3 working alone. now = " << env.now() << std::endl;
+        fmt::print("Example 2: p3 working alone. now = {}\n", env.now());
         co_await p3();
 
-        std::cout << "Example 3: p4 working alone. now = " << env.now() << std::endl;
+        fmt::print("Example 3: p4 working alone. now = {}\n", env.now());
         co_await p4(20);
 
-        std::cout << "Example 4: same thing with control flow expressions. now = " << env.now() << std::endl;
+        fmt::print("Example 4: same thing with control flow expressions. now = {}\n", env.now());
         co_await ((p1() && p2()), p3(), p4(20));
     }
 };
