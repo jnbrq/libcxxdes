@@ -107,12 +107,12 @@ struct process_base {
     }
 
     // process is also awaitable
-    event *on_suspend(promise_base *promise, coro_handle other_handle) {
+    event *on_suspend(promise_base *promise, coro_handle other_coro) {
         // start if deferred
         this_promise()->start(promise->env);
 
         // in case of completion, trigger the currently paused coroutine
-        event *completion_evt = new event{ 0, 1000, other_handle };
+        event *completion_evt = new event{ 0, 1000, other_coro };
         this_promise()->completion_evt = completion_evt;
         return completion_evt;
     }
@@ -149,14 +149,10 @@ template <typename T = void>
 struct process: process_base {
     using process_base::process_base;
 
-    struct promise_type;
-
-    using handle_type = std::coroutine_handle<promise_type>;
-
     struct promise_type: promise_base {
         template <typename ...Args>
         promise_type(Args && ...): promise_base() {
-            coro_ = handle_type::from_promise(*this);
+            coro_ = std::coroutine_handle<promise_type>::from_promise(*this);
         };
 
         std::optional<T> return_object;
@@ -187,14 +183,10 @@ template <>
 struct process<void>: process_base {
     using process_base::process_base;
 
-    struct promise_type;
-
-    using handle_type = std::coroutine_handle<promise_type>;
-
     struct promise_type: promise_base {
         template <typename ...Args>
         promise_type(Args && ...): promise_base() {
-            coro_ = handle_type::from_promise(*this);
+            coro_ = std::coroutine_handle<promise_type>::from_promise(*this);
         };
 
         process get_return_object() {
@@ -211,8 +203,8 @@ struct process<void>: process_base {
 };
 
 template <typename T>
-concept awaitable = requires(T t, promise_base *promise, coro_handle handle) {
-    { t.on_suspend(promise, handle) } -> std::convertible_to<event *>;
+concept awaitable = requires(T t, promise_base *promise, coro_handle coro) {
+    { t.on_suspend(promise, coro) } -> std::convertible_to<event *>;
     { t.on_resume() };
 };
 

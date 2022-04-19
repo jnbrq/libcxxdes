@@ -29,8 +29,8 @@ struct environment {
         events_.push(evt);
     }
 
-    void register_coroutine(coro_handle handle) {
-        coros_.push_back(handle);
+    void register_coroutine(coro_handle coro) {
+        coros_.push_back(coro);
     }
 
     bool step() {
@@ -55,9 +55,9 @@ struct environment {
             delete evt;
         }
 
-        for (auto handle: coros_) {
-            if (handle)
-                handle.destroy();
+        for (auto coro: coros_) {
+            if (coro)
+                coro.destroy();
         }
     }
 
