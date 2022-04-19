@@ -1,2 +1,2 @@
-# cxx-des
-A C++20-based Discrete Event Simulator.
+# libcxxdes
+A C++20 Discrete Event Simulation (DES) library.
