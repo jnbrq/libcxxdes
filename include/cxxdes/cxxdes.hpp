@@ -23,6 +23,7 @@
 #include <cxxdes/sync/event.hpp>
 #include <cxxdes/sync/mutex.hpp>
 #include <cxxdes/sync/queue.hpp>
+#include <cxxdes/sync/semaphore.hpp>
 
 namespace cxxdes {
 
