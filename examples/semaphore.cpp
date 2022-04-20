@@ -4,9 +4,11 @@
 using namespace cxxdes;
 
 CXXDES_SIMULATION(queue_example) {
-    sync::semaphore q;
+    sync::semaphore<> q{1};
     
     process<> p1() {
+        co_await q.down();
+        co_await q.down();
         co_await q.down();
         fmt::print("p1: now = {}\n", now());
     }
@@ -16,8 +18,13 @@ CXXDES_SIMULATION(queue_example) {
         co_await q.up();
     }
 
+    process<> p3() {
+        co_await timeout(10);
+        co_await q.up();
+    }
+
     process<> co_main() {
-        co_await (p1() && p2());
+        co_await (p1() && p2() && p3());
     }
 };
 

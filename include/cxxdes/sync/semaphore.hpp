@@ -16,6 +16,9 @@
 #include <cxxdes/sync/mutex.hpp>
 #include <cxxdes/sync/event.hpp>
 
+#include <limits>
+#include <concepts>
+
 namespace cxxdes {
 namespace sync {
 
@@ -25,24 +28,25 @@ using core::timeout;
 using core::process;
 using core::operator&&;
 
+template <std::unsigned_integral U = std::size_t>
 struct semaphore {
-    semaphore(std::size_t max = 0 /* no size limit */):
-        max_{max}, value_{0} {
+    semaphore(U value = 0, U max = std::numeric_limits<U>::max()):
+        value_{value}, max_{max} {
         
     }
 
-    std::size_t max() const {
+    U max() const {
         return max_;
     }
 
-    std::size_t value() const {
+    U value() const {
         return value_;
     }
 
     process<> up() {
         while (true) {
             co_await mutex_.acquire();
-            if (max_ == 0 || value_ < max_)
+            if (value_ < max_)
                 break ;
             co_await (mutex_.release() && event_.wait());
         }
@@ -62,8 +66,8 @@ struct semaphore {
     }
 
 protected:
-    std::size_t max_;
-    std::size_t value_;
+    U value_;
+    U max_;
 
     sync::event event_;
     sync::mutex mutex_;
