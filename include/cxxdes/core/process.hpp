@@ -201,9 +201,6 @@ struct process<void>: process_base {
     void on_resume() {
     }
 
-    // TODO: Find a way to reduce code duplication.
-
-
     auto &start(environment &env) {
         this_promise()->start(&env);
         return *this;
