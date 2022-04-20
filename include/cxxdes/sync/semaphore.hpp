@@ -23,6 +23,7 @@ namespace cxxdes {
 namespace sync {
 
 namespace detail {
+namespace ns_semaphore {
 
 using core::timeout;
 using core::process;
@@ -73,9 +74,10 @@ protected:
     sync::mutex mutex_;
 };
 
+} /* namespace ns_semaphore */
 } /* namespace detail */
 
-using detail::semaphore;
+using detail::ns_semaphore::semaphore;
 
 } /* namespace sync */
 } /* namespace cxxdes */
