@@ -23,6 +23,7 @@ CXXDES_SIMULATION(resource_example) {
             p(2, 2),
             p(3, 10).priority(10000 /* make it last to acquire the resource */)
         );
+        // in the end, process #3 finishes at 12.
         co_return ;
     }
 };
