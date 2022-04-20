@@ -117,29 +117,6 @@ struct process_base {
         return completion_evt;
     }
 
-    auto &start(environment &env) {
-        this_promise()->start(&env);
-        return *this;
-    }
-
-    auto &priority(priority_type priority) {
-        #ifdef CXXDES_SAFE
-        if (!this_promise()->start_event)
-            throw std::runtime_error("cannot change the priority of a started process");
-        #endif
-        this_promise()->start_event->priority = priority;
-        return *this;
-    }
-
-    auto &latency(time_type latency) {
-        #ifdef CXXDES_SAFE
-        if (!this_promise()->start_event)
-            throw std::runtime_error("cannot change the latency of a started process");
-        #endif
-        this_promise()->start_event->time = latency;
-        return *this;
-    }
-
 protected:
     coro_handle coro_ = nullptr;
     mutable promise_base *promise_ = nullptr;
@@ -177,6 +154,29 @@ struct process: process_base {
 
         return *promise->return_object;
     }
+
+    auto &start(environment &env) {
+        this_promise()->start(&env);
+        return *this;
+    }
+
+    auto &priority(priority_type priority) {
+        #ifdef CXXDES_SAFE
+        if (!this_promise()->start_event)
+            throw std::runtime_error("cannot change the priority of a started process");
+        #endif
+        this_promise()->start_event->priority = priority;
+        return *this;
+    }
+
+    auto &latency(time_type latency) {
+        #ifdef CXXDES_SAFE
+        if (!this_promise()->start_event)
+            throw std::runtime_error("cannot change the latency of a started process");
+        #endif
+        this_promise()->start_event->time = latency;
+        return *this;
+    }
 };
 
 template <>
@@ -199,6 +199,32 @@ struct process<void>: process_base {
     };
 
     void on_resume() {
+    }
+
+    // TODO: Find a way to reduce code duplication.
+
+
+    auto &start(environment &env) {
+        this_promise()->start(&env);
+        return *this;
+    }
+
+    auto &priority(priority_type priority) {
+        #ifdef CXXDES_SAFE
+        if (!this_promise()->start_event)
+            throw std::runtime_error("cannot change the priority of a started process");
+        #endif
+        this_promise()->start_event->priority = priority;
+        return *this;
+    }
+
+    auto &latency(time_type latency) {
+        #ifdef CXXDES_SAFE
+        if (!this_promise()->start_event)
+            throw std::runtime_error("cannot change the latency of a started process");
+        #endif
+        this_promise()->start_event->time = latency;
+        return *this;
     }
 };
 

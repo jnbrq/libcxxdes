@@ -24,6 +24,7 @@
 #include <cxxdes/sync/mutex.hpp>
 #include <cxxdes/sync/queue.hpp>
 #include <cxxdes/sync/semaphore.hpp>
+#include <cxxdes/sync/resource.hpp>
 
 namespace cxxdes {
 
