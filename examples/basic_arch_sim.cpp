@@ -26,7 +26,9 @@ struct memory {
                 auto it = std::min_element(
                     blocks_.begin(),
                     blocks_.end(),
-                    [](auto const &a, auto const &b) { return a.second.last_access < b.second.last_access; });
+                    [](auto const &a, auto const &b) {
+                        return a.second.last_access < b.second.last_access;
+                    });
 
                 if (it->second.dirty) {
                     co_await next_->store(it->second.addr);
@@ -94,6 +96,15 @@ CXXDES_SIMULATION(memory_test) {
             auto t2 = now();
             fmt::print("time to load block {} = {}\n", j, t2 - t1);
         }
+
+        for (arch::addr_type i = 0; i < 16; ++i) {
+            auto j = i;
+            auto t1 = now();
+            co_await mem2.load(j);
+            auto t2 = now();
+            fmt::print("time to load block {} = {}\n", j, t2 - t1);
+        }
+
         co_return ;
     }
 };
