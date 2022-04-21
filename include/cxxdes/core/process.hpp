@@ -283,7 +283,7 @@ inline auto promise_base::await_transform(get_env_type) {
             return true;
         }
 
-        bool await_suspend(coro_handle coro) {
+        void await_suspend(coro_handle coro) {
         }
 
         auto await_resume() {
