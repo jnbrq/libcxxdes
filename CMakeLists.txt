@@ -1,18 +1,28 @@
 cmake_minimum_required(VERSION 3.12)
 
-project(cxx-des)
+project(cxxdes)
 set(CMAKE_CXX_STANDARD 20)
 
-# Imported library for cxxdes
-add_library(cxxdes::cxxdes INTERFACE IMPORTED)
-target_include_directories(cxxdes::cxxdes INTERFACE "${PROJECT_SOURCE_DIR}/include")
-target_compile_options(cxxdes::cxxdes INTERFACE "--std=c++20")
-target_compile_definitions(cxxdes::cxxdes INTERFACE "CXXDES_SAFE")
+# TODO: please see
+# https://dominikberner.ch/cmake-interface-lib/
+
+# Library for cxxdes
+add_library(cxxdes INTERFACE)
+target_include_directories(
+    cxxdes
+    INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+target_compile_options(cxxdes INTERFACE "--std=c++20")
+target_compile_definitions(cxxdes INTERFACE "CXXDES_SAFE")
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(cxxdes::cxxdes INTERFACE "-fcoroutines")
+    target_compile_options(cxxdes INTERFACE "-fcoroutines")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_compile_options(cxxdes::cxxdes INTERFACE "-fcoroutines-ts")
+    target_compile_options(cxxdes INTERFACE "-fcoroutines-ts")
 endif()
+
+add_library(cxxdes::cxxdes ALIAS cxxdes)
 
 file(GLOB cpp_files ${PROJECT_SOURCE_DIR}/examples/*.cpp)
 
