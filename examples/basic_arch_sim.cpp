@@ -18,6 +18,7 @@ struct memory {
     process<> load(addr_type addr) {
         time_type timestamp = (co_await get_env)->now();
 
+        // co_await timeout(extra_latency_); // additional latency to be added here
         co_await mtx_.acquire();
 
         if (next_ && !blocks_.count(addr)) {
@@ -49,6 +50,7 @@ struct memory {
     process<> store(addr_type addr) {
         time_type timestamp = (co_await get_env)->now();
 
+        // co_await timeout(extra_latency_); // additional latency to be added here
         co_await mtx_.acquire();
 
         // given the fact that this is an inclusive memory hierarchy,
