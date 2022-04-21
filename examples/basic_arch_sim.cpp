@@ -81,17 +81,17 @@ CXXDES_SIMULATION(memory_test) {
     process<> co_main() {
         for (arch::addr_type i = 0; i < 32; ++i) {
             auto j = i % 16;
-            auto t1 = env.now();
+            auto t1 = now();
             co_await mem2.load(j);
-            auto t2 = env.now();
+            auto t2 = now();
             fmt::print("time to load block {} = {}\n", j, t2 - t1);
         }
 
         for (arch::addr_type i = 0; i < 32; ++i) {
             auto j = i;
-            auto t1 = env.now();
+            auto t1 = now();
             co_await mem2.load(j);
-            auto t2 = env.now();
+            auto t2 = now();
             fmt::print("time to load block {} = {}\n", j, t2 - t1);
         }
         co_return ;
