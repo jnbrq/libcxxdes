@@ -24,6 +24,8 @@ namespace core {
 namespace detail {
 namespace ns_process {
 
+struct get_env_type {};
+
 struct promise_base {
     /**
      * @brief the environment that is associated with the event object.
@@ -71,6 +73,8 @@ struct promise_base {
 
     template <typename T>
     auto await_transform(T &&a);
+
+    auto await_transform(get_env_type);
 
     ~promise_base() {
         if (start_event) delete start_event;
@@ -271,12 +275,33 @@ inline auto promise_base::await_transform(T &&t) {
     return wrap_awaitable<std::unwrap_ref_decay_t<T>>(this, std::forward<T>(t));
 }
 
+inline auto promise_base::await_transform(get_env_type) {
+    struct awaitable_type {
+        environment *env;
+
+        bool await_ready() {
+            return true;
+        }
+
+        bool await_suspend(coro_handle coro) {
+        }
+
+        auto await_resume() {
+            return env;
+        }
+    };
+
+    return awaitable_type{env};
+}
+
 } /* namespace ns_process */
 } /* namespace detail */
 
 using detail::ns_process::promise_base;
 using detail::ns_process::process;
 using detail::ns_process::awaitable;
+
+constexpr detail::ns_process::get_env_type get_env;
 
 } /* namespace core */
 } /* namespace cxxdes */

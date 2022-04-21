@@ -75,6 +75,35 @@ private:
     std::vector<coro_handle> coros_;
 };
 
+// An alternative get_env implementation, slower, left as an example
+#if 0
+
+namespace detail {
+
+struct get_env_type {
+    event *on_suspend(promise_base *promise, coro_handle coro) {
+        env_ = promise->env;
+        auto evt = new event(env_->now(), 1000, coro);
+        env_->append_event(evt);
+        return evt;
+    }
+
+    environment *on_resume() {
+        return env_;
+    }
+
+private:
+    environment *env_ = nullptr;
+};
+
+} /* namespace detail */
+
+inline auto get_env() {
+    return detail::get_env_type{};
+}
+
+#endif
+
 } /* namespace core */
 } /* namespace cxxdes */
 
