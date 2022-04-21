@@ -43,7 +43,6 @@ inline auto timeout(time_type latency) {
     return detail::ns_timeout::timeout(latency);
 }
 
-[[nodiscard("expected usage: co_await yield")]]
 constexpr auto yield = detail::ns_timeout::timeout{0};
 
 } /* namespace core */
