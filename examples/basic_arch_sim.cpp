@@ -79,7 +79,7 @@ private:
 }
 
 CXXDES_SIMULATION(memory_test) {
-    arch::memory mem1{10, 1024, nullptr};
+    arch::memory mem1{10 /* latency */, 1024 /* capacity */, nullptr /* next level */};
     arch::memory mem2{1, 16, &mem1};
 
     process<> co_main() {

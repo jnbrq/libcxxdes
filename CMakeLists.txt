@@ -3,9 +3,6 @@ cmake_minimum_required(VERSION 3.12)
 project(cxx-des)
 set(CMAKE_CXX_STANDARD 20)
 
-# external libraries
-add_subdirectory("external/fmt" EXCLUDE_FROM_ALL)
-
 # Imported library for cxxdes
 add_library(cxxdes::cxxdes INTERFACE IMPORTED)
 target_include_directories(cxxdes::cxxdes INTERFACE "${PROJECT_SOURCE_DIR}/include")
@@ -19,13 +16,18 @@ endif()
 
 file(GLOB cpp_files ${PROJECT_SOURCE_DIR}/examples/*.cpp)
 
-foreach (cpp_file ${cpp_files})
-    get_filename_component(basename ${cpp_file} NAME_WE)
-    add_executable("example_${basename}" "${cpp_file}")
-    target_link_libraries(
-        "example_${basename}"
-        PUBLIC
-        cxxdes::cxxdes
-        fmt::fmt-header-only)
-endforeach()
+if (NOT DEFINED CXXDES_NO_EXAMPLES)
 
+    find_package(fmt)
+
+    foreach (cpp_file ${cpp_files})
+        get_filename_component(basename ${cpp_file} NAME_WE)
+        add_executable("example_${basename}" "${cpp_file}")
+        target_link_libraries(
+            "example_${basename}"
+            PUBLIC
+            cxxdes::cxxdes
+            fmt::fmt-header-only)
+    endforeach()
+
+endif()
