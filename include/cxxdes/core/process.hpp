@@ -121,9 +121,12 @@ struct process_base {
         return completion_evt;
     }
 
-
     void start(environment &env) {
         this_promise()->start(&env);
+    }
+
+    void start(environment *env) {
+        this_promise()->start(env);
     }
 
     void priority(priority_type priority) {
@@ -185,6 +188,11 @@ struct process: process_base {
         return *this;
     }
 
+    auto &start(environment *env) {
+        process_base::start(env);
+        return *this;
+    }
+
     auto &priority(priority_type priority) {
         process_base::priority(priority);
         return *this;
@@ -229,6 +237,11 @@ struct process<void>: process_base {
     }
 
     auto &start(environment &env) {
+        process_base::start(env);
+        return *this;
+    }
+
+    auto &start(environment *env) {
         process_base::start(env);
         return *this;
     }

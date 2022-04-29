@@ -16,7 +16,7 @@ CXXDES_SIMULATION(return_value_example) {
 
         // test 2
         auto h = test();
-        h.start(env);
+        h.start(co_await get_env);
         co_await timeout(11);
         fmt::print("now = {}, done = {}, value = {}\n", now(), h.done(), h.result());
     }
