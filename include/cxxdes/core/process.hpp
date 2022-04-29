@@ -157,14 +157,14 @@ struct process: process_base {
             coro_ = std::coroutine_handle<promise_type>::from_promise(*this);
         };
 
-        std::optional<T> return_object;
+        std::optional<T> result;
 
         process get_return_object() {
             return process(coro_, this);
         }
 
         void return_value(const T& t) {
-            return_object = t;
+            result = t;
             do_return();
         }
     };
@@ -172,12 +172,12 @@ struct process: process_base {
     T on_resume() {
         auto promise = (promise_type *) this_promise();
         #ifdef CXXDES_SAFE
-        if (!promise->return_object) {
+        if (!promise->result) {
             throw std::runtime_error("no return value from the process!");
         }
         #endif
 
-        return *promise->return_object;
+        return *promise->result;
     }
 
     auto &start(environment &env) {
@@ -193,6 +193,16 @@ struct process: process_base {
     auto &latency(time_type latency) {
         process_base::latency(latency);
         return *this;
+    }
+
+    T &result() {
+        auto promise = (promise_type *) this_promise();
+        #ifdef CXXDES_SAFE
+        if (!promise->result) {
+            throw std::runtime_error("no return value from the process!");
+        }
+        #endif
+        return *(promise->result);
     }
 };
 
