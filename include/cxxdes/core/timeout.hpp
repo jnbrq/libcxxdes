@@ -21,12 +21,15 @@ namespace detail {
 namespace ns_timeout {
 
 struct timeout {
-    constexpr timeout(time_type latency): latency{latency} {  }
+    constexpr timeout(time_type latency, priority_type priority = 1000):
+        latency{latency}, priority{priority} {
+    }
 
     time_type latency;
+    priority_type priority = 1000;
 
     event *on_suspend(promise_base *promise, coro_handle coro) {
-        auto evt = new event(promise->env->now() + latency, 1000, coro);
+        auto evt = new event(promise->env->now() + latency, priority, coro);
         promise->env->append_event(evt);
         return evt;
     }
@@ -39,8 +42,8 @@ struct timeout {
 
 
 [[nodiscard("expected usage: co_await timeout(latency)")]]
-inline auto timeout(time_type latency) {
-    return detail::ns_timeout::timeout(latency);
+inline auto timeout(time_type latency, priority_type priority = 1000) {
+    return detail::ns_timeout::timeout(latency, priority);
 }
 
 constexpr auto yield = detail::ns_timeout::timeout{0};
