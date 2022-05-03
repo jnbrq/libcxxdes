@@ -33,4 +33,7 @@
 
 # CMake
 build*
+
+# visual studio related
 .vscode
+.vs

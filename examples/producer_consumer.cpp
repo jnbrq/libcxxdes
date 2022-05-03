@@ -28,17 +28,25 @@ inline auto rand_seed() {
 using namespace cxxdes;
 
 CXXDES_SIMULATION(producer_consumer_example) {
+    producer_consumer_example(double lambda, double mu, std::size_t n_packets = 1000000):
+        lambda{ rand_seed() /* seed */, lambda /* lambda */},
+        mu{ rand_seed() /* seed */, mu /* mu */ },
+        n_packets{n_packets} {
+    }
+
     double scale = 1.0e3; // 1000 simulation cycles is one second
 
     sync::queue<int> q;
-    std::size_t total = 100000;
+    std::size_t n_packets;
     double total_latency = 0;
 
-    exponent_rv lambda{ rand_seed() /* seed */, 4.0 /* lambda */ };
-    exponent_rv mu{ rand_seed() /* seed */, 10.0 /* mu */ };
+    exponent_rv lambda;
+    exponent_rv mu;
+
+    double avg_latency = 0.0;
     
     process<> producer() {
-        for (std::size_t i = 0; i < total; ++i) {
+        for (std::size_t i = 0; i < n_packets; ++i) {
             co_await q.put(now());
             co_await timeout(lambda() * scale);
         }
@@ -51,8 +59,8 @@ CXXDES_SIMULATION(producer_consumer_example) {
             auto x = co_await q.pop();
             ++n;
 
-            if (n == total) {
-                fmt::print("Average latency = {} seconds.\n", total_latency / total);
+            if (n == n_packets) {
+                avg_latency = total_latency / n_packets;
                 co_return ;
             }
             
@@ -68,6 +76,16 @@ CXXDES_SIMULATION(producer_consumer_example) {
 };
 
 int main() {
-    producer_consumer_example{}.run();
+    double mu = 10.0;
+    std::size_t n_steps = 100;
+
+    fmt::print("{}, {}, {}, {}\n", "lambda", "mu", "rho", "avg_latency");
+    for (std::size_t i = 0; i < n_steps; ++i) {
+        double lambda = mu * i / (n_steps - 1);
+        auto sim = producer_consumer_example{lambda, mu};
+        sim.run();
+        fmt::print("{}, {}, {}, {}\n", lambda, mu, lambda / mu, sim.avg_latency);
+    }
+
     return 0;
 }

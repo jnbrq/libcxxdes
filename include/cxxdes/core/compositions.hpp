@@ -40,7 +40,7 @@ struct giant1 {
                 if (Condition::operator()(remaining)) {
                     // inherit the output_event features
                     output_event->time = evt->time;
-                    output_event->priority = evt->priority; //evt->priority;
+                    output_event->priority = evt->priority;
                     output_event->coro = evt->coro;
                     env->append_event(output_event);
                     done = true;
