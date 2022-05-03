@@ -173,15 +173,8 @@ struct process: process_base {
         }
     };
 
-    T on_resume() {
-        auto promise = (promise_type *) this_promise();
-        #ifdef CXXDES_SAFE
-        if (!promise->result) {
-            throw std::runtime_error("no return value from the process!");
-        }
-        #endif
-
-        return *promise->result;
+    T &on_resume() {
+        return result();
     }
 
     auto &start(environment &env) {
@@ -266,6 +259,8 @@ concept awaitable = requires(T t, promise_base *promise, coro_handle coro) {
 
 template <awaitable T>
 struct wrap_awaitable: T {
+    using awaitable_return_value = decltype(std::declval<T>().on_resume());
+
     template <typename ...U>
     wrap_awaitable(promise_base *promise, U && ...u):
         promise_{promise},
@@ -286,8 +281,12 @@ struct wrap_awaitable: T {
         return true;
     }
 
-    auto await_resume() {
+    auto &await_resume() requires (not (std::is_same_v<awaitable_return_value, void>)) {
         return T::on_resume();
+    }
+
+    void await_resume() requires (std::is_same_v<awaitable_return_value, void>) {
+        T::on_resume();
     }
 
 private:
