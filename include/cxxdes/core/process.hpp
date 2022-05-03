@@ -11,6 +11,7 @@
 #ifndef CXXDES_CORE_PROCESS_HPP_INCLUDED
 #define CXXDES_CORE_PROCESS_HPP_INCLUDED
 
+#include <type_traits>
 #include <concepts>
 #include <stdexcept>
 #include <optional>
@@ -294,12 +295,40 @@ inline auto promise_base::await_transform(get_env_type) {
     return awaitable_type{env};
 }
 
+
+template <typename T>
+struct is_process_impl: std::false_type {  };
+
+template <typename T>
+struct is_process_impl<process<T>>: std::true_type {  };
+
+template <typename T>
+struct process_return_type_impl {  };
+
+template <typename T>
+struct process_return_type_impl<process<T>> {
+    using return_type = T;
+};
+
+template <typename T>
+constexpr auto is_process = is_process_impl<T>::value;
+
+template <typename T>
+using process_return_type = typename process_return_type_impl<T>::return_type;
+
+template <typename T, typename R>
+concept process_returning = is_process<T> && std::is_convertible_v<process_return_type<T>, R>;
+
 } /* namespace ns_process */
 } /* namespace detail */
 
 using detail::ns_process::promise_base;
 using detail::ns_process::process;
 using detail::ns_process::awaitable;
+
+using detail::ns_process::is_process;
+using detail::ns_process::process_return_type;
+using detail::ns_process::process_returning;
 
 constexpr detail::ns_process::get_env_type get_env;
 
