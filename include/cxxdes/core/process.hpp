@@ -171,6 +171,11 @@ struct process: process_base {
             result = t;
             do_return();
         }
+
+        void return_value(T&& t) {
+            result = std::move(t);
+            do_return();
+        }
     };
 
     T &on_resume() {
