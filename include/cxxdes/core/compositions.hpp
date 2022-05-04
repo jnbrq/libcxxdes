@@ -12,6 +12,8 @@
 #define CXXDES_CORE_COMPOSITIONS_HPP_INCLUDED
 
 #include <tuple>
+#include <vector>
+#include <iterator>
 
 #include <cxxdes/core/process.hpp>
 #include <cxxdes/core/environment.hpp>
@@ -73,11 +75,40 @@ struct giant1 {
         }
     };
 
+    template <awaitable A>
+    struct result_type_runtime {
+        std::vector<A> awaitables;
+
+        event *on_suspend(promise_base *promise, coro_handle coro) {
+            auto handler = new new_handler;
+            handler->done = false;
+            handler->remaining = awaitables.size();
+            handler->output_event = new event{0, 0, coro};
+            handler->env = promise->env;
+            for (auto &awaitable: awaitables)
+                awaitable.on_suspend(promise, coro)->handler = handler;
+            return handler->output_event;
+        }
+
+        void on_resume() {
+            // call on_resume on each awaitable
+            for (auto &awaitable: awaitables)
+                awaitable.on_resume();
+        }
+    };
+
     struct functor {
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await any_of(awaitables...) or all_of(awaitables...)")]]
         constexpr auto operator()(Ts && ...ts) const {
             return result_type<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
+        }
+
+        template <typename It>
+        [[nodiscard("expected usage: co_await any_of.sequence(begin, end) or all_of.sequence(begin, end)")]]
+        constexpr auto sequence(It first, It last) const {
+            using value_type = typename std::iterator_traits<It>::value_type;
+            return result_type_runtime<value_type>{std::vector<value_type>(first, last)};
         }
     };
 
@@ -129,11 +160,44 @@ struct giant2 {
         }
     };
 
+    template <awaitable A>
+    struct result_type_runtime {
+        std::vector<A> awaitables;
+
+        static process<> p(environment *env, std::vector<A> &awaitables) {
+            for (auto &awaitable: awaitables) {
+                co_await awaitable;
+            }
+            co_return ;
+        }
+        
+        event *on_suspend(promise_base *promise, coro_handle coro) {
+            event *output_event = new event{ 0, 1000, coro };
+            auto pp = p(promise->env, awaitables);
+            pp.this_promise()->completion_evt = output_event;
+            pp.start(*(promise->env));
+            return output_event;
+        }
+
+        void on_resume() {
+            for (auto &awaitable: awaitables) {
+                awaitable.on_resume();
+            }
+        }
+    };
+
     struct functor {
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await sequential(awaitables...)")]]
         constexpr auto operator()(Ts && ...ts) const {
             return result_type<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
+        }
+
+        template <typename It>
+        [[nodiscard("expected usage: co_await sequential.sequence(begin, end)")]]
+        constexpr auto sequence(It first, It last) const {
+            using value_type = typename std::iterator_traits<It>::value_type;
+            return result_type_runtime<value_type>{std::vector<value_type>(first, last)};
         }
     };
 };

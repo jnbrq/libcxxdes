@@ -1,5 +1,6 @@
 #include <cxxdes/cxxdes.hpp>
 #include <fmt/core.h>
+#include <vector>
 
 using namespace cxxdes;
 
@@ -42,6 +43,21 @@ CXXDES_SIMULATION(complicated_example) {
         co_await p4(k - 1);
     }
 
+    process<> p5() {
+        time_type t = 0;
+
+        fmt::print("Example 5: dynamic versions. now = {}\n", env.now());
+        auto to_wait = std::vector{ timeout(5),  timeout(10), timeout(20) };
+
+        t = now();
+        co_await all_of.sequence(to_wait.begin(), to_wait.end());
+        fmt::print("p5.delta1: {}\n", env.now() - t);
+
+        t = now();
+        co_await any_of.sequence(to_wait.begin(), to_wait.end());
+        fmt::print("p5.delta1: {}\n", env.now() - t);
+    }
+
     process<> co_main() {
         fmt::print("Example 1: p1 and p2 working together. now = {}\n", env.now());
         co_await all_of(p1(), p2());
@@ -54,6 +70,9 @@ CXXDES_SIMULATION(complicated_example) {
 
         fmt::print("Example 4: same thing with control flow expressions. now = {}\n", env.now());
         co_await ((p1() && p2()), p3(), p4(20));
+
+        fmt::print("Example 5: dynamic. now = {}\n", env.now());
+        co_await p5();
     }
 };
 
