@@ -8,10 +8,11 @@
  * 
  */
 
-#ifndef CXXDES_SYNC_QUEUE_HPP_INCLUDED
-#define CXXDES_SYNC_QUEUE_HPP_INCLUDED
+#ifndef LIBCXXDES_INCLUDE_CXXDES_SYNC_QUEUE_HPP_INCLUDED
+#define LIBCXXDES_INCLUDE_CXXDES_SYNC_QUEUE_HPP_INCLUDED
 
 #include <queue>
+#include <cxxdes/core/timeout.hpp>
 #include <cxxdes/core/compositions.hpp>
 #include <cxxdes/core/process.hpp>
 #include <cxxdes/sync/mutex.hpp>
@@ -80,4 +81,4 @@ using detail::ns_queue::queue;
 } /* namespace sync */
 } /* namespace cxxdes */
 
-#endif /* CXXDES_SYNC_QUEUE_HPP_INCLUDED */
+#endif /* LIBCXXDES_INCLUDE_CXXDES_SYNC_QUEUE_HPP_INCLUDED */
