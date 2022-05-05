@@ -52,7 +52,7 @@ struct queue {
                 break ;
             co_await (mutex_.release() && event_.wait());
         }
-        auto v = q_.front();
+        auto v = std::move(q_.front());
         q_.pop();
         co_await (mutex_.release() && event_.wake());
         co_return v;
