@@ -94,6 +94,8 @@ protected:
 };
 
 struct process_base {
+    process_base() = default;
+
     process_base(coro_handle coro, promise_base *promise):
         coro_{coro},
         promise_{promise} {
