@@ -54,7 +54,6 @@ struct promise_base {
         if (start_event) {
             this->env = env;
             start_event->coro = coro_;
-            env->register_coroutine(coro_);
             env->append_event(start_event);
             start_event = nullptr;
         }
@@ -64,7 +63,7 @@ struct promise_base {
         return {};
     }
 
-    std::suspend_always final_suspend() noexcept {
+    std::suspend_never final_suspend() noexcept {
         return {};
     }
 

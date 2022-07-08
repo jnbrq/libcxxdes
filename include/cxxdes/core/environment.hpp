@@ -29,10 +29,6 @@ struct environment {
         events_.push(evt);
     }
 
-    void register_coroutine(coro_handle coro) {
-        coros_.push_back(coro);
-    }
-
     bool step() {
         if (events_.empty())
             return false;
@@ -54,11 +50,6 @@ struct environment {
             events_.pop();
             delete evt;
         }
-
-        for (auto coro: coros_) {
-            if (coro)
-                coro.destroy();
-        }
     }
 
 private:
@@ -72,7 +63,6 @@ private:
     };
 
     std::priority_queue<event *, std::vector<event *>, event_comp> events_;
-    std::vector<coro_handle> coros_;
 };
 
 // An alternative get_env implementation, slower, left as an example
