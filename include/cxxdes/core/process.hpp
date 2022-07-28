@@ -16,6 +16,14 @@
 #include <stdexcept>
 #include <optional>
 
+#ifdef CXXDES_LIBRARY_DEBUG
+#include <fmt/format.h>
+
+#define CXXDES_INFO_MEMBER_FUNCTION fmt::print("[CXXDES] {} FROM this = {}\n", __PRETTY_FUNCTION__, (void *) this)
+#else
+#define CXXDES_INFO_MEMBER_FUNCTION
+#endif
+
 #include <cxxdes/core/event.hpp>
 #include <cxxdes/core/environment.hpp>
 
@@ -59,11 +67,13 @@ struct promise_base {
         }
     }
 
-    std::suspend_always initial_suspend() {
+    std::suspend_always initial_suspend() noexcept {
+        CXXDES_INFO_MEMBER_FUNCTION;
         return {};
     }
 
     std::suspend_never final_suspend() noexcept {
+        CXXDES_INFO_MEMBER_FUNCTION;
         return {};
     }
 
@@ -162,21 +172,34 @@ struct process: process_base {
             coro_ = std::coroutine_handle<promise_type>::from_promise(*this);
         };
 
-        std::optional<T> result;
+        T &result() {
+            CXXDES_INFO_MEMBER_FUNCTION;
+            #ifdef CXXDES_SAFE
+            if (!result_) {
+                throw std::runtime_error("no return value from the process!");
+            }
+            #endif
+            return *result_;
+        }
 
         process get_return_object() {
             return process(coro_, this);
         }
 
         void return_value(const T& t) {
-            result = t;
+            CXXDES_INFO_MEMBER_FUNCTION;
+            result_ = t;
             do_return();
         }
 
         void return_value(T&& t) {
-            result = std::move(t);
+            CXXDES_INFO_MEMBER_FUNCTION;
+            result_ = std::move(t);
             do_return();
         }
+
+    private:
+        std::optional<T> result_;
     };
 
     T &on_resume() {
@@ -205,12 +228,7 @@ struct process: process_base {
 
     T &result() {
         auto promise = (promise_type *) this_promise();
-        #ifdef CXXDES_SAFE
-        if (!promise->result) {
-            throw std::runtime_error("no return value from the process!");
-        }
-        #endif
-        return *(promise->result);
+        return promise->result();
     }
 };
 

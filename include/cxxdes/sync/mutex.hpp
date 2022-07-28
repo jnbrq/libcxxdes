@@ -77,7 +77,7 @@ private:
 };
 
 inline core::event *release_awaitable::on_suspend(promise_base *promise, coro_handle coro) {
-    #if CXXDES_SAFE
+    #ifdef CXXDES_SAFE
     if (mtx->coro_ != coro) {
         throw std::runtime_error("cannot release a mutex from a different process.");
     }
