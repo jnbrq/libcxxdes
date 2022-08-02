@@ -564,10 +564,45 @@ struct all_of_condition {
 constexpr any_all_helper<any_of_condition>::functor any_of;
 constexpr any_all_helper<all_of_condition>::functor all_of;
 
+struct sequential_helper {
+    template <typename ...Ts>
+    static process<void> seq_proc(Ts && ...ts) {
+        ((co_await std::forward<Ts>(ts)), ...);
+        co_return ;
+    }
+
+
+    struct functor {
+        template <typename ...Ts>
+        [[nodiscard("expected usage: co_await sequential(awaitables...)")]]
+        constexpr auto operator()(Ts && ...ts) const {
+            return seq_proc(std::forward<Ts>(ts)...);
+        }
+    };
+};
+
+constexpr sequential_helper::functor sequential;
+
 }
 
 using detail::any_of;
 using detail::all_of;
+using detail::sequential;
+
+template <awaitable A1, awaitable A2>
+auto operator||(A1 &&a1, A2 &&a2) {
+    return any_of(std::move(a1), std::move(a2));
+}
+
+template <awaitable A1, awaitable A2>
+auto operator&&(A1 &&a1, A2 &&a2) {
+    return all_of(std::move(a1), std::move(a2));
+}
+
+template <awaitable A1, awaitable A2>
+auto operator,(A1 &&a1, A2 &&a2) {
+    return sequential(std::move(a1), std::move(a2));
+}
 
 #include <fmt/core.h>
 
@@ -593,9 +628,8 @@ process<void> test() {
 
 process<void> test2() {
     auto this_env = co_await this_process::get_environment();
-    co_await all_of(timeout(10));
-    // co_await all_of(timeout(10) /*, timeout(30) */);
-    // fmt::print("from {}, now = {}\n", __PRETTY_FUNCTION__, this_env->now());
+    co_await sequential(all_of(timeout(10), timeout(30)), timeout(5));
+    fmt::print("from {}, now = {}\n", __PRETTY_FUNCTION__, this_env->now());
 }
 
 int main() {
