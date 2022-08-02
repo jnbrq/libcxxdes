@@ -11,88 +11,58 @@
 #ifndef CXXDES_CORE_ENVIRONMENT_HPP_INCLUDED
 #define CXXDES_CORE_ENVIRONMENT_HPP_INCLUDED
 
-#include <cxxdes/core/event.hpp>
+#include <cxxdes/core/token.hpp>
 #include <queue>
 
 namespace cxxdes {
 namespace core {
 
 struct environment {
-
     environment() {  }
 
     time_type now() const {
         return now_;
     }
 
-    void append_event(event *evt) {
-        events_.push(evt);
+    void schedule_token(token *tkn) {
+        tokens_.push(tkn);
     }
 
     bool step() {
-        if (events_.empty())
+        if (tokens_.empty())
             return false;
         
-        auto evt = events_.top();
-        events_.pop();
+        auto tkn = tokens_.top();
+        tokens_.pop();
 
-        now_ = std::max(evt->time, now_);
-        evt->process();
+        now_ = std::max(tkn->time, now_);
+        tkn->process();
 
-        delete evt;
+        delete tkn;
 
         return true;
     }
 
     ~environment() {
-        while (!events_.empty()) {
-            auto evt = events_.top();
-            events_.pop();
-            delete evt;
+        while (!tokens_.empty()) {
+            auto tkn = tokens_.top();
+            tokens_.pop();
+            delete tkn;
         }
     }
 
 private:
     time_type now_ = 0;
 
-    struct event_comp {
-        bool operator()(event *evt_a, event *evt_b) const {
-            return (evt_a->time > evt_b->time) ||
-                (evt_a->time == evt_b->time && evt_a->priority > evt_b->priority);
+    struct token_comp {
+        bool operator()(token *tkn_a, token *tkn_b) const {
+            return (tkn_a->time > tkn_b->time) ||
+                (tkn_a->time == tkn_b->time && tkn_a->priority > tkn_b->priority);
         }
     };
 
-    std::priority_queue<event *, std::vector<event *>, event_comp> events_;
+    std::priority_queue<token *, std::vector<token *>, token_comp> tokens_;
 };
-
-// An alternative get_env implementation, slower, left as an example
-#if 0
-
-namespace detail {
-
-struct get_env_type {
-    event *on_suspend(promise_base *promise, coro_handle coro) {
-        env_ = promise->env;
-        auto evt = new event(env_->now(), 1000, coro);
-        env_->append_event(evt);
-        return evt;
-    }
-
-    environment *on_resume() {
-        return env_;
-    }
-
-private:
-    environment *env_ = nullptr;
-};
-
-} /* namespace detail */
-
-inline auto get_env() {
-    return detail::get_env_type{};
-}
-
-#endif
 
 } /* namespace core */
 } /* namespace cxxdes */
