@@ -42,7 +42,7 @@ struct timeout {
         return tkn_;
     }
 
-    void await_resume() {
+    void await_resume() const noexcept {
     }
 private:
     environment *env_ = nullptr;
@@ -51,7 +51,9 @@ private:
     priority_type priority_;
 };
 
-constexpr auto yield = timeout{0};
+inline auto yield() {
+    return timeout{0};
+}
 
 } /* namespace core */
 } /* namespace cxxdes */

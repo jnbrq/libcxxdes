@@ -26,11 +26,11 @@ process<> clock(time_type period, std::string name) {
 }
 
 int main() {
-    clock(2, "clock 1").start(env);
-    clock(3, "clock 2").start(env);
+    clock(2, "clock 1").await_bind(&env);
+    clock(3, "clock 2").await_bind(&env);
 
     auto clock_instance = clock_class{7, "clock 3"};
-    clock_instance().start(env);
+    clock_instance().await_bind(&env);
 
     while (env.step() && env.now() < 10) ;
 }

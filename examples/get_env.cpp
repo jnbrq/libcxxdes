@@ -5,7 +5,7 @@ using namespace cxxdes;
 
 process<> p1() {
     fmt::print("p1.a\n");
-    auto env = co_await get_env; // it should not yield control here
+    auto env = co_await this_process::get_environment(); // it should not yield control here
     fmt::print("p1.b\n");
     co_await timeout(4);
     fmt::print("p1.c {}\n", env->now());
@@ -13,16 +13,16 @@ process<> p1() {
 
 process<> p2() {
     fmt::print("p2\n");
-    co_await yield;
+    co_await yield();
 
     fmt::print("p2\n");
-    co_await yield;
+    co_await yield();
 
     fmt::print("p2\n");
-    co_await yield;
+    co_await yield();
 
     fmt::print("p2\n");
-    co_await yield;
+    co_await yield();
 
     co_return ;
 }
@@ -30,8 +30,8 @@ process<> p2() {
 int main() {
     environment env;
 
-    p1().start(env);
-    p2().priority(-10000).start(env);
+    p1().await_bind(&env);
+    p2().priority(-10000).await_bind(&env);
 
     while (env.step()) ;
     return 0;
