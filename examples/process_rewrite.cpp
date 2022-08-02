@@ -144,19 +144,16 @@ private:
 
 struct this_process {
     struct get_return_latency {  };
-
-    struct get_return_priority {  };
-
     struct set_return_latency {
         time_type latency;
     };
 
+    struct get_return_priority {  };
     struct set_return_priority {
         priority_type priority;
     };
     
     struct get_priority {  };
-
     struct set_priority {
         priority_type priority;
     };
