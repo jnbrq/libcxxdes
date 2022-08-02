@@ -13,12 +13,22 @@ using namespace experimental;
 #include <type_traits>
 #include <iostream>
 #include <cstdint>
+#include <limits>
 #include <queue>
 #include <optional>
 
 using priority_type = std::intmax_t;
 using time_type = std::uintmax_t;
 using coro_handle = std::coroutine_handle<>;
+
+namespace priority_consts {
+
+constexpr priority_type highest = std::numeric_limits<priority_type>::min();
+constexpr priority_type inherit = std::numeric_limits<priority_type>::max();
+constexpr priority_type lowest = inherit - 1;
+constexpr priority_type zero = static_cast<priority_type>(0);
+
+}
 
 struct empty_type {};
 
@@ -34,6 +44,7 @@ struct token {
         time{time},
         priority{priority},
         coro{coro} {  }
+        
 
     time_type time = 0;
     priority_type priority = 0;
@@ -61,7 +72,7 @@ struct environment {
         return now_;
     }
 
-    void append_token(token *tkn) {
+    void schedule_token(token *tkn) {
         tokens_.push(tkn);
     }
 
@@ -101,12 +112,54 @@ private:
     std::priority_queue<token *, std::vector<token *>, token_comp> tokens_;
 };
 
+template <typename ReturnType>
+struct process;
+
 template <typename T>
-concept awaitable = requires(T t, environment *env, coro_handle coro) {
-    { t.await_bind(env) };
+concept awaitable = requires(
+    T t,
+    environment *env,
+    priority_type priority,
+    coro_handle coro) {
+    { t.await_bind(env, priority) };
     { t.await_ready() } -> std::same_as<bool>;
     { t.await_suspend(coro) };
     { t.await_resume() };
+};
+
+template <typename T>
+struct immediately_returning_awaitable {
+    template <typename ...Args>
+    immediately_returning_awaitable(Args &&...args): t_{std::forward<Args>(args)...} {  }
+
+    void await_bind(environment *, priority_type) const noexcept {  }
+    bool await_ready() const noexcept { return true; }
+    void await_suspend(coro_handle) const noexcept {  }
+    T await_resume() { return std::move(t_); }
+private:
+    T t_;
+};
+
+struct this_process {
+    struct get_return_latency {  };
+
+    struct get_return_priority {  };
+
+    struct set_return_latency {
+        time_type latency;
+    };
+
+    struct set_return_priority {
+        priority_type priority;
+    };
+    
+    struct get_priority {  };
+
+    struct set_priority {
+        priority_type priority;
+    };
+
+    struct get_environment {  };
 };
 
 template <typename ReturnType = void>
@@ -116,9 +169,8 @@ struct process {
     process(promise_type *this_promise): this_promise_{this_promise} {
     }
 
-    auto &await_bind(environment *env) {
+    void await_bind(environment *env, priority_type priority = priority_consts::zero) {
         this_promise_->bind(env);
-        return *this;
     }
 
     bool await_ready() const noexcept {
@@ -147,19 +199,19 @@ struct process {
 
     auto &priority(priority_type priority) {
         #ifdef CXXDES_SAFE
-        if (!this_promise_->start_token)
+        if (!this_promise_->start_tkn)
             throw std::runtime_error("cannot change the priority of a started process");
         #endif
-        this_promise_->start_token->priority = priority;
+        this_promise_->start_tkn->priority = priority;
         return *this;
     }
 
     auto &latency(time_type latency) {
         #ifdef CXXDES_SAFE
-        if (!this_promise_->start_token)
+        if (!this_promise_->start_tkn)
             throw std::runtime_error("cannot change the latency of a started process");
         #endif
-        this_promise_->start_token->time = latency;
+        this_promise_->start_tkn->time = latency;
         return *this;
     }
 
@@ -196,10 +248,20 @@ public:
             return_value_mixin<promise_type>
         > {
         
+        // environment that this process is bound to
         environment *env = nullptr;
+
+        // start token
         token *start_tkn = nullptr;
+
+        // completion token
         token *completion_tkn = nullptr;
+
+        // correspoding coroutine object
         coro_handle this_coro = nullptr;
+
+        // priority to be inherited by the subsequent co_await's
+        priority_type priority = 0;
 
         template <typename ...Args>
         promise_type(Args && ...) {
@@ -220,15 +282,66 @@ public:
             // co_await (A{});
             // A{} is alive throughout the co_await expression
             // therefore, it is safe to return an rvalue-reference to it
-            a.await_bind(env);
+
+            a.await_bind(env, priority);
             return std::move(a);
+        }
+
+        // implementation of the this_process interface
+
+        auto await_transform(this_process::get_return_latency) const {
+            if (!completion_tkn) {
+                throw std::runtime_error("get_return_latency cannot be called for the main process!");
+            }
+
+            return immediately_returning_awaitable<time_type>{completion_tkn->time};
+        }
+
+        auto await_transform(this_process::set_return_latency x) const {
+            if (!completion_tkn) {
+                throw std::runtime_error("set_return_latency cannot be called for the main process!");
+            }
+
+            completion_tkn->time = x.latency;
+            return std::suspend_never{};
+        }
+        
+        auto await_transform(this_process::get_return_priority) const {
+            if (!completion_tkn) {
+                throw std::runtime_error("get_return_latency cannot be called for the main process!");
+            }
+
+            return immediately_returning_awaitable<priority_type>{completion_tkn->priority};
+        }
+
+        auto await_transform(this_process::set_return_priority x) const {
+            if (!completion_tkn) {
+                throw std::runtime_error("set_return_latency cannot be called for the main process!");
+            }
+
+            completion_tkn->priority = x.priority;
+            return std::suspend_never{};
+        }
+
+        auto await_transform(this_process::get_priority) const {
+            return immediately_returning_awaitable<priority_type>{priority};
+        }
+
+        auto await_transform(this_process::set_priority x) const {
+            priority = x.priority;
+            return std::suspend_never{};
+        }
+
+        auto await_transform(this_process::get_environment) const {
+            return immediately_returning_awaitable<environment *>{env};
         }
 
         void bind(environment *env) {
             if (start_tkn) {
                 this->env = env;
                 start_tkn->coro = this_coro;
-                env->append_token(start_tkn);
+                env->schedule_token(start_tkn);
+                priority = start_tkn->priority;
                 start_tkn = nullptr;
             }
         }
@@ -243,7 +356,7 @@ public:
         void do_return() {
             if (completion_tkn) {
                 completion_tkn->time += env->now();
-                env->append_token(completion_tkn);
+                env->schedule_token(completion_tkn);
                 completion_tkn = nullptr;
             }
         }
@@ -259,13 +372,16 @@ private:
 };
 
 struct timeout {
-    constexpr timeout(time_type latency, priority_type priority = 1000):
+    constexpr timeout(time_type latency, priority_type priority = priority_consts::inherit):
         latency_{latency}, priority_{priority} {
     }
 
-    auto &await_bind(environment *env) {
+    void await_bind(environment *env, priority_type priority) {
         env_ = env;
-        return *this;
+
+        if (priority_ == priority_consts::inherit) {
+            priority_ = priority;
+        }
     }
 
     bool await_ready() const {
@@ -274,7 +390,7 @@ struct timeout {
 
     void await_suspend(coro_handle current_coro) const {
         auto tkn = new token(env_->now() + latency_, priority_, current_coro);
-        env_->append_token(tkn);
+        env_->schedule_token(tkn);
     }
 
     void await_resume() {
@@ -285,51 +401,30 @@ private:
     priority_type priority_ = 1000;
 };
 
-inline auto get_env() {
-    struct get_env_type {
-        constexpr get_env_type() {  }
-
-        auto &await_bind(environment *env) {
-            env_ = env;
-            return *this;
-        }
-
-        bool await_ready() const {
-            return true;
-        }
-
-        void await_suspend(coro_handle) const {
-        }
-
-        environment *await_resume() const {
-            return env_;
-        }
-
-    private:
-        environment *env_ = nullptr;
-    };
-
-    return get_env_type{};
-}
-
 #include <fmt/core.h>
 
+process<int> g() {
+    co_return 1100;
+}
+
 process<int> f() {
-    co_return 10;
+    co_return ((co_await g()) + 10);
 }
 
 process<void> test() {
-    auto this_env = co_await get_env();
+    auto this_env = co_await this_process::get_environment();
     co_await timeout(10);
     fmt::print("from {}, now = {}\n", __PRETTY_FUNCTION__, this_env->now());
     auto result = co_await f();
     fmt::print("from {}, now = {} and result = {}\n", __PRETTY_FUNCTION__, this_env->now(), result);
+    auto priority = co_await this_process::get_priority();
+    fmt::print("from {}, now = {} and priority = {}\n", __PRETTY_FUNCTION__, this_env->now(), priority);
 }
 
 int main() {
     environment env;
 
-    auto p = test();
+    auto p = test().priority(200);
     p.await_bind(&env);
 
     while (env.step()) ;
