@@ -9,10 +9,11 @@ using namespace experimental;
 #include <coroutine>
 #endif
 
+#include <cstdint>
+#include <algorithm>
 #include <stdexcept>
 #include <type_traits>
 #include <iostream>
-#include <cstdint>
 #include <limits>
 #include <queue>
 #include <optional>
@@ -379,7 +380,7 @@ struct timeout {
         latency_{latency}, priority_{priority} {
     }
 
-    void await_bind(environment *env, priority_type priority) {
+    void await_bind(environment *env, priority_type priority) noexcept {
         env_ = env;
 
         if (priority_ == priority_consts::inherit) {
@@ -387,7 +388,7 @@ struct timeout {
         }
     }
 
-    bool await_ready() const {
+    bool await_ready() const noexcept {
         return false;
     }
 
@@ -396,7 +397,7 @@ struct timeout {
         env_->schedule_token(tkn_);
     }
 
-    token *await_token() const {
+    token *await_token() const noexcept {
         return tkn_;
     }
 
@@ -410,15 +411,16 @@ private:
 };
 
 namespace detail {
+
 template <typename Condition>
-struct and_or_helper {
+struct any_all_helper {
     struct custom_handler: token_handler, Condition {
         bool done = false;
         std::size_t remaining = 0;
         token *completion_tkn = nullptr;
         environment *env = nullptr;
 
-        void invoke(token *tkn) override {
+        bool invoke(token *tkn) override {
             --remaining;
 
             // do not delete the handler while still in use
@@ -427,7 +429,7 @@ struct and_or_helper {
             if (!done) {
                 if (Condition::operator()(remaining)) {
                     // inherit the output_event features
-                    completion_tkn->time = tkn->time;
+                    completion_tkn->time += tkn->time;
                     completion_tkn->priority = tkn->priority;
                     completion_tkn->coro = tkn->coro;
                     env->schedule_token(completion_tkn);
@@ -437,78 +439,98 @@ struct and_or_helper {
 
             if (remaining == 0) {
                 // delete the handler
-                evt->handler = this;
+                tkn->handler = this;
             }
+
+            return false;
         }
     };
 
-    template <awaitable ...As>
-    struct result_type_static: std::tuple<As...> {
-        using std::tuple<As...>::tuple;
+    template <typename Derived>
+    struct base: Condition {
+        auto &priority(priority_type priority) noexcept {
+            priority_ = priority;
+            return *this;
+        }
+
+        auto &return_latency(time_type latency) noexcept {
+            latency_ = latency;
+            return *this;
+        }
 
         void await_bind(environment *env, priority_type priority) {
+            env_ = env;
+
             if (priority_ == priority_consts::inherit)
                 priority_ = priority;
             
-            std::apply([&](As & ...as) { ((as.await_bind(env, priority_)), ...); }, (std::tuple<As...> &)(*this));
+            ((Derived &) *this).apply([&](auto &a) { a.await_bind(env, priority_); });
         }
 
         bool await_ready() {
-            
+            remaining_ = ((Derived &) *this).count();
+            ((Derived &) *this).apply([&](auto &a) mutable { remaining_ -= (a.await_ready() ? 1 : 0); });
+            return Condition::operator()(remaining_);
         }
 
         void await_suspend(coro_handle current_coro) {
+            tkn_ = new token(latency_, priority_, current_coro);
 
+            auto handler = new custom_handler;
+            handler->remaining = remaining_;
+            handler->env = env_;
+            handler->completion_tkn = tkn_;
+
+            ((Derived &) *this).apply([&](auto &a) {
+                a.await_suspend(current_coro);
+                if (a.await_token())
+                    a.await_token()->handler = handler;
+            });
         }
 
-        token *await_token() {
-
+        token *await_token() const noexcept {
+            return tkn_;
         }
 
         void await_resume() {
-
-        }
-
-        event *on_suspend(promise_base *promise, coro_handle coro) {
-            auto handler = new new_handler;
-            handler->done = false;
-            handler->remaining = sizeof...(As);
-            handler->output_event = new event{0, 0, coro};
-            handler->env = promise->env;
-            std::apply([&](As & ...as) { ((as.on_suspend(promise, coro)->handler = handler), ...); }, (std::tuple<As...> &)(*this));
-            return handler->output_event;
-        }
-
-        void on_resume() {
-            // call on_resume on each awaitable
-            std::apply([](As & ...as) { (as.on_resume(), ...); }, (std::tuple<As...> &)(*this));
+            ((Derived &) *this).apply([&](auto &a) { a.await_resume(); });
         }
 
     private:
+        std::size_t remaining_ = 0;
+        
+        environment *env_ = nullptr;
+        token *tkn_ = nullptr;
         time_type latency_ = 0;
         priority_type priority_ = priority_consts::inherit;
     };
 
-    template <typename It>
-    struct result_type_runtime {
-        It first, last;
-        std::size_t size;
-
-        event *on_suspend(promise_base *promise, coro_handle coro) {
-            auto handler = new new_handler;
-            handler->done = false;
-            handler->remaining = size;
-            handler->output_event = new event{0, 0, coro};
-            handler->env = promise->env;
-            for (auto it = first; it != last; ++it)
-                it->on_suspend(promise, coro)->handler = handler;
-            return handler->output_event;
+    template <awaitable ...As>
+    struct tuple_based: std::tuple<As...>, base<tuple_based<As...>> {
+        using std::tuple<As...>::tuple;
+        
+        constexpr std::size_t count() const noexcept {
+            return sizeof...(As);
         }
 
-        void on_resume() {
-            // call on_resume on each awaitable
-            for (auto it = first; it != last; ++it)
-                it->on_resume();
+        template <typename UnaryFunction>
+        void apply(UnaryFunction f) {
+            std::apply([&](As & ...as) { (f(as), ...); }, (std::tuple<As...> &)(*this));
+        }
+    };
+
+    template <typename Iterator>
+    struct range_based: base<range_based<Iterator>> {
+        Iterator first, last;
+        std::size_t size;
+        
+        constexpr std::size_t count() const noexcept {
+            return size;
+        }
+
+        template <typename UnaryFunction>
+        void apply(UnaryFunction f) {
+            std::for_each(first, last, f);
         }
     };
 
@@ -516,23 +538,15 @@ struct and_or_helper {
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await any_of(awaitables...) or all_of(awaitables...)")]]
         constexpr auto operator()(Ts && ...ts) const {
-            return result_type<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
+            return tuple_based<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
         }
 
-        template <typename It>
-        [[nodiscard("expected usage: co_await any_of.sequence(begin, end) or all_of.sequence(begin, end)")]]
-        constexpr auto sequence(It first, It last) const {
-            return result_type_runtime<It>{first, last, (std::size_t) std::distance(first, last)};
+        template <typename Iterator>
+        [[nodiscard("expected usage: co_await any_of.range(begin, end) or all_of.range(begin, end)")]]
+        constexpr auto range(Iterator first, Iterator last) const {
+            return range_based<Iterator>{first, last, (std::size_t) std::distance(first, last)};
         }
     };
-
-    // GCC complains that a deduction guide should be declared in the namespace scope
-    // Clang complains that you cannot have a deduction guide for using statements
-    // I am very confused :(
-    /*
-    template <typename ...T>
-    result_type(T && ...) -> result_type<std::unwrap_ref_decay_t<T>...>;
-    */
 };
 
 struct any_of_condition {
@@ -547,8 +561,8 @@ struct all_of_condition {
     }
 };
 
-constexpr and_or_helper<any_of_condition>::functor any_of;
-constexpr and_or_helper<all_of_condition>::functor all_of;
+constexpr any_all_helper<any_of_condition>::functor any_of;
+constexpr any_all_helper<all_of_condition>::functor all_of;
 
 }
 
@@ -577,10 +591,17 @@ process<void> test() {
     fmt::print("from {}, now = {} and priority = {}\n", __PRETTY_FUNCTION__, this_env->now(), priority);
 }
 
+process<void> test2() {
+    auto this_env = co_await this_process::get_environment();
+    co_await all_of(timeout(10));
+    // co_await all_of(timeout(10) /*, timeout(30) */);
+    // fmt::print("from {}, now = {}\n", __PRETTY_FUNCTION__, this_env->now());
+}
+
 int main() {
     environment env;
 
-    auto p = test().priority(200);
+    auto p = test2().priority(200);
     p.await_bind(&env);
 
     while (env.step()) ;
