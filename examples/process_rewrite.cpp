@@ -178,7 +178,7 @@ struct process {
     }
 
     void await_suspend(coro_handle current_coro) noexcept {
-        completion_tkn_ = new token{this_promise_->env->now(), 1000, current_coro};
+        completion_tkn_ = new token{this_promise_->env->now(), this_promise_->priority, current_coro};
         if constexpr (not std::is_same_v<ReturnType, void>)
             completion_tkn_->handler = new return_value_handler{};
         this_promise_->completion_tkn = completion_tkn_;
@@ -265,7 +265,7 @@ public:
 
         template <typename ...Args>
         promise_type(Args && ...) {
-            start_tkn = new token{0, -1000, nullptr};
+            start_tkn = new token{0, priority_consts::zero, nullptr};
             this_coro = std::coroutine_handle<promise_type>::from_promise(*this);
         };
 
@@ -308,7 +308,7 @@ public:
         
         auto await_transform(this_process::get_return_priority) const {
             if (!completion_tkn) {
-                throw std::runtime_error("get_return_latency cannot be called for the main process!");
+                throw std::runtime_error("get_return_priority cannot be called for the main process!");
             }
 
             return immediately_returning_awaitable<priority_type>{completion_tkn->priority};
@@ -316,7 +316,7 @@ public:
 
         auto await_transform(this_process::set_return_priority x) const {
             if (!completion_tkn) {
-                throw std::runtime_error("set_return_latency cannot be called for the main process!");
+                throw std::runtime_error("set_return_priority cannot be called for the main process!");
             }
 
             completion_tkn->priority = x.priority;
@@ -400,6 +400,8 @@ private:
     time_type latency_ = 0;
     priority_type priority_ = 1000;
 };
+
+
 
 #include <fmt/core.h>
 
