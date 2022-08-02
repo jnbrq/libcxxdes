@@ -403,8 +403,10 @@ private:
 
 #include <fmt/core.h>
 
-process<int> g() {
-    co_return 1100;
+process<int> g(int k = 10) {
+    if (k == 0)
+        co_return 0;
+    co_return k + co_await g(k - 1);
 }
 
 process<int> f() {
