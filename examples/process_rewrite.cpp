@@ -120,10 +120,11 @@ concept awaitable = requires(
     T t,
     environment *env,
     priority_type priority,
-    coro_handle coro) {
+    coro_handle current_coro) {
     { t.await_bind(env, priority) };
     { t.await_ready() } -> std::same_as<bool>;
-    { t.await_suspend(coro) };
+    { t.await_suspend(current_coro) };
+    { t.await_token() } -> std::same_as<token *>;
     { t.await_resume() };
 };
 
@@ -135,6 +136,7 @@ struct immediately_returning_awaitable {
     void await_bind(environment *, priority_type) const noexcept {  }
     bool await_ready() const noexcept { return true; }
     void await_suspend(coro_handle) const noexcept {  }
+    token *await_token() const noexcept { return nullptr; }
     T await_resume() { return std::move(t_); }
 private:
     T t_;
@@ -177,11 +179,15 @@ struct process {
         return false;
     }
 
-    void await_suspend(coro_handle current_coro) noexcept {
+    void await_suspend(coro_handle current_coro) {
         completion_tkn_ = new token{this_promise_->env->now(), this_promise_->priority, current_coro};
         if constexpr (not std::is_same_v<ReturnType, void>)
             completion_tkn_->handler = new return_value_handler{};
         this_promise_->completion_tkn = completion_tkn_;
+    }
+
+    token *await_token() const noexcept {
+        return completion_tkn_;
     }
 
     ReturnType await_resume() {
@@ -388,20 +394,169 @@ struct timeout {
         return false;
     }
 
-    void await_suspend(coro_handle current_coro) const {
-        auto tkn = new token(env_->now() + latency_, priority_, current_coro);
-        env_->schedule_token(tkn);
+    void await_suspend(coro_handle current_coro) {
+        tkn_ = new token(env_->now() + latency_, priority_, current_coro);
+        env_->schedule_token(tkn_);
+    }
+
+    token *await_token() const {
+        return tkn_;
     }
 
     void await_resume() {
     }
 private:
     environment *env_ = nullptr;
-    time_type latency_ = 0;
-    priority_type priority_ = 1000;
+    token *tkn_ = nullptr;
+    time_type latency_;
+    priority_type priority_;
 };
 
+namespace detail {
+template <typename Condition>
+struct and_or_helper {
+    struct custom_handler: token_handler, Condition {
+        bool done = false;
+        std::size_t remaining = 0;
+        token *completion_tkn = nullptr;
+        environment *env = nullptr;
 
+        void invoke(token *tkn) override {
+            --remaining;
+
+            // do not delete the handler while still in use
+            tkn->handler = nullptr;
+            
+            if (!done) {
+                if (Condition::operator()(remaining)) {
+                    // inherit the output_event features
+                    completion_tkn->time = tkn->time;
+                    completion_tkn->priority = tkn->priority;
+                    completion_tkn->coro = tkn->coro;
+                    env->schedule_token(completion_tkn);
+                    done = true;
+                }
+            }
+
+            if (remaining == 0) {
+                // delete the handler
+                evt->handler = this;
+            }
+        }
+    };
+
+    template <awaitable ...As>
+    struct result_type_static: std::tuple<As...> {
+        using std::tuple<As...>::tuple;
+
+        void await_bind(environment *env, priority_type priority) {
+            if (priority_ == priority_consts::inherit)
+                priority_ = priority;
+            
+            std::apply([&](As & ...as) { ((as.await_bind(env, priority_)), ...); }, (std::tuple<As...> &)(*this));
+        }
+
+        bool await_ready() {
+            
+        }
+
+        void await_suspend(coro_handle current_coro) {
+
+        }
+
+        token *await_token() {
+
+        }
+
+        void await_resume() {
+
+        }
+
+        event *on_suspend(promise_base *promise, coro_handle coro) {
+            auto handler = new new_handler;
+            handler->done = false;
+            handler->remaining = sizeof...(As);
+            handler->output_event = new event{0, 0, coro};
+            handler->env = promise->env;
+            std::apply([&](As & ...as) { ((as.on_suspend(promise, coro)->handler = handler), ...); }, (std::tuple<As...> &)(*this));
+            return handler->output_event;
+        }
+
+        void on_resume() {
+            // call on_resume on each awaitable
+            std::apply([](As & ...as) { (as.on_resume(), ...); }, (std::tuple<As...> &)(*this));
+        }
+
+    private:
+        time_type latency_ = 0;
+        priority_type priority_ = priority_consts::inherit;
+    };
+
+    template <typename It>
+    struct result_type_runtime {
+        It first, last;
+        std::size_t size;
+
+        event *on_suspend(promise_base *promise, coro_handle coro) {
+            auto handler = new new_handler;
+            handler->done = false;
+            handler->remaining = size;
+            handler->output_event = new event{0, 0, coro};
+            handler->env = promise->env;
+            for (auto it = first; it != last; ++it)
+                it->on_suspend(promise, coro)->handler = handler;
+            return handler->output_event;
+        }
+
+        void on_resume() {
+            // call on_resume on each awaitable
+            for (auto it = first; it != last; ++it)
+                it->on_resume();
+        }
+    };
+
+    struct functor {
+        template <typename ...Ts>
+        [[nodiscard("expected usage: co_await any_of(awaitables...) or all_of(awaitables...)")]]
+        constexpr auto operator()(Ts && ...ts) const {
+            return result_type<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
+        }
+
+        template <typename It>
+        [[nodiscard("expected usage: co_await any_of.sequence(begin, end) or all_of.sequence(begin, end)")]]
+        constexpr auto sequence(It first, It last) const {
+            return result_type_runtime<It>{first, last, (std::size_t) std::distance(first, last)};
+        }
+    };
+
+    // GCC complains that a deduction guide should be declared in the namespace scope
+    // Clang complains that you cannot have a deduction guide for using statements
+    // I am very confused :(
+    /*
+    template <typename ...T>
+    result_type(T && ...) -> result_type<std::unwrap_ref_decay_t<T>...>;
+    */
+};
+
+struct any_of_condition {
+    constexpr bool operator()(std::size_t remaining) const {
+        return true;
+    }
+};
+
+struct all_of_condition {
+    constexpr bool operator()(std::size_t remaining) const {
+        return remaining == 0;
+    }
+};
+
+constexpr and_or_helper<any_of_condition>::functor any_of;
+constexpr and_or_helper<all_of_condition>::functor all_of;
+
+}
+
+using detail::any_of;
+using detail::all_of;
 
 #include <fmt/core.h>
 
