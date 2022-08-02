@@ -22,15 +22,15 @@ using coro_handle = std::coroutine_handle<>;
 
 struct empty_type {};
 
-struct event;
+struct token;
 
-struct event_handler {
-    virtual bool invoke(event *evt) { return true; }
-    virtual ~event_handler() {  }
+struct token_handler {
+    virtual bool invoke(token *tkn) { return true; }
+    virtual ~token_handler() {  }
 };
 
-struct event {
-    event(time_type time, priority_type priority, coro_handle coro):
+struct token {
+    token(time_type time, priority_type priority, coro_handle coro):
         time{time},
         priority{priority},
         coro{coro} {  }
@@ -39,7 +39,7 @@ struct event {
     priority_type priority = 0;
     coro_handle coro = nullptr;
 
-    event_handler *handler = nullptr;
+    token_handler *handler = nullptr;
 
     void process() {
         if (handler != nullptr)
@@ -49,7 +49,7 @@ struct event {
             coro.resume();
     }
 
-    ~event() {
+    ~token() {
         if (handler) delete handler;
     }
 };
@@ -61,44 +61,44 @@ struct environment {
         return now_;
     }
 
-    void append_event(event *evt) {
-        events_.push(evt);
+    void append_token(token *tkn) {
+        tokens_.push(tkn);
     }
 
     bool step() {
-        if (events_.empty())
+        if (tokens_.empty())
             return false;
         
-        auto evt = events_.top();
-        events_.pop();
+        auto tkn = tokens_.top();
+        tokens_.pop();
 
-        now_ = std::max(evt->time, now_);
-        evt->process();
+        now_ = std::max(tkn->time, now_);
+        tkn->process();
 
-        delete evt;
+        delete tkn;
 
         return true;
     }
 
     ~environment() {
-        while (!events_.empty()) {
-            auto evt = events_.top();
-            events_.pop();
-            delete evt;
+        while (!tokens_.empty()) {
+            auto tkn = tokens_.top();
+            tokens_.pop();
+            delete tkn;
         }
     }
 
 private:
     time_type now_ = 0;
 
-    struct event_comp {
-        bool operator()(event *evt_a, event *evt_b) const {
-            return (evt_a->time > evt_b->time) ||
-                (evt_a->time == evt_b->time && evt_a->priority > evt_b->priority);
+    struct token_comp {
+        bool operator()(token *tkn_a, token *tkn_b) const {
+            return (tkn_a->time > tkn_b->time) ||
+                (tkn_a->time == tkn_b->time && tkn_a->priority > tkn_b->priority);
         }
     };
 
-    std::priority_queue<event *, std::vector<event *>, event_comp> events_;
+    std::priority_queue<token *, std::vector<token *>, token_comp> tokens_;
 };
 
 template <typename T>
@@ -126,10 +126,10 @@ struct process {
     }
 
     void await_suspend(coro_handle current_coro) noexcept {
-        completion_evt_ = new event{this_promise_->env->now(), 1000, current_coro};
+        completion_tkn_ = new token{this_promise_->env->now(), 1000, current_coro};
         if constexpr (not std::is_same_v<ReturnType, void>)
-            completion_evt_->handler = new return_value_handler{};
-        this_promise_->completion_evt = completion_evt_;
+            completion_tkn_->handler = new return_value_handler{};
+        this_promise_->completion_tkn = completion_tkn_;
     }
 
     ReturnType await_resume() {
@@ -137,8 +137,8 @@ struct process {
             return ;
         else {
             // at this point, the promise is already destroyed,
-            // however, the completion event is still alive because events are deleted after coro is resumed.
-            auto &return_value = ((return_value_handler *) completion_evt_->handler)->return_value;
+            // however, the completion token is still alive because tokens are deleted after coro is resumed.
+            auto &return_value = ((return_value_handler *) completion_tkn_->handler)->return_value;
             if (!return_value)
                 throw std::runtime_error("no return value from the process<T> [T != void]!");
             return std::move(*return_value);
@@ -147,25 +147,25 @@ struct process {
 
     auto &priority(priority_type priority) {
         #ifdef CXXDES_SAFE
-        if (!this_promise_->start_event)
+        if (!this_promise_->start_token)
             throw std::runtime_error("cannot change the priority of a started process");
         #endif
-        this_promise_->start_event->priority = priority;
+        this_promise_->start_token->priority = priority;
         return *this;
     }
 
     auto &latency(time_type latency) {
         #ifdef CXXDES_SAFE
-        if (!this_promise_->start_event)
+        if (!this_promise_->start_token)
             throw std::runtime_error("cannot change the latency of a started process");
         #endif
-        this_promise_->start_event->time = latency;
+        this_promise_->start_token->time = latency;
         return *this;
     }
 
 private:
     // we need these mixins, because return_value and return_void cannot coexist.
-    // even with concepts, it does not help.
+    // even with concepts, it does not work.
 
     template <typename Derived>
     struct return_value_mixin {
@@ -183,7 +183,7 @@ private:
         }
     };
 
-    struct return_value_handler: event_handler {
+    struct return_value_handler: token_handler {
         std::optional<ReturnType> return_value;
         virtual ~return_value_handler() {  }
     };
@@ -197,13 +197,13 @@ public:
         > {
         
         environment *env = nullptr;
-        event *start_evt = nullptr;
-        event *completion_evt = nullptr;
+        token *start_tkn = nullptr;
+        token *completion_tkn = nullptr;
         coro_handle this_coro = nullptr;
 
         template <typename ...Args>
         promise_type(Args && ...) {
-            start_evt = new event{0, -1000, nullptr};
+            start_tkn = new token{0, -1000, nullptr};
             this_coro = std::coroutine_handle<promise_type>::from_promise(*this);
         };
 
@@ -225,37 +225,37 @@ public:
         }
 
         void bind(environment *env) {
-            if (start_evt) {
+            if (start_tkn) {
                 this->env = env;
-                start_evt->coro = this_coro;
-                env->append_event(start_evt);
-                start_evt = nullptr;
+                start_tkn->coro = this_coro;
+                env->append_token(start_tkn);
+                start_tkn = nullptr;
             }
         }
         
         template <typename T>
         void set_result(T &&t) {
-            if (completion_evt) {
-                ((return_value_handler *) completion_evt->handler)->return_value = std::forward<T>(t);
+            if (completion_tkn) {
+                ((return_value_handler *) completion_tkn->handler)->return_value = std::forward<T>(t);
             }
         }
 
         void do_return() {
-            if (completion_evt) {
-                completion_evt->time += env->now();
-                env->append_event(completion_evt);
-                completion_evt = nullptr;
+            if (completion_tkn) {
+                completion_tkn->time += env->now();
+                env->append_token(completion_tkn);
+                completion_tkn = nullptr;
             }
         }
 
         ~promise_type() {
-            if (start_evt) delete start_evt;
+            if (start_tkn) delete start_tkn;
         }
     };
 
 private:
     promise_type *this_promise_ = nullptr;
-    event *completion_evt_ = nullptr;
+    token *completion_tkn_ = nullptr;
 };
 
 struct timeout {
@@ -273,8 +273,8 @@ struct timeout {
     }
 
     void await_suspend(coro_handle current_coro) const {
-        auto evt = new event(env_->now() + latency_, priority_, current_coro);
-        env_->append_event(evt);
+        auto tkn = new token(env_->now() + latency_, priority_, current_coro);
+        env_->append_token(tkn);
     }
 
     void await_resume() {
