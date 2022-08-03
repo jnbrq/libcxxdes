@@ -233,7 +233,7 @@ auto operator,(A1 &&a1, A2 &&a2) {
     return sequential(std::forward<A1>(a1), std::forward<A2>(a2));
 }
 
-template <awaitable A>
+template <typename A>
 struct capture_return {
     A &&a;
 
@@ -242,6 +242,9 @@ struct capture_return {
         output = co_await a;
     }
 };
+
+template <typename A>
+capture_return(A &&) -> capture_return<A>;
 
 template <awaitable A, typename Output>
 auto operator>>(capture_return<A> &&crv, Output &output) {
