@@ -1,29 +1,7 @@
 #include <cxxdes/cxxdes.hpp>
 #include <fmt/core.h>
-#include <random>
-#include <chrono>
 
-template <typename Distribution, typename Engine = std::mt19937_64>
-struct random_variable {
-    template <typename Seed, typename ...Args>
-    random_variable(Seed &&seed, Args && ...args):
-        e_(std::forward<Seed>(seed)), d_(std::forward<Args>(args)...) {
-    }
-
-    auto operator()() {
-        return d_(e_);
-    }
-
-private:
-    Distribution d_;
-    Engine e_;
-};
-
-using exponent_rv = random_variable<std::exponential_distribution<>>;
-
-inline auto rand_seed() {
-    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
-}
+#include "random_variable.hpp"
 
 using namespace cxxdes;
 
@@ -40,8 +18,8 @@ CXXDES_SIMULATION(producer_consumer_example) {
     std::size_t n_packets;
     double total_latency = 0;
 
-    exponent_rv lambda;
-    exponent_rv mu;
+    exponential_rv lambda;
+    exponential_rv mu;
 
     double avg_latency = 0.0;
     
