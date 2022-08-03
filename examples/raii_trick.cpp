@@ -6,12 +6,7 @@ using namespace cxxdes;
 
 CXXDES_SIMULATION(raii_trick) {
     sync::resource res{1};
-
-    process<> q() {
-        fmt::print("{} {}:{}", __PRETTY_FUNCTION__, __FILE__, __LINE__);
-        co_return ;
-    }
-
+    
     process<> p(int id, time_type wait_time) {
         /*
         auto handle = co_await res.acquire();
@@ -20,6 +15,8 @@ CXXDES_SIMULATION(raii_trick) {
         co_await handle.release();
         */
 
+        fmt::print("p id = {}, priority = {}\n", id, co_await this_process::get_priority());
+
         co_with(res) {
             co_await timeout(wait_time);
             fmt::print("p id = {}, now = {}\n", id, now());
@@ -27,7 +24,7 @@ CXXDES_SIMULATION(raii_trick) {
     }
 
     process<> co_main() {
-        co_await (p(0, 10) && p(1, 5).priority(priority_consts::highest));
+        co_await all_of(p(0, 10).priority(0), p(1, 5).priority(-1), p(2, 8).priority(-2), p(3, 8).priority(-3));
     }
 };
 

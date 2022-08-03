@@ -85,12 +85,12 @@ private:
 
 struct mutex {
     [[nodiscard("expected usage: co_await mtx.acquire()")]]
-    auto acquire(time_type latency = 0, priority_type priority = 0) {
+    auto acquire(time_type latency = 0, priority_type priority = priority_consts::inherit) {
         return acquire_awaitable(this, latency, priority);
     }
 
     [[nodiscard("expected usage: co_await mtx.release()")]]
-    auto release(time_type latency = 0, priority_type priority = 0) {
+    auto release(time_type latency = 0, priority_type priority = priority_consts::inherit) {
         return release_awaitable(this, latency, priority);
     }
 

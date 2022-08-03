@@ -87,12 +87,12 @@ private:
 
 struct event {
     [[nodiscard("expected usage: co_await event.wake()")]]
-    auto wake(time_type latency = 0, priority_type priority = 0) {
+    auto wake(time_type latency = 0, priority_type priority = priority_consts::inherit) {
         return wake_awaitable(this, latency, priority);
     }
 
     [[nodiscard("expected usage: co_await event.wait()")]]
-    auto wait(time_type latency = 0, priority_type priority = 0) {
+    auto wait(time_type latency = 0, priority_type priority = priority_consts::inherit) {
         return wait_awaitable(this, latency, priority);
     }
 
