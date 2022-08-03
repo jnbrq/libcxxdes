@@ -16,7 +16,7 @@ process<int> f() {
 
 process<void> test() {
     auto this_env = co_await this_process::get_environment();
-    co_await timeout(10);
+    co_await sequential(all_of(timeout(10), timeout(30)), timeout(5));
     fmt::print("from {}, now = {}\n", __PRETTY_FUNCTION__, this_env->now());
     auto result = co_await f();
     fmt::print("from {}, now = {} and result = {}\n", __PRETTY_FUNCTION__, this_env->now(), result);
@@ -24,16 +24,10 @@ process<void> test() {
     fmt::print("from {}, now = {} and priority = {}\n", __PRETTY_FUNCTION__, this_env->now(), priority);
 }
 
-process<void> test2() {
-    auto this_env = co_await this_process::get_environment();
-    co_await sequential(all_of(timeout(10), timeout(30)), timeout(5));
-    fmt::print("from {}, now = {}\n", __PRETTY_FUNCTION__, this_env->now());
-}
-
 int main() {
     environment env;
 
-    auto p = test2().priority(200);
+    auto p = test().priority(200);
     p.await_bind(&env);
 
     while (env.step()) ;
