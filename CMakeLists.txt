@@ -26,6 +26,15 @@ add_library(cxxdes::cxxdes ALIAS cxxdes)
 
 file(GLOB cpp_files ${PROJECT_SOURCE_DIR}/examples/*.cpp)
 
+if (NOT DEFINED CXXDES_NO_CLANG_TIDY)
+    find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
+    set(
+        CLANG_TIDY_COMMAND
+        "${CLANG_TIDY_EXE}"
+        "-header-filter=."
+        "-checks=-*,modernize-*")
+endif()
+
 if (NOT DEFINED CXXDES_NO_EXAMPLES)
 
     find_package(fmt)
@@ -38,6 +47,14 @@ if (NOT DEFINED CXXDES_NO_EXAMPLES)
             PUBLIC
             cxxdes::cxxdes
             fmt::fmt-header-only)
+        
+        if (NOT DEFINED CXXDES_NO_CLANG_TIDY)
+            set_target_properties(
+                "example_${basename}"
+                PROPERTIES
+                CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
+        endif()
+        
         # target_compile_options("example_${basename}" PRIVATE -fsanitize=address)
         # target_link_options("example_${basename}" PRIVATE -fsanitize=address)
     endforeach()
