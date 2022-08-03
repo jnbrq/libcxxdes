@@ -3,6 +3,10 @@ cmake_minimum_required(VERSION 3.12)
 project(cxxdes)
 set(CMAKE_CXX_STANDARD 20)
 
+# default values to be stored in the cache
+set(CXXDES_CLANG_TIDY OFF CACHE BOOL "Use clang tidy.")
+set(CXXDES_EXAMPLES ON CACHE BOOL "Build examples.")
+
 # TODO: please see
 # https://dominikberner.ch/cmake-interface-lib/
 
@@ -26,7 +30,7 @@ add_library(cxxdes::cxxdes ALIAS cxxdes)
 
 file(GLOB cpp_files ${PROJECT_SOURCE_DIR}/examples/*.cpp)
 
-if (NOT DEFINED CXXDES_NO_CLANG_TIDY)
+if (CXXDES_CLANG_TIDY)
     find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
     set(
         CLANG_TIDY_COMMAND
@@ -35,7 +39,7 @@ if (NOT DEFINED CXXDES_NO_CLANG_TIDY)
         "-checks=-*,modernize-*")
 endif()
 
-if (NOT DEFINED CXXDES_NO_EXAMPLES)
+if (CXXDES_EXAMPLES)
 
     find_package(fmt)
 
@@ -48,7 +52,7 @@ if (NOT DEFINED CXXDES_NO_EXAMPLES)
             cxxdes::cxxdes
             fmt::fmt-header-only)
         
-        if (NOT DEFINED CXXDES_NO_CLANG_TIDY)
+        if (CXXDES_CLANG_TIDY)
             set_target_properties(
                 "example_${basename}"
                 PROPERTIES
