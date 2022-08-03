@@ -237,9 +237,9 @@ public:
             if (start_tkn) {
                 this->env = env;
                 start_tkn->coro = this_coro;
-                env->schedule_token(start_tkn);
                 if (start_tkn->priority == priority_consts::inherit)
                     start_tkn->priority = inherited_priority;
+                env->schedule_token(start_tkn);
                 priority = start_tkn->priority;
                 start_tkn = nullptr;
             }
