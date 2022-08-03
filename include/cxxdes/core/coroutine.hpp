@@ -22,8 +22,6 @@ using namespace experimental;
 #include <coroutine>
 #endif
 
-#include <exception>
-
 namespace cxxdes {
 namespace core {
 

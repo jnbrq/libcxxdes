@@ -22,7 +22,6 @@ namespace cxxdes {
 namespace sync {
 
 namespace detail {
-namespace ns_queue {
 
 using core::timeout;
 using core::process;
@@ -73,10 +72,9 @@ private:
     sync::mutex mutex_;
 };
 
-} /* namespace queue */
 } /* namespace detail */
 
-using detail::ns_queue::queue;
+using detail::queue;
 
 } /* namespace sync */
 } /* namespace cxxdes */

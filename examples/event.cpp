@@ -47,7 +47,7 @@ process<> p4() {
 int main() {
     []() -> process<> {
         co_await all_of(p1(), p2(), p3(), p4());
-    }().start(env);
+    }().await_bind(&env);
     /*
     
     // Or, equivalently, you can write:

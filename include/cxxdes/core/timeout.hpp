@@ -11,42 +11,49 @@
 #ifndef CXXDES_CORE_TIMEOUT_HPP_INCLUDED
 #define CXXDES_CORE_TIMEOUT_HPP_INCLUDED
 
-#include <cxxdes/core/process.hpp>
 #include <cxxdes/core/environment.hpp>
 
 namespace cxxdes {
 namespace core {
 
-namespace detail {
-namespace ns_timeout {
-
 struct timeout {
-    constexpr timeout(time_type latency, priority_type priority = 1000):
-        latency{latency}, priority{priority} {
+    constexpr timeout(time_type latency, priority_type priority = priority_consts::inherit):
+        latency_{latency}, priority_{priority} {
     }
 
-    time_type latency;
-    priority_type priority = 1000;
+    void await_bind(environment *env, priority_type priority) noexcept {
+        env_ = env;
 
-    event *on_suspend(promise_base *promise, coro_handle coro) {
-        auto evt = new event(promise->env->now() + latency, priority, coro);
-        promise->env->append_event(evt);
-        return evt;
+        if (priority_ == priority_consts::inherit) {
+            priority_ = priority;
+        }
     }
 
-    void on_resume() {  }
+    bool await_ready() const noexcept {
+        return false;
+    }
+
+    void await_suspend(coro_handle current_coro) {
+        tkn_ = new token(env_->now() + latency_, priority_, current_coro);
+        env_->schedule_token(tkn_);
+    }
+
+    token *await_token() const noexcept {
+        return tkn_;
+    }
+
+    void await_resume() const noexcept {
+    }
+private:
+    environment *env_ = nullptr;
+    token *tkn_ = nullptr;
+    time_type latency_;
+    priority_type priority_;
 };
 
-} /* namespace ns_timeout */
-} /* namespace detail */
-
-
-[[nodiscard("expected usage: co_await timeout(latency)")]]
-inline auto timeout(time_type latency, priority_type priority = 1000) {
-    return detail::ns_timeout::timeout(latency, priority);
+inline auto yield() {
+    return timeout{0};
 }
-
-constexpr auto yield = detail::ns_timeout::timeout{0};
 
 } /* namespace core */
 } /* namespace cxxdes */

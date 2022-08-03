@@ -24,359 +24,244 @@
 #define CXXDES_INFO_MEMBER_FUNCTION
 #endif
 
-#include <cxxdes/core/event.hpp>
 #include <cxxdes/core/environment.hpp>
+#include <cxxdes/core/awaitable.hpp>
 
 namespace cxxdes {
 namespace core {
 
-namespace detail {
-namespace ns_process {
 
-struct get_env_type {};
-
-struct promise_base {
-    /**
-     * @brief the environment that is associated with the event object.
-     * 
-     */
-    environment *env;
-
-    /**
-     * @brief Event scheduled when this process returns.
-     * 
-     */
-    event *completion_evt = nullptr;
-
-    /**
-     * @brief Event schedule for starting the process. nullptr if scheduled.
-     * 
-     */
-    event *start_event = nullptr;
-
-    promise_base() {
-        start_event = new event{0, -1000, nullptr};
-    }
-
-    void start(environment *env) {
-        if (start_event) {
-            this->env = env;
-            start_event->coro = coro_;
-            env->append_event(start_event);
-            start_event = nullptr;
-        }
-    }
-
-    std::suspend_always initial_suspend() noexcept {
-        CXXDES_INFO_MEMBER_FUNCTION;
-        return {};
-    }
-
-    std::suspend_never final_suspend() noexcept {
-        CXXDES_INFO_MEMBER_FUNCTION;
-        return {};
-    }
-
-    void unhandled_exception() {
-        std::rethrow_exception(std::current_exception());
-    }
-
-    template <typename T>
-    auto await_transform(T &&a);
-
-    auto await_transform(get_env_type);
-
-    ~promise_base() {
-        if (start_event) delete start_event;
-    }
-
-protected:
-    void do_return() {
-        if (completion_evt) {
-            completion_evt->time += env->now();
-            env->append_event(completion_evt);
-            completion_evt = nullptr;
-        }
-    }
-
-    coro_handle coro_;
-};
-
-struct process_base {
-    process_base() = default;
-
-    process_base(coro_handle coro, promise_base *promise):
-        coro_{coro},
-        promise_{promise} {
-    }
-
-    bool done() {
-        return coro_.done();
-    }
-
-    coro_handle get_coro_handle() {
-        return coro_;
-    }
-
-    promise_base *this_promise() const {
-        return promise_;
-    }
-
-    // process is also awaitable
-    event *on_suspend(promise_base *promise, coro_handle other_coro) {
-        // start if deferred
-        this_promise()->start(promise->env);
-
-        // in case of completion, trigger the currently paused coroutine
-        event *completion_evt = new event{ 0, 1000, other_coro };
-        this_promise()->completion_evt = completion_evt;
-        return completion_evt;
-    }
-
-    void start(environment &env) {
-        this_promise()->start(&env);
-    }
-
-    void start(environment *env) {
-        this_promise()->start(env);
-    }
-
-    void priority(priority_type priority) {
-        #ifdef CXXDES_SAFE
-        if (!this_promise()->start_event)
-            throw std::runtime_error("cannot change the priority of a started process");
-        #endif
-        this_promise()->start_event->priority = priority;
-    }
-
-    void latency(time_type latency) {
-        #ifdef CXXDES_SAFE
-        if (!this_promise()->start_event)
-            throw std::runtime_error("cannot change the latency of a started process");
-        #endif
-        this_promise()->start_event->time = latency;
-    }
-
-protected:
-    coro_handle coro_ = nullptr;
-    mutable promise_base *promise_ = nullptr;
-};
-
-template <typename T = void>
-struct process: process_base {
-    using process_base::process_base;
-
-    struct promise_type: promise_base {
-        template <typename ...Args>
-        promise_type(Args && ...): promise_base() {
-            coro_ = std::coroutine_handle<promise_type>::from_promise(*this);
-        };
-
-        T &result() {
-            CXXDES_INFO_MEMBER_FUNCTION;
-            #ifdef CXXDES_SAFE
-            if (!result_) {
-                throw std::runtime_error("no return value from the process!");
-            }
-            #endif
-            return *result_;
-        }
-
-        process get_return_object() {
-            return process(coro_, this);
-        }
-
-        void return_value(const T& t) {
-            CXXDES_INFO_MEMBER_FUNCTION;
-            result_ = t;
-            do_return();
-        }
-
-        void return_value(T&& t) {
-            CXXDES_INFO_MEMBER_FUNCTION;
-            result_ = std::move(t);
-            do_return();
-        }
-
-    private:
-        std::optional<T> result_;
+struct this_process {
+    struct get_return_latency {  };
+    struct set_return_latency {
+        time_type latency;
     };
 
-    T &on_resume() {
-        return result();
-    }
-
-    auto &start(environment &env) {
-        process_base::start(env);
-        return *this;
-    }
-
-    auto &start(environment *env) {
-        process_base::start(env);
-        return *this;
-    }
-
-    auto &priority(priority_type priority) {
-        process_base::priority(priority);
-        return *this;
-    }
-
-    auto &latency(time_type latency) {
-        process_base::latency(latency);
-        return *this;
-    }
-
-    T &result() {
-        auto promise = (promise_type *) this_promise();
-        return promise->result();
-    }
-};
-
-template <>
-struct process<void>: process_base {
-    using process_base::process_base;
-
-    struct promise_type: promise_base {
-        template <typename ...Args>
-        promise_type(Args && ...): promise_base() {
-            coro_ = std::coroutine_handle<promise_type>::from_promise(*this);
-        };
-
-        process get_return_object() {
-            return process(coro_, this);
-        }
-
-        void return_void() {
-            do_return();
-        }
+    struct get_return_priority {  };
+    struct set_return_priority {
+        priority_type priority;
+    };
+    
+    struct get_priority {  };
+    struct set_priority {
+        priority_type priority;
     };
 
-    void on_resume() {
-    }
-
-    auto &start(environment &env) {
-        process_base::start(env);
-        return *this;
-    }
-
-    auto &start(environment *env) {
-        process_base::start(env);
-        return *this;
-    }
-
-    auto &priority(priority_type priority) {
-        process_base::priority(priority);
-        return *this;
-    }
-
-    auto &latency(time_type latency) {
-        process_base::latency(latency);
-        return *this;
-    }
+    struct get_environment {  };
 };
 
-template <typename T>
-concept awaitable = requires(T t, promise_base *promise, coro_handle coro) {
-    { t.on_suspend(promise, coro) } -> std::convertible_to<event *>;
-    { t.on_resume() };
-};
+template <typename ReturnType = void>
+struct process {
+    struct promise_type;
 
-template <awaitable T>
-struct wrap_awaitable: T {
-    using awaitable_return_value = decltype(std::declval<T>().on_resume());
-
-    template <typename ...U>
-    wrap_awaitable(promise_base *promise, U && ...u):
-        promise_{promise},
-        T{std::forward<U>(u)...} {
+    process(promise_type *this_promise): this_promise_{this_promise} {
     }
 
-    bool await_ready() {
+    void await_bind(environment *env, priority_type priority = priority_consts::zero) {
+        this_promise_->bind(env);
+    }
+
+    bool await_ready() const noexcept {
         return false;
     }
 
-    bool await_suspend(coro_handle coro) {
-        auto e = T::on_suspend(promise_, coro);
-        #ifdef CXXDES_SAFE
-        if (e->handler) {
-            throw std::runtime_error("a resuming event is required!");
+    void await_suspend(coro_handle current_coro) {
+        completion_tkn_ = new token{0, this_promise_->priority, current_coro};
+        if constexpr (not std::is_same_v<ReturnType, void>)
+            completion_tkn_->handler = new return_value_handler{};
+        this_promise_->completion_tkn = completion_tkn_;
+    }
+
+    token *await_token() const noexcept {
+        return completion_tkn_;
+    }
+
+    ReturnType await_resume() {
+        if constexpr (std::is_same_v<ReturnType, void>)
+            return ;
+        else {
+            // at this point, the promise is already destroyed,
+            // however, the completion token is still alive because tokens are deleted after coro is resumed.
+            auto &return_value = ((return_value_handler *) completion_tkn_->handler)->return_value;
+            if (!return_value)
+                throw std::runtime_error("no return value from the process<T> [T != void]!");
+            return std::move(*return_value);
         }
+    }
+
+    auto &priority(priority_type priority) {
+        #ifdef CXXDES_SAFE
+        if (!this_promise_->start_tkn)
+            throw std::runtime_error("cannot change the priority of a started process");
         #endif
-        return true;
+        this_promise_->start_tkn->priority = priority;
+        return *this;
     }
 
-    auto &await_resume() requires (not (std::is_same_v<awaitable_return_value, void>)) {
-        return T::on_resume();
-    }
-
-    void await_resume() requires (std::is_same_v<awaitable_return_value, void>) {
-        T::on_resume();
+    auto &latency(time_type latency) {
+        #ifdef CXXDES_SAFE
+        if (!this_promise_->start_tkn)
+            throw std::runtime_error("cannot change the latency of a started process");
+        #endif
+        this_promise_->start_tkn->time = latency;
+        return *this;
     }
 
 private:
-    promise_base *promise_ = nullptr;
-};
+    // we need these mixins, because return_value and return_void cannot coexist.
+    // even with concepts, it does not work.
 
-template <typename T>
-inline auto promise_base::await_transform(T &&t) {
-    return wrap_awaitable<std::unwrap_ref_decay_t<T>>(this, std::forward<T>(t));
-}
-
-inline auto promise_base::await_transform(get_env_type) {
-    struct awaitable_type {
-        environment *env;
-
-        bool await_ready() {
-            return true;
-        }
-
-        void await_suspend(coro_handle coro) {
-        }
-
-        auto await_resume() {
-            return env;
+    template <typename Derived>
+    struct return_value_mixin {
+        template <typename T>
+        void return_value(T &&t) {
+            ((Derived &) *this).set_result(std::forward<T>(t));
+            ((Derived &) *this).do_return();
         }
     };
 
-    return awaitable_type{env};
-}
+    template <typename Derived>
+    struct return_void_mixin {
+        void return_void() {
+            ((Derived &) *this).do_return();
+        }
+    };
 
+    struct return_value_handler: token_handler {
+        std::optional<ReturnType> return_value;
+        virtual ~return_value_handler() {  }
+    };
+    
+public:
+    struct promise_type:
+        std::conditional_t<
+            std::is_same_v<ReturnType, void>,
+            return_void_mixin<promise_type>,
+            return_value_mixin<promise_type>
+        > {
+        
+        // environment that this process is bound to
+        environment *env = nullptr;
 
-template <typename T>
-struct is_process_impl: std::false_type {  };
+        // start token
+        token *start_tkn = nullptr;
 
-template <typename T>
-struct is_process_impl<process<T>>: std::true_type {  };
+        // completion token
+        token *completion_tkn = nullptr;
 
-template <typename T>
-struct process_return_type_impl {  };
+        // correspoding coroutine object
+        coro_handle this_coro = nullptr;
 
-template <typename T>
-struct process_return_type_impl<process<T>> {
-    using return_type = T;
+        // priority to be inherited by the subsequent co_await's
+        priority_type priority = 0;
+
+        template <typename ...Args>
+        promise_type(Args && ...) {
+            start_tkn = new token{0, priority_consts::zero, nullptr};
+            this_coro = std::coroutine_handle<promise_type>::from_promise(*this);
+        };
+
+        process get_return_object() {
+            return process(this);
+        }
+
+        auto initial_suspend() noexcept -> std::suspend_always { return {}; }
+        auto final_suspend() noexcept -> std::suspend_never { return {}; }
+        auto unhandled_exception() { std::rethrow_exception(std::current_exception()); }
+
+        template <typename A>
+        A &&await_transform(A &&a) const noexcept {
+            // co_await (A{});
+            // A{} is alive throughout the co_await expression
+            // therefore, it is safe to return an rvalue-reference to it
+
+            a.await_bind(env, priority);
+            return std::move(a);
+        }
+
+        // implementation of the this_process interface
+
+        auto await_transform(this_process::get_return_latency) const {
+            if (!completion_tkn) {
+                throw std::runtime_error("get_return_latency cannot be called for the main process!");
+            }
+
+            return immediately_returning_awaitable<time_type>{completion_tkn->time};
+        }
+
+        auto await_transform(this_process::set_return_latency x) const {
+            if (!completion_tkn) {
+                throw std::runtime_error("set_return_latency cannot be called for the main process!");
+            }
+
+            completion_tkn->time = x.latency;
+            return std::suspend_never{};
+        }
+        
+        auto await_transform(this_process::get_return_priority) const {
+            if (!completion_tkn) {
+                throw std::runtime_error("get_return_priority cannot be called for the main process!");
+            }
+
+            return immediately_returning_awaitable<priority_type>{completion_tkn->priority};
+        }
+
+        auto await_transform(this_process::set_return_priority x) const {
+            if (!completion_tkn) {
+                throw std::runtime_error("set_return_priority cannot be called for the main process!");
+            }
+
+            completion_tkn->priority = x.priority;
+            return std::suspend_never{};
+        }
+
+        auto await_transform(this_process::get_priority) const {
+            return immediately_returning_awaitable<priority_type>{priority};
+        }
+
+        auto await_transform(this_process::set_priority x) const {
+            priority = x.priority;
+            return std::suspend_never{};
+        }
+
+        auto await_transform(this_process::get_environment) const {
+            return immediately_returning_awaitable<environment *>{env};
+        }
+
+        void bind(environment *env) {
+            if (start_tkn) {
+                this->env = env;
+                start_tkn->coro = this_coro;
+                env->schedule_token(start_tkn);
+                priority = start_tkn->priority;
+                start_tkn = nullptr;
+            }
+        }
+        
+        template <typename T>
+        void set_result(T &&t) {
+            if (completion_tkn) {
+                ((return_value_handler *) completion_tkn->handler)->return_value = std::forward<T>(t);
+            }
+        }
+
+        void do_return() {
+            if (completion_tkn) {
+                completion_tkn->time += env->now();
+                env->schedule_token(completion_tkn);
+                completion_tkn = nullptr;
+            }
+        }
+
+        ~promise_type() {
+            if (start_tkn) delete start_tkn;
+        }
+    };
+
+private:
+    promise_type *this_promise_ = nullptr;
+    token *completion_tkn_ = nullptr;
 };
-
-template <typename T>
-constexpr auto is_process = is_process_impl<T>::value;
-
-template <typename T>
-using process_return_type = typename process_return_type_impl<T>::return_type;
-
-template <typename T, typename R>
-concept process_returning = is_process<T> && std::is_convertible_v<process_return_type<T>, R>;
-
-} /* namespace ns_process */
-} /* namespace detail */
-
-using detail::ns_process::promise_base;
-using detail::ns_process::process;
-using detail::ns_process::awaitable;
-
-using detail::ns_process::is_process;
-using detail::ns_process::process_return_type;
-using detail::ns_process::process_returning;
-
-constexpr detail::ns_process::get_env_type get_env;
 
 } /* namespace core */
 } /* namespace cxxdes */

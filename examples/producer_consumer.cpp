@@ -28,7 +28,7 @@ inline auto rand_seed() {
 using namespace cxxdes;
 
 CXXDES_SIMULATION(producer_consumer_example) {
-    producer_consumer_example(double lambda, double mu, std::size_t n_packets = 1000000):
+    producer_consumer_example(double lambda, double mu, std::size_t n_packets = 100000):
         lambda{ rand_seed() /* seed */, lambda /* lambda */},
         mu{ rand_seed() /* seed */, mu /* mu */ },
         n_packets{n_packets} {
@@ -86,6 +86,5 @@ int main() {
         sim.run();
         fmt::print("{}, {}, {}, {}\n", lambda, mu, lambda / mu, sim.avg_latency);
     }
-
     return 0;
 }

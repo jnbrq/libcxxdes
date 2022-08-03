@@ -12,31 +12,17 @@
 #define CXXDES_CORE_SIMULATION_HPP_INCLUDED
 
 #include <cxxdes/core/environment.hpp>
+#include <cxxdes/core/awaitable.hpp>
 
 namespace cxxdes {
 namespace core {
-
-template <typename T>
-concept startable = requires(T t, environment env) {
-    { t.start(env) };
-};
 
 template <typename Derived>
 struct simulation {
     environment env;
 
-    template <startable S>
-    auto &start(S &&s) {
-        return s.start(env);
-    }
-
-    template <typename T, typename ...Args>
-    auto create(Args && ...args) {
-        return T{env, std::forward<Args>(args) ...};
-    }
-
     void start_main() {
-        ((Derived &) *this).co_main().start(env);
+        ((Derived &) *this).co_main().await_bind(&env);
     }
 
     auto now() const {

@@ -15,85 +15,134 @@
 #include <iterator>
 
 #include <cxxdes/core/process.hpp>
-#include <cxxdes/core/environment.hpp>
 
 namespace cxxdes {
 namespace core {
 
 namespace detail {
-namespace ns_compositions {
 
 template <typename Condition>
-struct giant1 {
-    struct new_handler: event_handler, Condition {
+struct any_all_helper {
+    struct custom_handler: token_handler, Condition {
         bool done = false;
+        std::size_t total = 0;
         std::size_t remaining = 0;
-        event *output_event = nullptr;
+        token *completion_tkn = nullptr;
         environment *env = nullptr;
 
-        void invoke(event *evt) override {
+        bool invoke(token *tkn) override {
             --remaining;
 
-            // we do not want to be deleted while in use
-            evt->handler = nullptr;
+            // do not delete the handler while still in use
+            tkn->handler = nullptr;
             
             if (!done) {
-                if (Condition::operator()(remaining)) {
+                if (Condition::operator()(total, remaining)) {
                     // inherit the output_event features
-                    output_event->time = evt->time;
-                    output_event->priority = evt->priority;
-                    output_event->coro = evt->coro;
-                    env->append_event(output_event);
+                    completion_tkn->time += tkn->time;
+                    completion_tkn->priority = tkn->priority;
+                    completion_tkn->coro = tkn->coro;
+                    env->schedule_token(completion_tkn);
                     done = true;
                 }
             }
 
             if (remaining == 0) {
-                evt->handler = this;
+                // delete the handler
+                tkn->handler = this;
             }
+
+            return false;
         }
+    };
+
+    template <typename Derived>
+    struct base: Condition {
+        auto &priority(priority_type priority) noexcept {
+            priority_ = priority;
+            return *this;
+        }
+
+        auto &return_latency(time_type latency) noexcept {
+            latency_ = latency;
+            return *this;
+        }
+
+        void await_bind(environment *env, priority_type priority) {
+            env_ = env;
+
+            if (priority_ == priority_consts::inherit)
+                priority_ = priority;
+            
+            ((Derived &) *this).apply([&](auto &a) { a.await_bind(env, priority_); });
+        }
+
+        bool await_ready() {
+            auto total = ((Derived &) *this).count();
+            remaining_ = total;
+            ((Derived &) *this).apply([&](auto &a) mutable { remaining_ -= (a.await_ready() ? 1 : 0); });
+            return Condition::operator()(total, remaining_);
+        }
+
+        void await_suspend(coro_handle current_coro) {
+            tkn_ = new token(latency_, priority_, current_coro);
+
+            auto handler = new custom_handler;
+            handler->total = ((Derived &) *this).count();
+            handler->remaining = remaining_;
+            handler->env = env_;
+            handler->completion_tkn = tkn_;
+
+            ((Derived &) *this).apply([&](auto &a) {
+                a.await_suspend(current_coro);
+                if (a.await_token())
+                    a.await_token()->handler = handler;
+            });
+        }
+
+        token *await_token() const noexcept {
+            return tkn_;
+        }
+
+        void await_resume() {
+            ((Derived &) *this).apply([&](auto &a) { a.await_resume(); });
+        }
+
+    private:
+        std::size_t remaining_ = 0;
+        
+        environment *env_ = nullptr;
+        token *tkn_ = nullptr;
+        time_type latency_ = 0;
+        priority_type priority_ = priority_consts::inherit;
     };
 
     template <awaitable ...As>
-    struct result_type: std::tuple<As...> {
+    struct tuple_based: std::tuple<As...>, base<tuple_based<As...>> {
         using std::tuple<As...>::tuple;
-
-        event *on_suspend(promise_base *promise, coro_handle coro) {
-            auto handler = new new_handler;
-            handler->done = false;
-            handler->remaining = sizeof...(As);
-            handler->output_event = new event{0, 0, coro};
-            handler->env = promise->env;
-            std::apply([&](As & ...as) { ((as.on_suspend(promise, coro)->handler = handler), ...); }, (std::tuple<As...> &)(*this));
-            return handler->output_event;
+        
+        constexpr std::size_t count() const noexcept {
+            return sizeof...(As);
         }
 
-        void on_resume() {
-            // call on_resume on each awaitable
-            std::apply([](As & ...as) { (as.on_resume(), ...); }, (std::tuple<As...> &)(*this));
+        template <typename UnaryFunction>
+        void apply(UnaryFunction f) {
+            std::apply([&](As & ...as) { (f(as), ...); }, (std::tuple<As...> &)(*this));
         }
     };
 
-    template <typename It>
-    struct result_type_runtime {
-        It first, last;
+    template <typename Iterator>
+    struct range_based: base<range_based<Iterator>> {
+        Iterator first, last;
         std::size_t size;
-
-        event *on_suspend(promise_base *promise, coro_handle coro) {
-            auto handler = new new_handler;
-            handler->done = false;
-            handler->remaining = size;
-            handler->output_event = new event{0, 0, coro};
-            handler->env = promise->env;
-            for (auto it = first; it != last; ++it)
-                it->on_suspend(promise, coro)->handler = handler;
-            return handler->output_event;
+        
+        constexpr std::size_t count() const noexcept {
+            return size;
         }
 
-        void on_resume() {
-            // call on_resume on each awaitable
-            for (auto it = first; it != last; ++it)
-                it->on_resume();
+        template <typename UnaryFunction>
+        void apply(UnaryFunction f) {
+            std::for_each(first, last, f);
         }
     };
 
@@ -101,127 +150,87 @@ struct giant1 {
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await any_of(awaitables...) or all_of(awaitables...)")]]
         constexpr auto operator()(Ts && ...ts) const {
-            return result_type<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
+            return tuple_based<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
         }
 
-        template <typename It>
-        [[nodiscard("expected usage: co_await any_of.sequence(begin, end) or all_of.sequence(begin, end)")]]
-        constexpr auto sequence(It first, It last) const {
-            return result_type_runtime<It>{first, last, (std::size_t) std::distance(first, last)};
+        template <typename Iterator>
+        [[nodiscard("expected usage: co_await any_of.range(begin, end) or all_of.range(begin, end)")]]
+        constexpr auto range(Iterator first, Iterator last) const {
+            return range_based<Iterator>{
+                .first = first,
+                .last = last,
+                .size = (std::size_t) std::distance(first, last)
+            };
         }
     };
-
-    // GCC complains that a deduction guide should be declared in the namespace scope
-    // Clang complains that you cannot have a deduction guide for using statements
-    // I am very confused :(
-    /*
-    template <typename ...T>
-    result_type(T && ...) -> result_type<std::unwrap_ref_decay_t<T>...>;
-    */
 };
 
 struct any_of_condition {
-    constexpr bool operator()(std::size_t remaining) const {
-        return true;
+    constexpr bool operator()(std::size_t total, std::size_t remaining) const {
+        return remaining < total;
     }
 };
 
 struct all_of_condition {
-    constexpr bool operator()(std::size_t remaining) const {
+    constexpr bool operator()(std::size_t total, std::size_t remaining) const {
         return remaining == 0;
     }
 };
 
-constexpr giant1<any_of_condition>::functor any_of;
-constexpr giant1<all_of_condition>::functor all_of;
+constexpr any_all_helper<any_of_condition>::functor any_of;
+constexpr any_all_helper<all_of_condition>::functor all_of;
 
-struct giant2 {
-    template <awaitable ...As>
-    struct result_type: std::tuple<As...> {
-        using std::tuple<As...>::tuple;
+struct sequential_helper {
+    template <typename ...Ts>
+    static process<void> seq_proc_tuple(Ts && ...ts) {
+        ((co_await std::forward<Ts>(ts)), ...);
+        co_return ;
+    }
 
-        static process<> p(environment *env, As & ...as) {
-            ((co_await as), ...);
-            co_return ;
+    template <typename Iterator>
+    static process<void> seq_proc_range(Iterator begin, Iterator end) {
+        for (Iterator it = begin; it != end; ++it) {
+            co_await (*it);
         }
-        
-        event *on_suspend(promise_base *promise, coro_handle coro) {
-            event *output_event = new event{ 0, 1000, coro };
-            auto pp = std::apply([&](As & ...as) { return p(promise->env, as...); }, (std::tuple<As...> &)(*this));
-            pp.this_promise()->completion_evt = output_event;
-            pp.start(*(promise->env));
-            return output_event;
-        }
-
-        void on_resume() {
-            // call on_resume on each awaitable
-            std::apply([](As & ...as) { (as.on_resume(), ...); }, (std::tuple<As...> &)(*this));
-        }
-    };
-
-    template <typename It>
-    struct result_type_runtime {
-        It first, last;
-
-        static process<> p(environment *env, It first, It last) {
-            for (auto it = first; it != last; ++it) {
-                co_await *it;
-            }
-        }
-        
-        event *on_suspend(promise_base *promise, coro_handle coro) {
-            event *output_event = new event{ 0, 1000, coro };
-            auto pp = p(promise->env, first, last);
-            pp.this_promise()->completion_evt = output_event;
-            pp.start(*(promise->env));
-            return output_event;
-        }
-
-        void on_resume() {
-            for (auto it = first; it != last; ++it) {
-                it->on_resume();
-            }
-        }
-    };
-
+        co_return;
+    }
+    
     struct functor {
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await sequential(awaitables...)")]]
         constexpr auto operator()(Ts && ...ts) const {
-            return result_type<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
+            return seq_proc_tuple(std::forward<Ts>(ts)...);
         }
 
-        template <typename It>
-        [[nodiscard("expected usage: co_await sequential.sequence(begin, end)")]]
-        constexpr auto sequence(It first, It last) const {
-            return result_type_runtime<It>{first, last};
+        template <typename Iterator>
+        [[nodiscard("expected usage: co_await sequential.range(begin, end)")]]
+        constexpr auto range(Iterator first, Iterator last) const {
+            return seq_proc_range(first, last);
         }
     };
 };
 
-constexpr giant2::functor sequential;
+constexpr sequential_helper::functor sequential;
 
-
-} /* namespace ns_compositions */
 } /* namespace detail */
 
-using detail::ns_compositions::any_of;
-using detail::ns_compositions::all_of;
-using detail::ns_compositions::sequential;
+using detail::any_of;
+using detail::all_of;
+using detail::sequential;
 
 template <awaitable A1, awaitable A2>
 auto operator||(A1 &&a1, A2 &&a2) {
-    return any_of(std::move(a1), std::move(a2));
+    return any_of(std::forward<A1>(a1), std::forward<A2>(a2));
 }
 
 template <awaitable A1, awaitable A2>
 auto operator&&(A1 &&a1, A2 &&a2) {
-    return all_of(std::move(a1), std::move(a2));
+    return all_of(std::forward<A1>(a1), std::forward<A2>(a2));
 }
 
 template <awaitable A1, awaitable A2>
 auto operator,(A1 &&a1, A2 &&a2) {
-    return sequential(std::move(a1), std::move(a2));
+    return sequential(std::forward<A1>(a1), std::forward<A2>(a2));
 }
 
 } /* namespace core */

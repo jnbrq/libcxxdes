@@ -1,3 +1,5 @@
+#define CXXDES_LIBRARY_DEBUG
+
 #include <cxxdes/cxxdes.hpp>
 #include <fmt/core.h>
 
@@ -10,15 +12,8 @@ CXXDES_SIMULATION(return_value_example) {
     }
 
     process<> co_main() {
-        // test 1
         auto result = co_await test();
         fmt::print("now = {}, value = {}\n", now(), result);
-
-        // test 2
-        auto h = test();
-        h.start(co_await get_env);
-        co_await timeout(11);
-        fmt::print("now = {}, done = {}, value = {}\n", now(), h.done(), h.result());
     }
 };
 
