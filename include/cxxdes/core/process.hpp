@@ -66,7 +66,7 @@ struct process {
     }
 
     void await_suspend(coro_handle current_coro) {
-        completion_tkn_ = new token{this_promise_->env->now(), this_promise_->priority, current_coro};
+        completion_tkn_ = new token{0, this_promise_->priority, current_coro};
         if constexpr (not std::is_same_v<ReturnType, void>)
             completion_tkn_->handler = new return_value_handler{};
         this_promise_->completion_tkn = completion_tkn_;
