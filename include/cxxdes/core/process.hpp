@@ -187,10 +187,15 @@ public:
             return std::forward<A>(a);
         }
 
+        // for async_with (experimental)
+        #ifdef CXXDES_ASYNC_WITH
+
         template <awaitable A>
         auto &&yield_value(A &&a) {
-            return std::forward<A>(a);
+            return await_transform(std::forward<A>(a));
         }
+
+        #endif // CXXDES_ASYNC_WITH
 
         // implementation of the this_process interface
 
@@ -275,6 +280,30 @@ private:
     [[no_unique_address]]
     return_container_type return_container_;
 };
+
+template <typename T>
+concept releasable = requires(T t) {
+    { t.release() } -> awaitable;
+};
+
+template <typename T>
+concept acquirable = requires(T t) {
+    { t.acquire() } -> awaitable;
+    { t.acquire().await_resume() } -> releasable;
+};
+
+#ifdef CXXDES_ASYNC_WITH
+
+template <acquirable A, typename F>
+process<void> operator+(A &a, F &&f) {
+    auto handle = co_await a.acquire();
+    co_await std::forward<F>(f)();
+    co_await handle.release();
+}
+
+#define async_with(x) co_yield (x) + [&]() mutable -> process<void>
+
+#endif // CXXDES_ASYNC_WITH
 
 } /* namespace core */
 } /* namespace cxxdes */
