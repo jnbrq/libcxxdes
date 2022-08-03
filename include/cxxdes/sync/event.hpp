@@ -14,90 +14,121 @@
 #include <vector>
 #include <stdexcept>
 
-#include <cxxdes/core/process.hpp>
+#include <cxxdes/core/token.hpp>
 
 namespace cxxdes {
 namespace sync {
 
 namespace detail {
-namespace ns_event {
 
-using core::time_type;
-using core::priority_type;
-using core::coro_handle;
-using core::promise_base;
-using core::process;
+using namespace cxxdes::core;
 
 struct event;
 
 struct wake_awaitable {
-    event *fence;
-    time_type latency;
-    priority_type priority;
+    constexpr wake_awaitable(
+        event *evt,
+        time_type latency,
+        priority_type priority = priority_consts::inherit):
+        evt_{evt}, latency_{latency}, priority_{priority} {
+    }
 
-    core::event *on_suspend(promise_base *promise, coro_handle coro);
+    void await_bind(environment *env, priority_type priority) noexcept {
+        env_ = env;
 
-    void on_resume() {  }
+        if (priority_ == priority_consts::inherit) {
+            priority_ = priority;
+        }
+    }
+
+    bool await_ready() const noexcept { return false; }
+    void await_suspend(coro_handle current_coro);
+    token *await_token() const noexcept { return tkn_; }
+    void await_resume() const noexcept {  }
+
+private:
+    event *evt_;
+
+    environment *env_ = nullptr;
+    token *tkn_ = nullptr;
+    time_type latency_;
+    priority_type priority_;
 };
 
 struct wait_awaitable {
-    event *fence;
-    time_type latency;
-    priority_type priority;
+    constexpr wait_awaitable(
+        event *evt,
+        time_type latency,
+        priority_type priority = priority_consts::inherit):
+        evt_{evt}, latency_{latency}, priority_{priority} {
+    }
 
-    core::event *on_suspend(promise_base *promise, coro_handle coro);
+    void await_bind(environment *env, priority_type priority) noexcept {
+        env_ = env;
 
-    void on_resume() {  }
+        if (priority_ == priority_consts::inherit) {
+            priority_ = priority;
+        }
+    }
+
+    bool await_ready() const noexcept { return false; }
+    void await_suspend(coro_handle current_coro);
+    token *await_token() const noexcept { return tkn_; }
+    void await_resume() const noexcept {  }
+
+private:
+    event *evt_;
+
+    environment *env_ = nullptr;
+    token *tkn_ = nullptr;
+    time_type latency_;
+    priority_type priority_;
 };
 
 struct event {
     [[nodiscard("expected usage: co_await event.wake()")]]
     wake_awaitable wake(time_type latency = 0, priority_type priority = 0) {
-        return {this, latency, priority};
+        return wake_awaitable(this, latency, priority);
     }
 
     [[nodiscard("expected usage: co_await event.wait()")]]
     wait_awaitable wait(time_type latency = 0, priority_type priority = 0) {
-        return {this, latency, priority};
+        return wait_awaitable(this, latency, priority);
     }
 
     ~event() {
-        for (auto e: events_)
-            delete e;
+        for (auto tkn: tokens_)
+            delete tkn;
         
-        events_.clear();
+        tokens_.clear();
     }
 private:
     friend struct wake_awaitable;
     friend struct wait_awaitable;
 
-    std::vector<core::event *> events_;
+    std::vector<token *> tokens_;
 };
 
-inline core::event *wake_awaitable::on_suspend(promise_base *promise, coro_handle coro) {
-    for (auto evt: fence->events_) {
-        evt->time += promise->env->now();
-        promise->env->append_event(evt);
+inline void wake_awaitable::await_suspend(coro_handle current_coro) {
+    for (auto tkn: evt_->tokens_) {
+        tkn->time += env_->now();
+        env_->schedule_token(tkn);
     }
 
-    fence->events_.clear();
+    evt_->tokens_.clear();
 
-    auto evt = new core::event{ promise->env->now() + latency, priority, coro };
-    promise->env->append_event(evt);
-
-    return evt;
+    tkn_ = new token(env_->now() + latency_, priority_, current_coro);
+    env_->schedule_token(tkn_);
 }
 
-inline core::event *wait_awaitable::on_suspend(promise_base *promise, coro_handle coro) {
-    core::event *evt = new core::event{ latency, priority, coro };
-    fence->events_.push_back(evt);
-    return evt;
+inline void wait_awaitable::await_suspend(coro_handle current_coro) {
+    tkn_ = new token(latency_, priority_, current_coro);
+    evt_->tokens_.push_back(tkn_);
 }
 
-} /* namespace ns_event */
 } /* namespace detail */
 
-using detail::ns_event::event;
+using detail::event;
 
 } /* namespace sync */
 } /* namespace cxxdes */

@@ -1,8 +1,6 @@
 #include <fmt/core.h>
 
-#include <cxxdes/core/process.hpp>
-#include <cxxdes/core/compositions.hpp>
-#include <cxxdes/core/timeout.hpp>
+#include <cxxdes/cxxdes.hpp>
 
 using namespace cxxdes::core;
 
