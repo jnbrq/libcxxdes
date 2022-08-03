@@ -20,9 +20,9 @@ template <typename T>
 concept awaitable = requires(
     T t,
     environment *env,
-    priority_type priority,
+    priority_type inherited_priority,
     coro_handle current_coro) {
-    { t.await_bind(env, priority) };
+    { t.await_bind(env, inherited_priority) };
     { t.await_ready() } -> std::same_as<bool>;
     { t.await_suspend(current_coro) };
     { t.await_token() } -> std::same_as<token *>;
