@@ -182,17 +182,30 @@ constexpr any_all_helper<all_of_condition>::functor all_of;
 
 struct sequential_helper {
     template <typename ...Ts>
-    static process<void> seq_proc(Ts && ...ts) {
+    static process<void> seq_proc_tuple(Ts && ...ts) {
         ((co_await std::forward<Ts>(ts)), ...);
         co_return ;
     }
 
-
+    template <typename Iterator>
+    static process<void> seq_proc_range(Iterator begin, Iterator end) {
+        for (Iterator it = begin; it != end; ++it) {
+            co_await (*it);
+        }
+        co_return;
+    }
+    
     struct functor {
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await sequential(awaitables...)")]]
         constexpr auto operator()(Ts && ...ts) const {
-            return seq_proc(std::forward<Ts>(ts)...);
+            return seq_proc_tuple(std::forward<Ts>(ts)...);
+        }
+
+        template <typename Iterator>
+        [[nodiscard("expected usage: co_await sequential.range(begin, end)")]]
+        constexpr auto range(Iterator first, Iterator last) const {
+            return seq_proc_range(first, last);
         }
     };
 };
