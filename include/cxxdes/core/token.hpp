@@ -46,10 +46,16 @@ struct token {
         coro{coro} {  }
         
 
+    // schedule time
     time_type time = 0;
+
+    // schedule priority
     priority_type priority = 0;
+
+    // coroutine to continue
     coro_handle coro = nullptr;
 
+    // token handler can be modified only by all and any compositions
     token_handler *handler = nullptr;
 
     void process() {

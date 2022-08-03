@@ -50,8 +50,16 @@ struct this_process {
     struct get_environment {  };
 };
 
+struct empty_type {  };
+
 template <typename ReturnType = void>
 struct process {
+    using return_container_type = std::conditional_t<
+        std::is_same_v<ReturnType, void>,
+        empty_type,
+        std::optional<ReturnType>
+    >;
+
     struct promise_type;
 
     process(promise_type *this_promise): this_promise_{this_promise} {
@@ -68,7 +76,7 @@ struct process {
     void await_suspend(coro_handle current_coro) {
         completion_tkn_ = new token{0, this_promise_->priority, current_coro};
         if constexpr (not std::is_same_v<ReturnType, void>)
-            completion_tkn_->handler = new return_value_handler{};
+            this_promise_->return_container = &return_container_;
         this_promise_->completion_tkn = completion_tkn_;
     }
 
@@ -81,11 +89,10 @@ struct process {
             return ;
         else {
             // at this point, the promise is already destroyed,
-            // however, the completion token is still alive because tokens are deleted after coro is resumed.
-            auto &return_value = ((return_value_handler *) completion_tkn_->handler)->return_value;
-            if (!return_value)
+            // however, the coroutine object process<T> is still alive.
+            if (!return_container_)
                 throw std::runtime_error("no return value from the process<T> [T != void]!");
-            return std::move(*return_value);
+            return std::move(*return_container_);
         }
     }
 
@@ -113,9 +120,12 @@ private:
 
     template <typename Derived>
     struct return_value_mixin {
+        // return value
+        return_container_type *return_container = nullptr;
+
         template <typename T>
         void return_value(T &&t) {
-            ((Derived &) *this).set_result(std::forward<T>(t));
+            (*return_container).emplace(std::forward<T>(t));
             ((Derived &) *this).do_return();
         }
     };
@@ -125,11 +135,6 @@ private:
         void return_void() {
             ((Derived &) *this).do_return();
         }
-    };
-
-    struct return_value_handler: token_handler {
-        std::optional<ReturnType> return_value;
-        virtual ~return_value_handler() {  }
     };
     
 public:
@@ -237,13 +242,6 @@ public:
                 start_tkn = nullptr;
             }
         }
-        
-        template <typename T>
-        void set_result(T &&t) {
-            if (completion_tkn) {
-                ((return_value_handler *) completion_tkn->handler)->return_value = std::forward<T>(t);
-            }
-        }
 
         void do_return() {
             if (completion_tkn) {
@@ -261,6 +259,11 @@ public:
 private:
     promise_type *this_promise_ = nullptr;
     token *completion_tkn_ = nullptr;
+
+    // this should come last, so that its padding is not reused
+    // see: https://en.cppreference.com/w/cpp/language/attributes/no_unique_address
+    [[no_unique_address]]
+    return_container_type return_container_;
 };
 
 } /* namespace core */
