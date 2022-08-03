@@ -50,15 +50,26 @@ struct this_process {
     struct get_environment {  };
 };
 
+struct empty_type {  };
+
 template <typename ReturnType = void>
 struct process {
+    using return_container_type = std::conditional_t<
+        std::is_same_v<ReturnType, void>,
+        empty_type,
+        std::optional<ReturnType>
+    >;
+
     struct promise_type;
 
     process(promise_type *this_promise): this_promise_{this_promise} {
     }
 
     void await_bind(environment *env, priority_type priority = priority_consts::zero) {
-        this_promise_->bind(env);
+        if (bound_)
+            throw std::runtime_error("cannot bind an already bound process twice");
+        bound_ = true;
+        this_promise_->bind(env, priority);
     }
 
     bool await_ready() const noexcept {
@@ -68,7 +79,7 @@ struct process {
     void await_suspend(coro_handle current_coro) {
         completion_tkn_ = new token{0, this_promise_->priority, current_coro};
         if constexpr (not std::is_same_v<ReturnType, void>)
-            completion_tkn_->handler = new return_value_handler{};
+            this_promise_->return_container = &return_container_;
         this_promise_->completion_tkn = completion_tkn_;
     }
 
@@ -81,17 +92,16 @@ struct process {
             return ;
         else {
             // at this point, the promise is already destroyed,
-            // however, the completion token is still alive because tokens are deleted after coro is resumed.
-            auto &return_value = ((return_value_handler *) completion_tkn_->handler)->return_value;
-            if (!return_value)
+            // however, the coroutine object process<T> is still alive.
+            if (!return_container_)
                 throw std::runtime_error("no return value from the process<T> [T != void]!");
-            return std::move(*return_value);
+            return std::move(*return_container_);
         }
     }
 
     auto &priority(priority_type priority) {
         #ifdef CXXDES_SAFE
-        if (!this_promise_->start_tkn)
+        if (bound_)
             throw std::runtime_error("cannot change the priority of a started process");
         #endif
         this_promise_->start_tkn->priority = priority;
@@ -100,7 +110,7 @@ struct process {
 
     auto &latency(time_type latency) {
         #ifdef CXXDES_SAFE
-        if (!this_promise_->start_tkn)
+        if (bound_)
             throw std::runtime_error("cannot change the latency of a started process");
         #endif
         this_promise_->start_tkn->time = latency;
@@ -113,9 +123,12 @@ private:
 
     template <typename Derived>
     struct return_value_mixin {
+        // return value
+        return_container_type *return_container = nullptr;
+
         template <typename T>
         void return_value(T &&t) {
-            ((Derived &) *this).set_result(std::forward<T>(t));
+            (*return_container).emplace(std::forward<T>(t));
             ((Derived &) *this).do_return();
         }
     };
@@ -125,11 +138,6 @@ private:
         void return_void() {
             ((Derived &) *this).do_return();
         }
-    };
-
-    struct return_value_handler: token_handler {
-        std::optional<ReturnType> return_value;
-        virtual ~return_value_handler() {  }
     };
     
 public:
@@ -157,7 +165,7 @@ public:
 
         template <typename ...Args>
         promise_type(Args && ...) {
-            start_tkn = new token{0, priority_consts::zero, nullptr};
+            start_tkn = new token{0, priority_consts::inherit, nullptr};
             this_coro = std::coroutine_handle<promise_type>::from_promise(*this);
         };
 
@@ -169,14 +177,14 @@ public:
         auto final_suspend() noexcept -> std::suspend_never { return {}; }
         auto unhandled_exception() { std::rethrow_exception(std::current_exception()); }
 
-        template <typename A>
+        template <awaitable A>
         A &&await_transform(A &&a) const noexcept {
             // co_await (A{});
             // A{} is alive throughout the co_await expression
             // therefore, it is safe to return an rvalue-reference to it
 
             a.await_bind(env, priority);
-            return std::move(a);
+            return std::forward<A>(a);
         }
 
         // implementation of the this_process interface
@@ -228,21 +236,14 @@ public:
             return immediately_returning_awaitable<environment *>{env};
         }
 
-        void bind(environment *env) {
-            if (start_tkn) {
-                this->env = env;
-                start_tkn->coro = this_coro;
-                env->schedule_token(start_tkn);
-                priority = start_tkn->priority;
-                start_tkn = nullptr;
-            }
-        }
-        
-        template <typename T>
-        void set_result(T &&t) {
-            if (completion_tkn) {
-                ((return_value_handler *) completion_tkn->handler)->return_value = std::forward<T>(t);
-            }
+        void bind(environment *env, priority_type inherited_priority) {
+            this->env = env;
+            start_tkn->coro = this_coro;
+            if (start_tkn->priority == priority_consts::inherit)
+                start_tkn->priority = inherited_priority;
+            env->schedule_token(start_tkn);
+            priority = start_tkn->priority;
+            start_tkn = nullptr;
         }
 
         void do_return() {
@@ -261,6 +262,13 @@ public:
 private:
     promise_type *this_promise_ = nullptr;
     token *completion_tkn_ = nullptr;
+
+    bool bound_ = false;
+
+    // this should come last, so that its padding is not reused
+    // see: https://en.cppreference.com/w/cpp/language/attributes/no_unique_address
+    [[no_unique_address]]
+    return_container_type return_container_;
 };
 
 } /* namespace core */
