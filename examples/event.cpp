@@ -48,17 +48,6 @@ int main() {
     []() -> process<> {
         co_await all_of(p1(), p2(), p3(), p4());
     }().await_bind(&env);
-    /*
-    
-    // Or, equivalently, you can write:
-
-    p1().start(env);
-    p2().start(env);
-    p3().start(env);
-    p4().start(env);
-
-    */
-    
     while (env.step()) ;
 
     return 0;
