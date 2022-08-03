@@ -38,6 +38,8 @@ if (NOT DEFINED CXXDES_NO_EXAMPLES)
             PUBLIC
             cxxdes::cxxdes
             fmt::fmt-header-only)
+        # target_compile_options("example_${basename}" PRIVATE -fsanitize=address)
+        # target_link_options("example_${basename}" PRIVATE -fsanitize=address)
     endforeach()
 
 endif()
