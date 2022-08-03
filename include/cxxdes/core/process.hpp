@@ -178,12 +178,17 @@ public:
         auto unhandled_exception() { std::rethrow_exception(std::current_exception()); }
 
         template <awaitable A>
-        A &&await_transform(A &&a) const noexcept {
+        auto &&await_transform(A &&a) const noexcept {
             // co_await (A{});
             // A{} is alive throughout the co_await expression
             // therefore, it is safe to return an rvalue-reference to it
 
             a.await_bind(env, priority);
+            return std::forward<A>(a);
+        }
+
+        template <awaitable A>
+        auto &&yield_value(A &&a) {
             return std::forward<A>(a);
         }
 
@@ -197,7 +202,7 @@ public:
             return immediately_returning_awaitable<time_type>{completion_tkn->time};
         }
 
-        auto await_transform(this_process::set_return_latency x) const {
+        auto await_transform(this_process::set_return_latency x) {
             if (!completion_tkn) {
                 throw std::runtime_error("set_return_latency cannot be called for the main process!");
             }
@@ -214,7 +219,7 @@ public:
             return immediately_returning_awaitable<priority_type>{completion_tkn->priority};
         }
 
-        auto await_transform(this_process::set_return_priority x) const {
+        auto await_transform(this_process::set_return_priority x) {
             if (!completion_tkn) {
                 throw std::runtime_error("set_return_priority cannot be called for the main process!");
             }
@@ -227,7 +232,7 @@ public:
             return immediately_returning_awaitable<priority_type>{priority};
         }
 
-        auto await_transform(this_process::set_priority x) const {
+        auto await_transform(this_process::set_priority x) {
             priority = x.priority;
             return std::suspend_never{};
         }
