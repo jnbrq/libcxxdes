@@ -18,43 +18,80 @@ namespace cxxdes {
 namespace sync {
 
 namespace detail {
-namespace ns_mutex {
 
-using core::time_type;
-using core::priority_type;
-using core::coro_handle;
-using core::promise_base;
-using core::process;
+using namespace cxxdes::core;
 
 struct mutex;
 
 struct release_awaitable {
-    mutex *mtx;
-    time_type latency;
-    priority_type priority;
+    constexpr release_awaitable(
+        mutex *mtx,
+        time_type latency,
+        priority_type priority = priority_consts::inherit):
+        mtx_{mtx}, latency_{latency}, priority_{priority} {
+    }
 
-    core::event *on_suspend(promise_base *promise, coro_handle coro);
-    void on_resume() {  }
+    void await_bind(environment *env, priority_type priority) noexcept {
+        env_ = env;
+
+        if (priority_ == priority_consts::inherit) {
+            priority_ = priority;
+        }
+    }
+
+    bool await_ready() const noexcept { return false; }
+    void await_suspend(coro_handle current_coro);
+    token *await_token() const noexcept { return tkn_; }
+    void await_resume() const noexcept {  }
+
+private:
+    mutex *mtx_ = nullptr;
+
+    environment *env_ = nullptr;
+    token *tkn_ = nullptr;
+    time_type latency_;
+    priority_type priority_;
 };
 
 struct acquire_awaitable {
-    mutex *mtx;
-    time_type latency;
-    priority_type priority;
+    constexpr acquire_awaitable(
+        mutex *mtx,
+        time_type latency,
+        priority_type priority = priority_consts::inherit):
+        mtx_{mtx}, latency_{latency}, priority_{priority} {
+    }
 
-    core::event *on_suspend(promise_base *promise, coro_handle coro);
-    void on_resume() {  }
+    void await_bind(environment *env, priority_type priority) noexcept {
+        env_ = env;
+
+        if (priority_ == priority_consts::inherit) {
+            priority_ = priority;
+        }
+    }
+
+    bool await_ready() const noexcept { return false; }
+    void await_suspend(coro_handle current_coro);
+    token *await_token() const noexcept { return tkn_; }
+    void await_resume() const noexcept {  }
+
+private:
+    mutex *mtx_ = nullptr;
+
+    environment *env_ = nullptr;
+    token *tkn_ = nullptr;
+    time_type latency_;
+    priority_type priority_;
 };
 
 struct mutex {
     [[nodiscard("expected usage: co_await mtx.acquire()")]]
-    acquire_awaitable acquire(time_type latency = 0, priority_type priority = 0) {
-        return {this, latency, priority};
+    auto acquire(time_type latency = 0, priority_type priority = 0) {
+        return acquire_awaitable(this, latency, priority);
     }
 
     [[nodiscard("expected usage: co_await mtx.release()")]]
-    release_awaitable release(time_type latency = 0, priority_type priority = 0) {
-        return {this, latency, priority};
+    auto release(time_type latency = 0, priority_type priority = 0) {
+        return release_awaitable(this, latency, priority);
     }
 
     [[nodiscard]]
@@ -67,66 +104,56 @@ private:
     friend struct release_awaitable;
 
     struct event_comp {
-        bool operator()(core::event *evt_a, core::event *evt_b) const {
-            return (evt_a->priority > evt_b->priority);
+        bool operator()(token *tkn_a, token *tkn_b) const {
+            return (tkn_a->priority > tkn_b->priority);
         }
     };
 
     coro_handle coro_ = nullptr;
-    std::priority_queue<core::event *, std::vector<core::event *>, event_comp> events_;
+    std::priority_queue<token *, std::vector<token *>, event_comp> tokens_;
 };
 
-inline core::event *release_awaitable::on_suspend(promise_base *promise, coro_handle coro) {
-    #ifdef CXXDES_SAFE
-    if (mtx->coro_ != coro) {
+inline void release_awaitable::await_suspend(coro_handle current_coro) {
+    if (mtx_->coro_ != current_coro)
         throw std::runtime_error("cannot release a mutex from a different process.");
-    }
-    #endif
 
     // next process to wake up
-    if (mtx->events_.size() > 0) {
-        auto evt = mtx->events_.top();
-        mtx->events_.pop();
-        mtx->coro_ = evt->coro;
-        evt->time += promise->env->now();
-        promise->env->append_event(evt);
+    if (mtx_->tokens_.size() > 0) {
+        auto evt = mtx_->tokens_.top();
+        mtx_->tokens_.pop();
+        mtx_->coro_ = evt->coro;
+        evt->time += env_->now();
+        env_->schedule_token(evt);
     }
     else {
-        mtx->coro_ = nullptr;
+        mtx_->coro_ = nullptr;
     }
 
     // resume the current process
-    auto evt = new core::event{ promise->env->now() + latency, priority, coro };
-    promise->env->append_event(evt);
-    
-    return evt;
+    tkn_ = new token(env_->now() + latency_, priority_, current_coro);
+    env_->schedule_token(tkn_);
 }
 
-inline core::event *acquire_awaitable::on_suspend(promise_base *promise, coro_handle coro) {
-    #ifdef CXXDES_SAFE
-    if (mtx->coro_ == coro) {
+inline void acquire_awaitable::await_suspend(coro_handle current_coro) {
+    if (mtx_->coro_ == current_coro)
         throw std::runtime_error("cannot recursively acquire a mutex from the same process.");
-    }
-    #endif
     
-    core::event *evt = new core::event{ latency, priority, coro };
-    if (!mtx->coro_) {
+    tkn_ = new token(latency_, priority_, current_coro);
+    if (!mtx_->coro_) {
         // free mutex
-        evt->time += promise->env->now();
-        promise->env->append_event(evt);
-        mtx->coro_ = coro;
+        tkn_->time += env_->now();
+        env_->schedule_token(tkn_);
+        mtx_->coro_ = current_coro;
     }
     else {
         // locked mutex, block until we are done
-        mtx->events_.push(evt);
+        mtx_->tokens_.push(tkn_);
     }
-    return evt;
 }
 
-} /* namespace ns_mutex */
 } /* namespace detail */
 
-using detail::ns_mutex::mutex;
+using detail::mutex;
 
 } /* namespace sync */
 } /* namespace cxxdes */

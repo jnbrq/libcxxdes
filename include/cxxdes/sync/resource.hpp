@@ -18,7 +18,6 @@ namespace cxxdes {
 namespace sync {
 
 namespace detail {
-namespace ns_resource {
 
 using core::process;
 
@@ -45,11 +44,10 @@ private:
     semaphore<> s_;
 };
 
-} /* namespace resource */
 } /* namespace detail */
 
-using detail::ns_resource::resource_handle;
-using detail::ns_resource::resource;
+using detail::resource_handle;
+using detail::resource;
 
 } /* namespace sync */
 } /* namespace cxxdes */

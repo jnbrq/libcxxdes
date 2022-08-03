@@ -47,7 +47,7 @@ struct wake_awaitable {
     void await_resume() const noexcept {  }
 
 private:
-    event *evt_;
+    event *evt_ = nullptr;
 
     environment *env_ = nullptr;
     token *tkn_ = nullptr;
@@ -77,7 +77,7 @@ struct wait_awaitable {
     void await_resume() const noexcept {  }
 
 private:
-    event *evt_;
+    event *evt_ = nullptr;
 
     environment *env_ = nullptr;
     token *tkn_ = nullptr;
@@ -87,12 +87,12 @@ private:
 
 struct event {
     [[nodiscard("expected usage: co_await event.wake()")]]
-    wake_awaitable wake(time_type latency = 0, priority_type priority = 0) {
+    auto wake(time_type latency = 0, priority_type priority = 0) {
         return wake_awaitable(this, latency, priority);
     }
 
     [[nodiscard("expected usage: co_await event.wait()")]]
-    wait_awaitable wait(time_type latency = 0, priority_type priority = 0) {
+    auto wait(time_type latency = 0, priority_type priority = 0) {
         return wait_awaitable(this, latency, priority);
     }
 
