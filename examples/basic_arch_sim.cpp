@@ -16,7 +16,7 @@ struct memory {
     }
 
     process<> load(addr_type addr) {
-        time_type timestamp = (co_await get_env)->now();
+        time_type timestamp = (co_await this_process::get_environment())->now();
 
         // co_await timeout(extra_latency_); // additional latency to be added here
         co_await mtx_.acquire();
@@ -48,7 +48,7 @@ struct memory {
     }
 
     process<> store(addr_type addr) {
-        time_type timestamp = (co_await get_env)->now();
+        time_type timestamp = (co_await this_process::get_environment())->now();
 
         // co_await timeout(extra_latency_); // additional latency to be added here
         co_await mtx_.acquire();
