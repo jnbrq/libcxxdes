@@ -66,7 +66,7 @@ struct process {
     }
 
     void await_bind(environment *env, priority_type priority = priority_consts::zero) {
-        this_promise_->bind(env);
+        this_promise_->bind(env, priority);
     }
 
     bool await_ready() const noexcept {
@@ -162,7 +162,7 @@ public:
 
         template <typename ...Args>
         promise_type(Args && ...) {
-            start_tkn = new token{0, priority_consts::zero, nullptr};
+            start_tkn = new token{0, priority_consts::inherit, nullptr};
             this_coro = std::coroutine_handle<promise_type>::from_promise(*this);
         };
 
@@ -174,14 +174,14 @@ public:
         auto final_suspend() noexcept -> std::suspend_never { return {}; }
         auto unhandled_exception() { std::rethrow_exception(std::current_exception()); }
 
-        template <typename A>
+        template <awaitable A>
         A &&await_transform(A &&a) const noexcept {
             // co_await (A{});
             // A{} is alive throughout the co_await expression
             // therefore, it is safe to return an rvalue-reference to it
 
             a.await_bind(env, priority);
-            return std::move(a);
+            return std::forward<A>(a);
         }
 
         // implementation of the this_process interface
@@ -233,11 +233,13 @@ public:
             return immediately_returning_awaitable<environment *>{env};
         }
 
-        void bind(environment *env) {
+        void bind(environment *env, priority_type inherited_priority) {
             if (start_tkn) {
                 this->env = env;
                 start_tkn->coro = this_coro;
                 env->schedule_token(start_tkn);
+                if (start_tkn->priority == priority_consts::inherit)
+                    start_tkn->priority = inherited_priority;
                 priority = start_tkn->priority;
                 start_tkn = nullptr;
             }
