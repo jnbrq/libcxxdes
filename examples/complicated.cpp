@@ -9,11 +9,15 @@ CXXDES_SIMULATION(complicated_example) {
 
     process<> p0() {
         co_await timeout(5);
+
+        co_return;
     }
 
     process<> p1() {
         co_await timeout(5);
         co_await evt.wake();
+
+        co_return;
     }
 
     process<> p2() {
@@ -24,6 +28,8 @@ CXXDES_SIMULATION(complicated_example) {
         fmt::print("p2.c now = {}\n", env.now());
         co_await sequential(timeout(5), timeout(5));
         fmt::print("p2.d now = {}\n", env.now());
+
+        co_return;
     }
 
     // A very bad example
@@ -31,6 +37,8 @@ CXXDES_SIMULATION(complicated_example) {
         co_await sequential(timeout(5), timeout(10), p0());
         // do *not* use p0().start()!
         fmt::print("p3.a now = {}\n", env.now());
+
+        co_return;
     }
 
     // Recursion example
@@ -41,6 +49,8 @@ CXXDES_SIMULATION(complicated_example) {
         co_await timeout(5);
         fmt::print("p4.a k = {}, now = {}\n", k, env.now());
         co_await p4(k - 1);
+
+        co_return;
     }
 
     process<> p5() {
@@ -50,12 +60,14 @@ CXXDES_SIMULATION(complicated_example) {
         auto to_wait = std::vector{ timeout(5),  timeout(10), timeout(20) };
 
         t = now();
-        co_await all_of.sequence(to_wait.begin(), to_wait.end());
+        co_await all_of.range(to_wait.begin(), to_wait.end());
         fmt::print("p5.delta1: {}\n", env.now() - t);
 
         t = now();
-        co_await any_of.sequence(to_wait.begin(), to_wait.end());
+        co_await any_of.range(to_wait.begin(), to_wait.end());
         fmt::print("p5.delta1: {}\n", env.now() - t);
+
+        co_return;
     }
 
     process<> co_main() {
@@ -73,6 +85,8 @@ CXXDES_SIMULATION(complicated_example) {
 
         fmt::print("Example 5: dynamic. now = {}\n", env.now());
         co_await p5();
+
+        co_return;
     }
 };
 

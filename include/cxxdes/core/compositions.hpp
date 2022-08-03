@@ -156,7 +156,11 @@ struct any_all_helper {
         template <typename Iterator>
         [[nodiscard("expected usage: co_await any_of.range(begin, end) or all_of.range(begin, end)")]]
         constexpr auto range(Iterator first, Iterator last) const {
-            return range_based<Iterator>{first, last, (std::size_t) std::distance(first, last)};
+            return range_based<Iterator>{
+                .first = first,
+                .last = last,
+                .size = (std::size_t) std::distance(first, last)
+            };
         }
     };
 };
@@ -203,17 +207,17 @@ using detail::sequential;
 
 template <awaitable A1, awaitable A2>
 auto operator||(A1 &&a1, A2 &&a2) {
-    return any_of(std::move(a1), std::move(a2));
+    return any_of(std::forward<A1>(a1), std::forward<A2>(a2));
 }
 
 template <awaitable A1, awaitable A2>
 auto operator&&(A1 &&a1, A2 &&a2) {
-    return all_of(std::move(a1), std::move(a2));
+    return all_of(std::forward<A1>(a1), std::forward<A2>(a2));
 }
 
 template <awaitable A1, awaitable A2>
 auto operator,(A1 &&a1, A2 &&a2) {
-    return sequential(std::move(a1), std::move(a2));
+    return sequential(std::forward<A1>(a1), std::forward<A2>(a2));
 }
 
 } /* namespace core */
