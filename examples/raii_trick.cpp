@@ -1,4 +1,4 @@
-#define CXXDES_ASYNC_WITH
+#define CXXDES_CO_WITH
 #include <cxxdes/cxxdes.hpp>
 #include <fmt/core.h>
 
@@ -20,7 +20,7 @@ CXXDES_SIMULATION(raii_trick) {
         co_await handle.release();
         */
 
-        async_with(res) {
+        co_with(res) {
             co_await timeout(wait_time);
             fmt::print("p id = {}, now = {}\n", id, now());
         };
