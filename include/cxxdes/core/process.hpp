@@ -66,6 +66,9 @@ struct process {
     }
 
     void await_bind(environment *env, priority_type priority = priority_consts::zero) {
+        if (bound_)
+            throw std::runtime_error("cannot bind an already bound process twice");
+        bound_ = true;
         this_promise_->bind(env, priority);
     }
 
@@ -98,7 +101,7 @@ struct process {
 
     auto &priority(priority_type priority) {
         #ifdef CXXDES_SAFE
-        if (!this_promise_->start_tkn)
+        if (bound_)
             throw std::runtime_error("cannot change the priority of a started process");
         #endif
         this_promise_->start_tkn->priority = priority;
@@ -107,7 +110,7 @@ struct process {
 
     auto &latency(time_type latency) {
         #ifdef CXXDES_SAFE
-        if (!this_promise_->start_tkn)
+        if (bound_)
             throw std::runtime_error("cannot change the latency of a started process");
         #endif
         this_promise_->start_tkn->time = latency;
@@ -234,15 +237,13 @@ public:
         }
 
         void bind(environment *env, priority_type inherited_priority) {
-            if (start_tkn) {
-                this->env = env;
-                start_tkn->coro = this_coro;
-                if (start_tkn->priority == priority_consts::inherit)
-                    start_tkn->priority = inherited_priority;
-                env->schedule_token(start_tkn);
-                priority = start_tkn->priority;
-                start_tkn = nullptr;
-            }
+            this->env = env;
+            start_tkn->coro = this_coro;
+            if (start_tkn->priority == priority_consts::inherit)
+                start_tkn->priority = inherited_priority;
+            env->schedule_token(start_tkn);
+            priority = start_tkn->priority;
+            start_tkn = nullptr;
         }
 
         void do_return() {
@@ -261,6 +262,8 @@ public:
 private:
     promise_type *this_promise_ = nullptr;
     token *completion_tkn_ = nullptr;
+
+    bool bound_ = false;
 
     // this should come last, so that its padding is not reused
     // see: https://en.cppreference.com/w/cpp/language/attributes/no_unique_address
