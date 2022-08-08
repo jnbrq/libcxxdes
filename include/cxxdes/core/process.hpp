@@ -52,6 +52,9 @@ struct this_process {
 
 struct empty_type {  };
 
+template <typename T>
+struct await_transform_extender;
+
 template <typename ReturnType = void>
 struct process {
     using return_container_type = std::conditional_t<
@@ -129,14 +132,14 @@ private:
         template <typename T>
         void return_value(T &&t) {
             (*return_container).emplace(std::forward<T>(t));
-            ((Derived &) *this).do_return();
+            static_cast<Derived *>(this)->do_return();
         }
     };
 
     template <typename Derived>
     struct return_void_mixin {
         void return_void() {
-            ((Derived &) *this).do_return();
+            static_cast<Derived *>(this)->do_return();
         }
     };
     
@@ -244,6 +247,11 @@ public:
 
         auto await_transform(this_process::get_environment) const {
             return immediately_returning_awaitable<environment *>{env};
+        }
+
+        template <typename T>
+        auto await_transform(await_transform_extender<T> const &a) {
+            return a.await_transform(*this);
         }
 
         void bind(environment *env, priority_type inherited_priority) {
