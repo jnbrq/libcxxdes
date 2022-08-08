@@ -14,27 +14,21 @@ CXXDES_SIMULATION(mutex_example)
     }
 
     process<> p1() {
-        print_time("p1a");
         co_await m.acquire();
-        print_time("p1b");
-        co_await timeout(10);
-        print_time("p1c");
+        std::cout << "p1 works\n";
+        co_await timeout(5);
         co_await m.release();
-        print_time("p1d");
     }
 
     process<> p2() {
-        print_time("p2a");
-        co_await timeout(5);
-        print_time("p2b");
         co_await m.acquire();
-        print_time("p2c");
+        std::cout << "p2 works\n";
+        co_await timeout(5);
         co_await m.release();
-        print_time("p2d");
     }
 
     process<> co_main() {
-        co_await (p1() && p2());
+        co_await (p1() && p2().priority(-10));
     }
 };
 
