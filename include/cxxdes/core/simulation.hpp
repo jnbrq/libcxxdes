@@ -23,7 +23,9 @@ struct simulation {
 
     template <awaitable A>
     void start_awaitable(A &&a) {
-        a.await_bind(&env);
+        std::forward<A>(a).await_bind(&env);
+        std::forward<A>(a).await_ready();
+        std::forward<A>(a).await_suspend(nullptr);
     }
 
     void start_main() {
