@@ -21,6 +21,11 @@ template <typename Derived>
 struct simulation {
     environment env;
 
+    template <awaitable A>
+    void start_awaitable(A &&a) {
+        a.await_bind(&env);
+    }
+
     void start_main() {
         static_cast<Derived *>(this)->co_main().await_bind(&env);
     }
