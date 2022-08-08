@@ -22,7 +22,7 @@ struct simulation {
     environment env;
 
     void start_main() {
-        ((Derived &) *this).co_main().await_bind(&env);
+        static_cast<Derived *>(this)->co_main().await_bind(&env);
     }
 
     auto now() const {

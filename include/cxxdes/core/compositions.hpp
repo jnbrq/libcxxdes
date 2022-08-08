@@ -74,13 +74,13 @@ struct any_all_helper {
             if (priority_ == priority_consts::inherit)
                 priority_ = priority;
             
-            ((Derived &) *this).apply([&](auto &a) { a.await_bind(env, priority_); });
+            derived().apply([&](auto &a) { a.await_bind(env, priority_); });
         }
 
         bool await_ready() {
-            auto total = ((Derived &) *this).count();
+            auto total = derived().count();
             remaining_ = total;
-            ((Derived &) *this).apply([&](auto &a) mutable { remaining_ -= (a.await_ready() ? 1 : 0); });
+            derived().apply([&](auto &a) mutable { remaining_ -= (a.await_ready() ? 1 : 0); });
             return Condition::operator()(total, remaining_);
         }
 
@@ -88,12 +88,12 @@ struct any_all_helper {
             tkn_ = new token(latency_, priority_, current_coro);
 
             auto handler = new custom_handler;
-            handler->total = ((Derived &) *this).count();
+            handler->total = derived().count();
             handler->remaining = remaining_;
             handler->env = env_;
             handler->completion_tkn = tkn_;
 
-            ((Derived &) *this).apply([&](auto &a) {
+            derived().apply([&](auto &a) {
                 a.await_suspend(current_coro);
                 if (a.await_token())
                     a.await_token()->handler = handler;
@@ -105,11 +105,19 @@ struct any_all_helper {
         }
 
         void await_resume() {
-            ((Derived &) *this).apply([&](auto &a) { a.await_resume(); });
+            derived().apply([&](auto &a) { a.await_resume(); });
         }
 
     private:
         std::size_t remaining_ = 0;
+
+        auto derived() -> auto & {
+            return *(static_cast<Derived *>(this));
+        }
+
+        auto derived() const -> auto const & {
+            return *(static_cast<Derived const *>(this));
+        }
         
         environment *env_ = nullptr;
         token *tkn_ = nullptr;
