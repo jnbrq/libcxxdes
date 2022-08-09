@@ -13,8 +13,12 @@
 
 #include <tuple>
 #include <iterator>
-
 #include <cxxdes/core/process.hpp>
+
+#include <cxxdes/debug/helpers.hpp>
+#ifdef CXXDES_DEBUG_CORE_COMPOSITIONS
+#   include <cxxdes/debug/begin.hpp>
+#endif
 
 namespace cxxdes {
 namespace core {
@@ -31,6 +35,8 @@ struct any_all_helper {
         environment *env = nullptr;
 
         bool invoke(token *tkn) override {
+            CXXDES_DEBUG_MEMBER_FUNCTION;
+
             --remaining;
 
             // do not delete the handler while still in use
@@ -69,6 +75,8 @@ struct any_all_helper {
         }
 
         void await_bind(environment *env, priority_type priority) {
+            CXXDES_DEBUG_MEMBER_FUNCTION;
+            
             env_ = env;
 
             if (priority_ == priority_consts::inherit)
@@ -85,6 +93,8 @@ struct any_all_helper {
         }
 
         void await_suspend(coro_handle current_coro) {
+            CXXDES_DEBUG_MEMBER_FUNCTION;
+
             tkn_ = new token(latency_, priority_, current_coro);
 
             auto handler = new custom_handler;
@@ -105,6 +115,8 @@ struct any_all_helper {
         }
 
         void await_resume() {
+            CXXDES_DEBUG_MEMBER_FUNCTION;
+            
             derived().apply([&](auto &a) { a.await_resume(); });
         }
 
@@ -262,5 +274,8 @@ auto operator>>(capture_return<A> &&crv, Output &output) {
 } /* namespace core */
 } /* namespace cxxdes */
 
+#ifdef CXXDES_DEBUG_CORE_COMPOSITIONS
+#   include <cxxdes/debug/end.hpp>
+#endif
 
 #endif /* CXXDES_CORE_COMPOSITIONS_HPP_INCLUDED */

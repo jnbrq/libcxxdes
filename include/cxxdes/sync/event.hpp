@@ -13,8 +13,12 @@
 
 #include <vector>
 #include <stdexcept>
-
 #include <cxxdes/core/token.hpp>
+
+#include <cxxdes/debug/helpers.hpp>
+#ifdef CXXDES_DEBUG_SYNC_EVENT
+#   include <cxxdes/debug/begin.hpp>
+#endif
 
 namespace cxxdes {
 namespace sync {
@@ -34,6 +38,8 @@ struct wake_awaitable {
     }
 
     void await_bind(environment *env, priority_type priority) noexcept {
+        CXXDES_DEBUG_MEMBER_FUNCTION;
+
         env_ = env;
 
         if (priority_ == priority_consts::inherit) {
@@ -44,7 +50,10 @@ struct wake_awaitable {
     bool await_ready() const noexcept { return false; }
     void await_suspend(coro_handle current_coro);
     token *await_token() const noexcept { return tkn_; }
-    void await_resume() const noexcept {  }
+
+    void await_resume() const noexcept {
+        CXXDES_DEBUG_MEMBER_FUNCTION;
+    }
 
 private:
     event *evt_ = nullptr;
@@ -64,6 +73,8 @@ struct wait_awaitable {
     }
 
     void await_bind(environment *env, priority_type priority) noexcept {
+        CXXDES_DEBUG_MEMBER_FUNCTION;
+
         env_ = env;
 
         if (priority_ == priority_consts::inherit) {
@@ -74,7 +85,10 @@ struct wait_awaitable {
     bool await_ready() const noexcept { return false; }
     void await_suspend(coro_handle current_coro);
     token *await_token() const noexcept { return tkn_; }
-    void await_resume() const noexcept {  }
+
+    void await_resume() const noexcept {
+        CXXDES_DEBUG_MEMBER_FUNCTION;
+    }
 
 private:
     event *evt_ = nullptr;
@@ -110,6 +124,8 @@ private:
 };
 
 inline void wake_awaitable::await_suspend(coro_handle current_coro) {
+    CXXDES_DEBUG_MEMBER_FUNCTION;
+
     for (auto tkn: evt_->tokens_) {
         tkn->time += env_->now();
         env_->schedule_token(tkn);
@@ -122,6 +138,8 @@ inline void wake_awaitable::await_suspend(coro_handle current_coro) {
 }
 
 inline void wait_awaitable::await_suspend(coro_handle current_coro) {
+    CXXDES_DEBUG_MEMBER_FUNCTION;
+    
     tkn_ = new token(latency_, priority_, current_coro);
     evt_->tokens_.push_back(tkn_);
 }
@@ -132,5 +150,9 @@ using detail::event;
 
 } /* namespace sync */
 } /* namespace cxxdes */
+
+#ifdef CXXDES_DEBUG_SYNC_EVENT
+#   include <cxxdes/debug/end.hpp>
+#endif
 
 #endif /* CXXDES_SYNC_EVENT_HPP_INCLUDED */

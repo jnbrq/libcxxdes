@@ -11,8 +11,13 @@
 #ifndef CXXDES_CORE_ENVIRONMENT_HPP_INCLUDED
 #define CXXDES_CORE_ENVIRONMENT_HPP_INCLUDED
 
-#include <cxxdes/core/token.hpp>
 #include <queue>
+#include <cxxdes/core/token.hpp>
+
+#include <cxxdes/debug/helpers.hpp>
+#ifdef CXXDES_DEBUG_CORE_ENVIRONMENT
+#   include <cxxdes/debug/begin.hpp>
+#endif
 
 namespace cxxdes {
 namespace core {
@@ -25,10 +30,15 @@ struct environment {
     }
 
     void schedule_token(token *tkn) {
+        CXXDES_DEBUG_MEMBER_FUNCTION;
+        CXXDES_DEBUG_VARIABLE(tkn);
+
         tokens_.push(tkn);
     }
 
     bool step() {
+        CXXDES_DEBUG_MEMBER_FUNCTION;
+        
         if (tokens_.empty())
             return false;
         
@@ -44,6 +54,8 @@ struct environment {
     }
 
     ~environment() {
+        CXXDES_DEBUG_MEMBER_FUNCTION;
+        
         while (!tokens_.empty()) {
             auto tkn = tokens_.top();
             tokens_.pop();
@@ -66,5 +78,9 @@ private:
 
 } /* namespace core */
 } /* namespace cxxdes */
+
+#ifdef CXXDES_DEBUG_CORE_ENVIRONMENT
+#   include <cxxdes/debug/end.hpp>
+#endif
 
 #endif /* CXXDES_CORE_ENVIRONMENT_HPP_INCLUDED */

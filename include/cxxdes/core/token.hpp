@@ -13,8 +13,12 @@
 
 #include <cstdint>
 #include <limits>
-
 #include <cxxdes/core/coroutine.hpp>
+
+#include <cxxdes/debug/helpers.hpp>
+#ifdef CXXDES_DEBUG_CORE_TOKEN
+#   include <cxxdes/debug/begin.hpp>
+#endif
 
 namespace cxxdes {
 namespace core {
@@ -59,6 +63,8 @@ struct token {
     token_handler *handler = nullptr;
 
     void process() {
+        CXXDES_DEBUG_MEMBER_FUNCTION;
+        
         if (handler != nullptr)
             if (not handler->invoke(this))
                 return ;
@@ -73,5 +79,9 @@ struct token {
 
 } /* namespace core */
 } /* namespace cxxdes */
+
+#ifdef CXXDES_DEBUG_CORE_TOKEN
+#   include <cxxdes/debug/end.hpp>
+#endif
 
 #endif /* CXXDES_CORE_TOKEN_HPP_INCLUDED */

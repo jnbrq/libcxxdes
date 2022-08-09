@@ -14,6 +14,11 @@
 #include <cxxdes/core/process.hpp>
 #include <cxxdes/sync/semaphore.hpp>
 
+#include <cxxdes/debug/helpers.hpp>
+#ifdef CXXDES_DEBUG_SYNC_RESOURCE
+#   include <cxxdes/debug/begin.hpp>
+#endif
+
 namespace cxxdes {
 namespace sync {
 
@@ -51,5 +56,9 @@ using detail::resource;
 
 } /* namespace sync */
 } /* namespace cxxdes */
+
+#ifdef CXXDES_DEBUG_SYNC_RESOURCE
+#   include <cxxdes/debug/end.hpp>
+#endif
 
 #endif /* CXXDES_SYNC_RESOURCE_HPP_INCLUDED */

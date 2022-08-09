@@ -11,8 +11,13 @@
 #ifndef CXXDES_SYNC_MUTEX_HPP_INCLUDED
 #define CXXDES_SYNC_MUTEX_HPP_INCLUDED
 
-#include <cxxdes/core/process.hpp>
 #include <queue>
+#include <cxxdes/core/process.hpp>
+
+#include <cxxdes/debug/helpers.hpp>
+#ifdef CXXDES_DEBUG_SYNC_MUTEX
+#   include <cxxdes/debug/begin.hpp>
+#endif
 
 namespace cxxdes {
 namespace sync {
@@ -157,5 +162,9 @@ using detail::mutex;
 
 } /* namespace sync */
 } /* namespace cxxdes */
+
+#ifdef CXXDES_DEBUG_SYNC_MUTEX
+#   include <cxxdes/debug/end.hpp>
+#endif
 
 #endif /* CXXDES_SYNC_MUTEX_HPP_INCLUDED */

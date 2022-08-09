@@ -14,6 +14,11 @@
 #include <cxxdes/core/environment.hpp>
 #include <cxxdes/core/awaitable.hpp>
 
+#include <cxxdes/debug/helpers.hpp>
+#ifdef CXXDES_DEBUG_CORE_SIMULATION
+#   include <cxxdes/debug/begin.hpp>
+#endif
+
 namespace cxxdes {
 namespace core {
 
@@ -23,13 +28,17 @@ struct simulation {
 
     template <awaitable A>
     void start_awaitable(A &&a) {
+        CXXDES_DEBUG_MEMBER_FUNCTION;
+
         std::forward<A>(a).await_bind(&env);
         std::forward<A>(a).await_ready();
         std::forward<A>(a).await_suspend(nullptr);
     }
 
     void start_main() {
-        static_cast<Derived *>(this)->co_main().await_bind(&env);
+        CXXDES_DEBUG_MEMBER_FUNCTION;
+
+        start_awaitable(static_cast<Derived *>(this)->co_main());
     }
 
     auto now() const {
@@ -55,5 +64,9 @@ struct simulation {
 
 } /* namespace core */
 } /* namespace cxxdes */
+
+#ifdef CXXDES_DEBUG_CORE_SIMULATION
+#   include <cxxdes/debug/end.hpp>
+#endif
 
 #endif /* CXXDES_CORE_SIMULATION_HPP_INCLUDED */

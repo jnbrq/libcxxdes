@@ -13,6 +13,11 @@
 
 #include <cxxdes/core/environment.hpp>
 
+#include <cxxdes/debug/helpers.hpp>
+#ifdef CXXDES_DEBUG_CORE_TIMEOUT
+#   include <cxxdes/debug/begin.hpp>
+#endif
+
 namespace cxxdes {
 namespace core {
 
@@ -22,6 +27,8 @@ struct timeout {
     }
 
     void await_bind(environment *env, priority_type priority) noexcept {
+        CXXDES_DEBUG_MEMBER_FUNCTION;
+
         env_ = env;
 
         if (priority_ == priority_consts::inherit) {
@@ -34,6 +41,8 @@ struct timeout {
     }
 
     void await_suspend(coro_handle current_coro) {
+        CXXDES_DEBUG_MEMBER_FUNCTION;
+
         tkn_ = new token(env_->now() + latency_, priority_, current_coro);
         env_->schedule_token(tkn_);
     }
@@ -43,6 +52,7 @@ struct timeout {
     }
 
     void await_resume() const noexcept {
+        CXXDES_DEBUG_MEMBER_FUNCTION;
     }
 private:
     environment *env_ = nullptr;
@@ -57,5 +67,9 @@ inline auto yield() {
 
 } /* namespace core */
 } /* namespace cxxdes */
+
+#ifdef CXXDES_DEBUG_CORE_TIMEOUT
+#   include <cxxdes/debug/end.hpp>
+#endif
 
 #endif /* CXXDES_CORE_TIMEOUT_HPP_INCLUDED */

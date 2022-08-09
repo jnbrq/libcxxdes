@@ -18,6 +18,11 @@
 #include <cxxdes/sync/mutex.hpp>
 #include <cxxdes/sync/event.hpp>
 
+#include <cxxdes/debug/helpers.hpp>
+#ifdef CXXDES_DEBUG_SYNC_QUEUE
+#   include <cxxdes/debug/begin.hpp>
+#endif
+
 namespace cxxdes {
 namespace sync {
 
@@ -78,5 +83,9 @@ using detail::queue;
 
 } /* namespace sync */
 } /* namespace cxxdes */
+
+#ifdef CXXDES_DEBUG_SYNC_QUEUE
+#   include <cxxdes/debug/end.hpp>
+#endif
 
 #endif /* LIBCXXDES_INCLUDE_CXXDES_SYNC_QUEUE_HPP_INCLUDED */

@@ -16,9 +16,13 @@
 #include <stdexcept>
 #include <optional>
 
-#include <cxxdes/core/debug_helpers.hpp>
 #include <cxxdes/core/environment.hpp>
 #include <cxxdes/core/awaitable.hpp>
+
+#include <cxxdes/debug/helpers.hpp>
+#ifdef CXXDES_DEBUG_CORE_PROCESS
+#   include <cxxdes/debug/begin.hpp>
+#endif
 
 namespace cxxdes {
 namespace core {
@@ -60,6 +64,7 @@ struct process {
 
     process(promise_type *this_promise): this_promise_{this_promise} {
         CXXDES_DEBUG_MEMBER_FUNCTION;
+        CXXDES_DEBUG_VARIABLE(this_promise);
     }
 
     void await_bind(environment *env, priority_type priority = priority_consts::zero) {
@@ -103,19 +108,17 @@ struct process {
     }
 
     auto &priority(priority_type priority) {
-        #ifdef CXXDES_SAFE
         if (bound_)
             throw std::runtime_error("cannot change the priority of a started process");
-        #endif
+        
         this_promise_->start_tkn->priority = priority;
         return *this;
     }
 
     auto &latency(time_type latency) {
-        #ifdef CXXDES_SAFE
         if (bound_)
             throw std::runtime_error("cannot change the latency of a started process");
-        #endif
+        
         this_promise_->start_tkn->time = latency;
         return *this;
     }
@@ -213,14 +216,14 @@ public:
 
         #endif // CXXDES_CO_WITH
 
-        // implementation of the this_process interface
+        // BEGIN implementation of the this_process interface
 
         auto await_transform(this_process::get_return_latency) const {
             if (!completion_tkn) {
                 throw std::runtime_error("get_return_latency cannot be called for the main process!");
             }
 
-            return immediately_returning_awaitable<time_type>{completion_tkn->time};
+            return immediately_returning_awaitable{completion_tkn->time};
         }
 
         auto await_transform(this_process::set_return_latency x) {
@@ -237,7 +240,7 @@ public:
                 throw std::runtime_error("get_return_priority cannot be called for the main process!");
             }
 
-            return immediately_returning_awaitable<priority_type>{completion_tkn->priority};
+            return immediately_returning_awaitable{completion_tkn->priority};
         }
 
         auto await_transform(this_process::set_return_priority x) {
@@ -250,7 +253,7 @@ public:
         }
 
         auto await_transform(this_process::get_priority) const {
-            return immediately_returning_awaitable<priority_type>{priority};
+            return immediately_returning_awaitable{priority};
         }
 
         auto await_transform(this_process::set_priority x) {
@@ -259,8 +262,10 @@ public:
         }
 
         auto await_transform(this_process::get_environment) const {
-            return immediately_returning_awaitable<environment *>{env};
+            return immediately_returning_awaitable{env};
         }
+
+        // END implementation of the this_process interface
 
         template <typename T>
         auto await_transform(await_transform_extender<T> const &a) {
@@ -332,5 +337,9 @@ process<void> operator+(A &a, F &&f) {
 
 } /* namespace core */
 } /* namespace cxxdes */
+
+#ifdef CXXDES_DEBUG_CORE_PROCESS
+#   include <cxxdes/debug/end.hpp>
+#endif
 
 #endif /* CXXDES_CORE_PROCESS_HPP_INCLUDED */

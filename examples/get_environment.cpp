@@ -1,4 +1,11 @@
+#if 0 // uncomment to print debug messages
+#   define CXXDES_DEBUG_CORE_PROCESS
+#   define CXXDES_DEBUG_CORE_ENVIRONMENT
+#   define CXXDES_DEBUG_CORE_TOKEN
+#endif
+
 #include <cxxdes/cxxdes.hpp>
+
 #include <fmt/core.h>
 
 using namespace cxxdes;

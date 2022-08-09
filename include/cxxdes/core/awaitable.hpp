@@ -11,6 +11,8 @@
 #ifndef CXXDES_CORE_AWAITABLE_HPP_INCLUDED
 #define CXXDES_CORE_AWAITABLE_HPP_INCLUDED
 
+#include <type_traits>
+#include <concepts>
 #include <cxxdes/core/environment.hpp>
 
 namespace cxxdes {
@@ -31,17 +33,18 @@ concept awaitable = requires(
 
 template <typename T>
 struct immediately_returning_awaitable {
-    template <typename ...Args>
-    immediately_returning_awaitable(Args &&...args): t_{std::forward<Args>(args)...} {  }
+    T return_value;
 
     void await_bind(environment *, priority_type) const noexcept {  }
     bool await_ready() const noexcept { return true; }
     void await_suspend(coro_handle) const noexcept {  }
     token *await_token() const noexcept { return nullptr; }
-    T await_resume() { return std::move(t_); }
-private:
-    T t_;
+    T await_resume() { return std::move(return_value); }
 };
+
+// Clang needs a deduction guide
+template <typename A>
+immediately_returning_awaitable(A &&a) -> immediately_returning_awaitable<std::remove_reference_t<A>>;
 
 } /* namespace core */
 } /* namespace cxxdes */
