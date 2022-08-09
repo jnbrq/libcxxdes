@@ -44,7 +44,8 @@ struct timeout_base {
     void await_suspend(coro_handle current_coro) {
         CXXDES_DEBUG_MEMBER_FUNCTION;
 
-        tkn_ = new token(env_->now() + derived().latency(), priority_, current_coro);
+        auto latency = derived().latency();
+        tkn_ = new token(env_->now() + latency, priority_, current_coro);
         env_->schedule_token(tkn_);
     }
 
@@ -88,7 +89,7 @@ auto timeout(Node &&node, priority_type priority = priority_consts::inherit) {
         }
     };
 
-    return result{ { priority }, std::forward<Node>(node)};
+    return result{ { priority }, std::forward<Node>(node) };
 }
 
 template <cxxdes::time_ops::detail::scalar Scalar>
@@ -104,24 +105,23 @@ auto timeout(Scalar &&scalar, priority_type priority = priority_consts::inherit)
         }
     };
 
-    return result{ { priority }, std::forward<Scalar>(scalar)};
+    return result{ { priority }, std::forward<Scalar>(scalar) };
 }
 
-template <cxxdes::time_ops::detail::scalar Scalar>
-auto delay(Scalar &&scalar, priority_type priority = priority_consts::inherit) {
+template <std::integral Integer>
+auto delay(Integer integer, priority_type priority = priority_consts::inherit) {
     struct result: timeout_base<result> {
         using base = timeout_base<result>;
 
-        std::remove_reference_t<Scalar> scalar;
+        Integer integer;
 
         auto latency() {
-            return scalar;
+            return integer;
         }
     };
 
-    return result{ { priority }, std::forward<Scalar>(scalar)};
+    return result{ { priority }, integer };
 }
-
 
 inline auto yield() {
     return delay(0);
