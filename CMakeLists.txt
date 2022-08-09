@@ -19,7 +19,7 @@ target_include_directories(
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 target_compile_options(cxxdes INTERFACE "--std=c++20")
-target_compile_definitions(cxxdes INTERFACE "CXXDES_SAFE")
+target_compile_definitions(cxxdes INTERFACE "CXXDES_LIBRARY_SAFE")
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_compile_options(cxxdes INTERFACE "-fcoroutines")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")

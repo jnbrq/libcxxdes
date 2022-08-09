@@ -16,14 +16,7 @@
 #include <stdexcept>
 #include <optional>
 
-#ifdef CXXDES_LIBRARY_DEBUG
-#include <fmt/format.h>
-
-#define CXXDES_INFO_MEMBER_FUNCTION fmt::print("[CXXDES] {} FROM this = {}\n", __PRETTY_FUNCTION__, (void *) this)
-#else
-#define CXXDES_INFO_MEMBER_FUNCTION
-#endif
-
+#include <cxxdes/core/debug_helpers.hpp>
 #include <cxxdes/core/environment.hpp>
 #include <cxxdes/core/awaitable.hpp>
 
@@ -66,9 +59,12 @@ struct process {
     struct promise_type;
 
     process(promise_type *this_promise): this_promise_{this_promise} {
+        CXXDES_DEBUG_MEMBER_FUNCTION;
     }
 
     void await_bind(environment *env, priority_type priority = priority_consts::zero) {
+        CXXDES_DEBUG_MEMBER_FUNCTION;
+
         if (bound_)
             throw std::runtime_error("cannot bind an already bound process twice");
         bound_ = true;
@@ -80,6 +76,8 @@ struct process {
     }
 
     void await_suspend(coro_handle current_coro) {
+        CXXDES_DEBUG_MEMBER_FUNCTION;
+
         completion_tkn_ = new token{0, this_promise_->priority, current_coro};
         if constexpr (not std::is_same_v<ReturnType, void>)
             this_promise_->return_container = &return_container_;
@@ -91,6 +89,8 @@ struct process {
     }
 
     ReturnType await_resume() {
+        CXXDES_DEBUG_MEMBER_FUNCTION;
+
         if constexpr (std::is_same_v<ReturnType, void>)
             return ;
         else {
@@ -120,6 +120,10 @@ struct process {
         return *this;
     }
 
+    ~process() {
+        CXXDES_DEBUG_MEMBER_FUNCTION;
+    }
+
 private:
     // we need these mixins, because return_value and return_void cannot coexist.
     // even with concepts, it does not work.
@@ -131,7 +135,12 @@ private:
 
         template <typename T>
         void return_value(T &&t) {
-            (*return_container).emplace(std::forward<T>(t));
+            CXXDES_DEBUG_MEMBER_FUNCTION;
+
+            if (return_container)
+                (*return_container).emplace(std::forward<T>(t));
+            else
+                CXXDES_WARNING("{}: return_container == nullptr", __PRETTY_FUNCTION__);
             static_cast<Derived *>(this)->do_return();
         }
     };
@@ -139,6 +148,8 @@ private:
     template <typename Derived>
     struct return_void_mixin {
         void return_void() {
+            CXXDES_DEBUG_MEMBER_FUNCTION;
+
             static_cast<Derived *>(this)->do_return();
         }
     };
@@ -168,6 +179,8 @@ public:
 
         template <typename ...Args>
         promise_type(Args && ...) {
+            CXXDES_DEBUG_MEMBER_FUNCTION;
+
             start_tkn = new token{0, priority_consts::inherit, nullptr};
             this_coro = std::coroutine_handle<promise_type>::from_promise(*this);
         };
@@ -265,6 +278,8 @@ public:
         }
 
         void do_return() {
+            CXXDES_DEBUG_MEMBER_FUNCTION;
+            
             if (completion_tkn) {
                 completion_tkn->time += env->now();
                 env->schedule_token(completion_tkn);
@@ -273,6 +288,8 @@ public:
         }
 
         ~promise_type() {
+            CXXDES_DEBUG_MEMBER_FUNCTION;
+
             if (start_tkn) delete start_tkn;
         }
     };
