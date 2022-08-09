@@ -24,7 +24,7 @@ namespace core {
 
 template <typename Derived>
 struct simulation {
-    environment env;
+    environment env{ derived().time_unit(), derived().time_precision() };
 
     template <awaitable A>
     void start_awaitable(A &&a) {
@@ -45,6 +45,14 @@ struct simulation {
         return env.now();
     }
 
+    auto t() const {
+        return env.t();
+    }
+
+    auto now_seconds() const {
+        return env.now_seconds();
+    }
+
     void run() {
         start_main();
         while (env.step()) ;
@@ -58,9 +66,19 @@ struct simulation {
     void run_for(time_type t) {
         run_until(now() + t);
     }
+
+    constexpr auto time_unit() const noexcept { return one_second; } \
+    constexpr auto time_precision() const noexcept { return one_second; }
+private:
+    auto derived() noexcept -> auto & {
+        return static_cast<Derived &>(*this);
+    }
 };
 
 #define CXXDES_SIMULATION(name) struct name : cxxdes::core::simulation < name >
+#define CXXDES_TIMESCALE(UNIT, PRECISION) \
+    constexpr auto time_unit() const noexcept { return (UNIT); } \
+    constexpr auto time_precision() const noexcept { return (PRECISION); }
 
 } /* namespace core */
 } /* namespace cxxdes */

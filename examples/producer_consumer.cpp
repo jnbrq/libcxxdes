@@ -4,17 +4,18 @@
 #include "random_variable.hpp"
 
 using namespace cxxdes;
+using namespace cxxdes::time_ops;
 
 CXXDES_SIMULATION(producer_consumer_example) {
+    CXXDES_TIMESCALE(1_s, 1_ms)
+
     producer_consumer_example(double lambda, double mu, std::size_t n_packets = 100000):
         lambda{ rand_seed() /* seed */, lambda /* lambda */},
         mu{ rand_seed() /* seed */, mu /* mu */ },
         n_packets{n_packets} {
     }
 
-    double scale = 1.0e3; // 1000 simulation cycles is one second
-
-    sync::queue<int> q;
+    sync::queue<double> q;
     std::size_t n_packets;
     double total_latency = 0;
 
@@ -25,8 +26,8 @@ CXXDES_SIMULATION(producer_consumer_example) {
     
     process<> producer() {
         for (std::size_t i = 0; i < n_packets; ++i) {
-            co_await q.put(now());
-            co_await timeout(lambda() * scale);
+            co_await q.put(now_seconds());
+            co_await timeout(lambda());
         }
     }
 
@@ -42,9 +43,9 @@ CXXDES_SIMULATION(producer_consumer_example) {
                 co_return ;
             }
             
-            co_await timeout(mu() * scale);
+            co_await timeout(mu());
 
-            total_latency += (now() - x) / scale;
+            total_latency += (now_seconds() - x);
         }
     }
 
