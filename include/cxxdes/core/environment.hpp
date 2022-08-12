@@ -50,6 +50,20 @@ struct environment {
         return prec_;
     }
 
+    template <cxxdes::time_ops::detail::node Node>
+    time_type real_to_sim(Node const &n) const noexcept {
+        return n.count(time_precision());
+    }
+
+    template <cxxdes::time_ops::detail::scalar Scalar>
+    time_type real_to_sim(Scalar const &s) const noexcept {
+        using cxxdes::time_ops::operator*;
+        return (s * time_unit()).count(time_precision());
+    }
+
+    template <typename T>
+    auto timeout(T &&t) const noexcept;
+
     void schedule_token(token *tkn) {
         CXXDES_DEBUG_MEMBER_FUNCTION;
         CXXDES_DEBUG_VARIABLE(tkn);

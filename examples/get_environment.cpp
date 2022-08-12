@@ -16,6 +16,8 @@ process<> p1() {
     fmt::print("p1.b\n");
     co_await timeout(4);
     fmt::print("p1.c {}\n", env->now());
+    co_await env->timeout(4);
+    fmt::print("p1.d {}\n", env->now());
 }
 
 process<> p2() {
