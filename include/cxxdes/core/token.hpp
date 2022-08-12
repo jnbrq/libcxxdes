@@ -25,7 +25,7 @@ namespace core {
 
 
 using priority_type = std::intmax_t;
-using time_type = std::uintmax_t;
+using time_type = std::intmax_t;
 using real_type = double;
 
 namespace priority_consts {

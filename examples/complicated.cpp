@@ -35,7 +35,6 @@ CXXDES_SIMULATION(complicated_example) {
     // A very bad example
     process<> p3() {
         co_await sequential(timeout(5), timeout(10), p0());
-        // do *not* use p0().start()!
         fmt::print("p3.a now = {}\n", env.now());
 
         co_return;

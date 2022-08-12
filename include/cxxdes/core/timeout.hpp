@@ -57,7 +57,7 @@ struct timeout_base {
         CXXDES_DEBUG_MEMBER_FUNCTION;
     }
 
-    auto &env() noexcept {
+    auto &env() const noexcept {
         return *env_;
     }
 
@@ -73,14 +73,14 @@ protected:
 };
 
 template <typename T>
-auto timeout(T &&t, priority_type priority = priority_consts::inherit) {
+auto timeout(T &&t, priority_type priority = priority_consts::inherit) noexcept {
     struct result: timeout_base<result> {
         // for some reason Apple Clang do not see time_precision() alone
         using base = timeout_base<result>;
 
         std::remove_reference_t<T> node;
 
-        auto latency() {
+        auto latency() const noexcept {
             return base::env().real_to_sim(node);
         }
     };
@@ -88,22 +88,22 @@ auto timeout(T &&t, priority_type priority = priority_consts::inherit) {
     return result{ { priority }, std::forward<T>(t) };
 }
 
+struct delay_type: timeout_base<delay_type> {
+    using base = timeout_base<delay_type>;
+
+    time_type integer;
+
+    auto latency() const noexcept {
+        return integer;
+    }
+};
+
 template <std::integral Integer>
-auto delay(Integer integer, priority_type priority = priority_consts::inherit) {
-    struct result: timeout_base<result> {
-        using base = timeout_base<result>;
-
-        Integer integer;
-
-        auto latency() {
-            return integer;
-        }
-    };
-
-    return result{ { priority }, integer };
+auto delay(Integer delay, priority_type priority = priority_consts::inherit) noexcept {
+    return delay_type{ { priority }, static_cast<time_type>(delay) };
 }
 
-inline auto yield() {
+inline auto yield() noexcept {
     return delay(0);
 }
 
