@@ -12,6 +12,7 @@
 #define CXXDES_CORE_ENVIRONMENT_HPP_INCLUDED
 
 #include <queue>
+#include <cxxdes/time.hpp>
 #include <cxxdes/core/token.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
@@ -22,11 +23,31 @@
 namespace cxxdes {
 namespace core {
 
-struct environment {
-    environment() {  }
+constexpr auto one_second = time<time_type>{1, time_unit_type::seconds};
 
-    time_type now() const {
+struct environment {
+    environment(time<time_type> const &unit = one_second, time<time_type> const &prec = one_second):
+        now_{(time_type) 0}, unit_{unit}, prec_{prec} {
+    }
+
+    time_type now() const noexcept {
         return now_;
+    }
+
+    time<time_type> t() const noexcept {
+        return { now() * prec_.t, prec_.u };
+    }
+
+    real_type now_seconds() const noexcept {
+        return t().seconds<real_type>();
+    }
+
+    time<time_type> time_unit() const noexcept {
+        return unit_;
+    }
+
+    time<time_type> time_precision() const noexcept {
+        return prec_;
     }
 
     void schedule_token(token *tkn) {
@@ -65,6 +86,9 @@ struct environment {
 
 private:
     time_type now_ = 0;
+
+    time<time_type> unit_;
+    time<time_type> prec_;
 
     struct token_comp {
         bool operator()(token *tkn_a, token *tkn_b) const {
