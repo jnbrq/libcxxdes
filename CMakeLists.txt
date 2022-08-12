@@ -18,8 +18,14 @@ target_include_directories(
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
-target_compile_options(cxxdes INTERFACE "--std=c++20")
+if(MSVC)
+    target_compile_options(cxxdes INTERFACE "/std:c++20")
+else()
+    target_compile_options(cxxdes INTERFACE "--std=c++20")
+endif()
+
 # target_compile_definitions(cxxdes INTERFACE "-DMACRO_DEFINITIONS=HERE")
+
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_compile_options(cxxdes INTERFACE "-fcoroutines")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
