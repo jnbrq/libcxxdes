@@ -6,6 +6,7 @@
 #include <fmt/core.h>
 
 using namespace cxxdes;
+using namespace cxxdes::time_ops;
 
 // https://www.southampton.ac.uk/~sqc/EL336/CNL-7.pdf
 
@@ -14,9 +15,7 @@ struct aloha_config {
     float lambda = 2.0f; // frames / second
     std::size_t packets_per_station = 10000; // frames
     float frame_time = 1.0f; // seconds / frame
-    float scale = 100.0f; // simulation cycles / second
 };
-
 
 struct aloha_result {
     float g;
@@ -24,6 +23,8 @@ struct aloha_result {
 };
 
 CXXDES_SIMULATION(aloha) {
+    CXXDES_TIMESCALE(1_s, 1_ms)
+
     aloha(aloha_config const &cfg): cfg_{cfg} {  }
 
     const auto &config() const {
@@ -41,7 +42,7 @@ CXXDES_SIMULATION(aloha) {
             ps.emplace_back(station(i));
         co_await all_of.range(ps.begin(), ps.end());
 
-        result_.s = successful_transmissions_ / (float) (now() / cfg_.scale);
+        result_.s = successful_transmissions_ / now_seconds();
         result_.g = cfg_.lambda * cfg_.frame_time;
     }
 
@@ -55,7 +56,7 @@ private:
             active_transmissions_.insert(&collided);
 
             check_collisions();
-            co_await timeout(cfg_.frame_time * cfg_.scale);
+            co_await timeout(cfg_.frame_time);
 
             active_transmissions_.erase(&collided);
 
@@ -64,7 +65,7 @@ private:
             }
 
             auto wait_time = interarrival();
-            co_await timeout(wait_time * cfg_.scale);
+            co_await timeout(wait_time);
         }
     }
 
