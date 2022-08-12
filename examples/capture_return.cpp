@@ -26,6 +26,13 @@ CXXDES_SIMULATION(example) {
 
         co_await all_of((capture_return{f(50)} >> x).priority(5), capture_return{f(80)} >> x, timeout(5));
         fmt::print("return value = {}\n", x);
+
+        // x = 50 right now
+        bool done = false;
+        co_await any_of((timeout(2), f(90) >> x, flag_done(done)), timeout(1));
+        fmt::print("return value = {}, done = {}\n", x, done);
+        co_await timeout(1, 2);
+        fmt::print("return value = {}, done = {}\n", x, done);
     }
 };
 
