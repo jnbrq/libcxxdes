@@ -37,3 +37,4 @@ build*
 # visual studio related
 .vscode
 .vs
+CMakeSettings.json
