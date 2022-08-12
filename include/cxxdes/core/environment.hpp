@@ -42,8 +42,22 @@ struct environment {
         return t().seconds<real_type>();
     }
 
+    void time_unit(time<time_type> x) noexcept {
+        if (used_)
+            CXXDES_UNSAFE(__PRETTY_FUNCTION__, " called on a used environment!");
+        
+        unit_ = x;
+    }
+
     time<time_type> time_unit() const noexcept {
         return unit_;
+    }
+
+    void time_precision(time<time_type> x) noexcept {
+        if (used_)
+            CXXDES_UNSAFE(__PRETTY_FUNCTION__, " called on a used environment!");
+        
+        prec_ = x;
     }
 
     time<time_type> time_precision() const noexcept {
@@ -68,6 +82,7 @@ struct environment {
         CXXDES_DEBUG_MEMBER_FUNCTION;
         CXXDES_DEBUG_VARIABLE(tkn);
 
+        used_ = true;
         tokens_.push(tkn);
     }
 
@@ -100,6 +115,7 @@ struct environment {
 
 private:
     time_type now_ = 0;
+    bool used_ = false;
 
     time<time_type> unit_;
     time<time_type> prec_;

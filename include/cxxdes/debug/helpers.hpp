@@ -31,6 +31,7 @@ struct message_printer {
 #define CXXDES_WARNING(...) ((void) 0)
 #define CXXDES_DEBUG(...) ((void) 0)
 
+#define CXXDES_UNSAFE(format, ...) CXXDES_MESSAGE(std::cout, "UNSAFE", format, __VA_ARGS__)
 #define CXXDES_ERROR(format, ...) CXXDES_MESSAGE(std::cout, "ERROR", format, __VA_ARGS__)
 
 // TODO use a better solution to emulate __PRETTY_FUNCTION__ on MSVC

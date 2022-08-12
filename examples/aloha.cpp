@@ -23,9 +23,10 @@ struct aloha_result {
 };
 
 CXXDES_SIMULATION(aloha) {
-    CXXDES_TIMESCALE(1_s, 1_ms)
-
-    aloha(aloha_config const &cfg): cfg_{cfg} {  }
+    aloha(aloha_config const &cfg): cfg_{cfg} {
+        env.time_unit(1_s);
+        env.time_precision(1_ms);
+    }
 
     const auto &config() const {
         return cfg_;
