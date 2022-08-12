@@ -29,7 +29,7 @@ CXXDES_SIMULATION(example) {
 
         // x = 50 right now
         bool done = false;
-        co_await any_of((timeout(2), f(90) >> x, flag_done(done)), timeout(1));
+        co_await any_of((f(90) >> x, flag_done(done)).latency(2), timeout(1));
         fmt::print("return value = {}, done = {}\n", x, done);
         co_await timeout(1, 2);
         fmt::print("return value = {}, done = {}\n", x, done);
