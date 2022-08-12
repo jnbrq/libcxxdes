@@ -111,38 +111,52 @@ concept scalar =
     std::floating_point<std::remove_reference_t<T>> || std::integral<std::remove_reference_t<T>>;
 
 template <typename A, typename B, typename Operation>
-struct binary_node: Operation {
+struct binary_node {
     struct node_tag {  };
 
-    A &&a;
-    B &&b;
+    [[no_unique_address]] A a;
+    [[no_unique_address]] B b;
+    [[no_unique_address]] Operation op;
 
     template <typename I>
-    constexpr auto count(time<I> const &precision) -> I {
-        return Operation::operator()(std::forward<A>(a), std::forward<B>(b), precision);
+    constexpr auto count(time<I> const &precision) const noexcept -> I {
+        return op(a, b, precision);
     }
 };
 
 template <typename A, typename Operation>
-struct unary_node: Operation {
+struct unary_node {
     struct node_tag {  };
 
-    A &&a;
+    [[no_unique_address]] A a;
+    [[no_unique_address]] Operation op;
 
     template <typename I>
-    constexpr auto count(time<I> const &precision) -> I {
-        return Operation::operator()(std::forward<A>(a), precision);
+    constexpr auto count(time<I> const &precision) const noexcept -> I {
+        return op(a, precision);
     }
 };
 
-template <typename A, typename B, typename Operation>
-constexpr auto make_node(A &&a, B &&b, Operation &&operation) -> binary_node<A, B, Operation> {
-    return { std::forward<Operation>(operation), std::forward<A>(a), std::forward<B>(b) };
+template <typename L, typename R, typename Operation>
+constexpr auto make_node(L &&l, R &&r, Operation &&op) {
+    using _L = std::remove_reference_t<L>;
+    using _R = std::remove_reference_t<R>;
+    using _Operation = std::remove_reference_t<Operation>;
+    return binary_node<_L, _R, _Operation>{
+        std::forward<L>(l),
+        std::forward<R>(r),
+        std::forward<Operation>(op)
+    };
 }
 
-template <typename A, typename Operation>
-constexpr auto make_node(A &&a, Operation &&operation) -> unary_node<A, Operation> {
-    return { std::forward<Operation>(operation), std::forward<A>(a) };
+template <typename L, typename Operation>
+constexpr auto make_node(L &&l, Operation &&op) {
+    using _L = std::remove_reference_t<L>;
+    using _Operation = std::remove_reference_t<Operation>;
+    return unary_node<_L, _Operation>{
+        std::forward<L>(l),
+        std::forward<Operation>(op)
+    };
 }
 
 template <node A>
@@ -154,7 +168,7 @@ template <node A>
 constexpr auto operator-(A &&a) {
     return make_node(
         std::forward<A>(a),
-        [](auto &&a, auto const &p) {
+        [](auto const &a, auto const &p) {
             return -a.count(p);
         });
 }
@@ -163,7 +177,7 @@ template <node A, node B>
 constexpr auto operator+(A &&a, B &&b) {
     return make_node(
         std::forward<A>(a), std::forward<B>(b),
-        [](auto &&a, auto &&b, auto const &p) {
+        [](auto const &a, auto const &b, auto const &p) {
             return a.count(p) + b.count(p);
         });
 }
@@ -172,7 +186,7 @@ template <node A, node B>
 constexpr auto operator-(A &&a, B &&b) {
     return make_node(
         std::forward<A>(a), std::forward<B>(b),
-        [](auto &&a, auto &&b, auto const &p) {
+        [](auto const &a, auto const &b, auto const &p) {
             return a.count(p) - b.count(p);
         });
 }
@@ -181,7 +195,7 @@ template <node A, scalar B>
 constexpr auto operator*(A &&a, B &&b) {
     return make_node(
         std::forward<A>(a), std::forward<B>(b),
-        [](auto &&a, auto &&b, auto const &p) {
+        [](auto const &a, auto const &b, auto const &p) {
             return a.count(p) * b;
         });
 }
@@ -190,7 +204,7 @@ template <scalar A, node B>
 constexpr auto operator*(A &&a, B &&b) {
     return make_node(
         std::forward<A>(a), std::forward<B>(b),
-        [](auto &&a, auto &&b, auto const &p) {
+        [](auto const &a, auto const &b, auto const &p) {
             return a * b.count(p);
         });
 }
@@ -199,7 +213,7 @@ template <node A, node B>
 constexpr auto operator/(A &&a, B &&b) {
     return make_node(
         std::forward<A>(a), std::forward<B>(b),
-        [](auto &&a, auto &&b, auto const &p) {
+        [](auto const &a, auto const &b, auto const &p) {
             return a.count() / b.count(p);
         });
 }
@@ -208,7 +222,7 @@ template <node A, scalar B>
 constexpr auto operator/(A &&a, B &&b) {
     return make_node(
         std::forward<A>(a), std::forward<B>(b),
-        [](auto &&a, auto &&b, auto const &p) {
+        [](auto const &a, auto const &b, auto const &p) {
             return a.count() / b;
         });
 }
