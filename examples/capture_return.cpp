@@ -15,17 +15,24 @@ CXXDES_SIMULATION(example) {
     process<> co_main() {
         int x;
 
-        co_await (capture_return{f(90)} >> x);
+        co_await (f(90) >> x);
         fmt::print("return value = {}\n", x);
 
-        co_await all_of(capture_return{f(66)} >> x, timeout(5));
+        co_await all_of(f(66) >> x, timeout(5));
         fmt::print("return value = {}\n", x);
 
-        co_await all_of((capture_return{f(50)} >> x).priority(-5), capture_return{f(80)} >> x, timeout(5));
+        co_await all_of((f(50) >> x).priority(-5), f(80) >> x, timeout(5));
         fmt::print("return value = {}\n", x);
 
-        co_await all_of((capture_return{f(50)} >> x).priority(5), capture_return{f(80)} >> x, timeout(5));
+        co_await all_of((f(50) >> x).priority(5), f(80) >> x, timeout(5));
         fmt::print("return value = {}\n", x);
+
+        // x = 50 right now
+        bool done = false;
+        co_await any_of((timeout(2), f(90) >> x, flag_done(done)), timeout(1));
+        fmt::print("return value = {}, done = {}\n", x, done);
+        co_await timeout(1, 2);
+        fmt::print("return value = {}, done = {}\n", x, done);
     }
 };
 

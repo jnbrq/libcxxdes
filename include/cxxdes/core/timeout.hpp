@@ -32,8 +32,8 @@ struct timeout_base {
 
         env_ = env;
 
-        if (priority == priority_consts::inherit) {
-            priority = priority;
+        if (priority_ == priority_consts::inherit) {
+            priority_ = priority;
         }
     }
 

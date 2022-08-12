@@ -1,7 +1,8 @@
 /**
  * @file compositions.hpp
  * @author Canberk Sönmez (canberk.sonmez.409@gmail.com)
- * @brief operator||, operator&& and operator, for awaitables. Also, capture_return.
+ * @brief operator||, operator&& and operator, for awaitables.
+ * Also, operator>> for capturing return values.
  * @date 2022-04-13
  * 
  * Copyright (c) Canberk Sönmez 2022
@@ -253,22 +254,14 @@ auto operator,(A1 &&a1, A2 &&a2) {
     return sequential(std::forward<A1>(a1), std::forward<A2>(a2));
 }
 
-template <typename A>
-struct capture_return {
-    A &&a;
-
-    template <typename Output>
-    process<void> assign(Output &output) {
-        output = co_await a;
-    }
-};
-
-template <typename A>
-capture_return(A &&) -> capture_return<A>;
-
 template <awaitable A, typename Output>
-auto operator>>(capture_return<A> &&crv, Output &output) {
-    return crv.assign(output);
+auto operator>>(A &&a, Output &output) -> process<void> {
+    output = co_await a;
+}
+
+auto flag_done(bool &flag) -> process<void> {
+    flag = true;
+    co_return ;
 }
 
 } /* namespace core */
