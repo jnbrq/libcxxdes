@@ -197,7 +197,7 @@ public:
         auto unhandled_exception() { std::rethrow_exception(std::current_exception()); }
 
         template <awaitable A>
-        auto &&await_transform(A &&a) const noexcept {
+        auto &&await_transform(A &&a) const {
             // co_await (A{});
             // A{} is alive throughout the co_await expression
             // therefore, it is safe to return an rvalue-reference to it
