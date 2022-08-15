@@ -118,7 +118,8 @@ struct any_all_helper {
         void await_resume() {
             CXXDES_DEBUG_MEMBER_FUNCTION;
             
-            derived().apply([&](auto &a) { a.await_resume(); });
+            // As we cannot return a value from compositions, no need call await_resume()
+            // derived().apply([&](auto &a) { a.await_resume(); });
         }
 
     private:

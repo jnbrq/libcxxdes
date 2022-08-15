@@ -99,3 +99,5 @@ In the later versions of the `libcxxdes`, additional information may be passed u
 ### await_resume
 
 `R T::await_resume()` is called when the coroutine that the awaitable had suspended is resumed. The return value of this function is the result of the `co_await` expression. The lifetime of the coroutine object ends after this point; therefore, `await_resume` should not return a reference to an object inside the coroutine object.
+
+`await_resume` is not called in case the return value cannot be returned. For example, compositions do not call `await_resume` of the wrapped handlers.
