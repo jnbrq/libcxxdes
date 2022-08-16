@@ -124,7 +124,7 @@ struct process {
     ~process() {
         CXXDES_DEBUG_MEMBER_FUNCTION;
 
-        if (this_promise_) this_promise_->return_object_ = nullptr;
+        if (bound_ && this_promise_) this_promise_->return_object_ = nullptr;
     }
 
 private:
