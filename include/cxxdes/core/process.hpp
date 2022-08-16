@@ -73,7 +73,7 @@ struct process {
         if (bound_)
             throw std::runtime_error("cannot bind an already bound process twice");
         bound_ = true;
-        this_promise_->bind(env, priority);
+        this_promise_->bind(this, env, priority);
     }
 
     bool await_ready() const noexcept {
@@ -84,8 +84,6 @@ struct process {
         CXXDES_DEBUG_MEMBER_FUNCTION;
 
         completion_tkn_ = new token{0, this_promise_->priority, current_coro};
-        if constexpr (not std::is_same_v<ReturnType, void>)
-            this_promise_->return_container = &return_container_;
         this_promise_->completion_tkn = completion_tkn_;
     }
 
@@ -125,6 +123,8 @@ struct process {
 
     ~process() {
         CXXDES_DEBUG_MEMBER_FUNCTION;
+
+        if (this_promise_) this_promise_->return_object_ = nullptr;
     }
 
 private:
@@ -133,17 +133,11 @@ private:
 
     template <typename Derived>
     struct return_value_mixin {
-        // return value
-        return_container_type *return_container = nullptr;
-
         template <typename T>
         void return_value(T &&t) {
             CXXDES_DEBUG_MEMBER_FUNCTION;
 
-            if (return_container)
-                (*return_container).emplace(std::forward<T>(t));
-            else
-                CXXDES_WARNING("{}: return_container == nullptr", __PRETTY_FUNCTION__);
+            static_cast<Derived *>(this)->set_return_value(std::forward<T>(t));
             static_cast<Derived *>(this)->do_return();
         }
     };
@@ -179,6 +173,10 @@ public:
 
         // priority to be inherited by the subsequent co_await's
         priority_type priority = 0;
+
+        // return object that this coroutine is bound to
+        // it is set to nullptr in case the return object is destroyed
+        process *return_object_;
 
         template <typename ...Args>
         promise_type(Args && ...) {
@@ -272,7 +270,8 @@ public:
             return a.await_transform(*this);
         }
 
-        void bind(environment *env, priority_type inherited_priority) {
+        void bind(process *return_object, environment *env, priority_type inherited_priority) {
+            this->return_object_ = return_object;
             this->env = env;
             start_tkn->coro = this_coro;
             start_tkn->time += env->now();
@@ -281,6 +280,12 @@ public:
             env->schedule_token(start_tkn);
             priority = start_tkn->priority;
             start_tkn = nullptr;
+        }
+
+        template <typename T>
+        void set_return_value(T &&t) {
+            if (return_object_)
+                *(return_object_->return_container_) = std::forward<T>(t);
         }
 
         void do_return() {
@@ -297,6 +302,7 @@ public:
             CXXDES_DEBUG_MEMBER_FUNCTION;
 
             if (start_tkn) delete start_tkn;
+            if (return_object_) return_object_->this_promise_ = nullptr;
         }
     };
 

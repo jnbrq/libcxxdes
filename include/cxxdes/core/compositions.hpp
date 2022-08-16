@@ -35,7 +35,7 @@ struct any_all_helper {
         token *completion_tkn = nullptr;
         environment *env = nullptr;
 
-        bool invoke(token *tkn) override {
+        void invoke(token *tkn) override {
             CXXDES_DEBUG_MEMBER_FUNCTION;
 
             --remaining;
@@ -58,8 +58,6 @@ struct any_all_helper {
                 // delete the handler
                 tkn->handler = this;
             }
-
-            return false;
         }
     };
 
@@ -140,8 +138,8 @@ struct any_all_helper {
     };
 
     template <awaitable ...As>
-    struct tuple_based: std::tuple<As...>, base<tuple_based<As...>> {
-        using std::tuple<As...>::tuple;
+    struct tuple_based: std::tuple<As &&...>, base<tuple_based<As &&...>> {
+        using std::tuple<As &&...>::tuple;
         
         constexpr std::size_t count() const noexcept {
             return sizeof...(As);
@@ -172,7 +170,7 @@ struct any_all_helper {
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await any_of(awaitables...) or all_of(awaitables...)")]]
         constexpr auto operator()(Ts && ...ts) const {
-            return tuple_based<std::unwrap_ref_decay_t<Ts>...>{ std::forward<Ts>(ts)... };
+            return tuple_based<Ts...>{ std::forward<Ts>(ts)... };
         }
 
         template <typename Iterator>

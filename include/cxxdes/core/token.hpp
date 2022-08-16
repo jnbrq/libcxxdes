@@ -40,7 +40,7 @@ constexpr priority_type zero = static_cast<priority_type>(0);
 struct token;
 
 struct token_handler {
-    virtual bool invoke(token *tkn) { return true; }
+    virtual void invoke(token *tkn) {  }
     virtual ~token_handler() {  }
 };
 
@@ -66,9 +66,11 @@ struct token {
     void process() {
         CXXDES_DEBUG_MEMBER_FUNCTION;
         
-        if (handler != nullptr)
-            if (not handler->invoke(this))
-                return ;
+        if (handler != nullptr) {
+            handler->invoke(this);
+            return ;
+        }
+
         if (coro && !coro.done())
             coro.resume();
     }
