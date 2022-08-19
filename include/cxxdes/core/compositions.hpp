@@ -170,7 +170,7 @@ struct any_all_helper {
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await any_of(awaitables...) or all_of(awaitables...)")]]
         constexpr auto operator()(Ts && ...ts) const {
-            return tuple_based<Ts &&...>{ std::forward<Ts>(ts)... };
+            return tuple_based<Ts /* keep copies */...>{ std::forward<Ts>(ts)... };
         }
 
         template <typename Iterator>
@@ -202,8 +202,8 @@ constexpr any_all_helper<all_of_condition>::functor all_of;
 
 struct sequential_helper {
     template <typename ...Ts>
-    static process<void> seq_proc_tuple(Ts && ...ts) {
-        ((co_await std::forward<Ts>(ts)), ...);
+    static process<void> seq_proc_tuple(Ts ...ts) {
+        ((co_await ts), ...);
         co_return ;
     }
 
