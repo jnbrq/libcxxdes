@@ -127,14 +127,22 @@ public:
         return *this;
     }
 
-    auto &return_priority(priority_type priority) {
+    auto &return_priority(priority_type priority) noexcept {
         ret_priority_ = priority;
         return *this;
     }
 
-    auto &return_latency(time_type latency) {
+    auto &return_latency(time_type latency) noexcept {
         ret_latency_ = latency;
         return *this;
+    }
+
+    bool is_complete() const noexcept {
+        return pinfo_->complete;
+    }
+
+    auto return_value() {
+        return await_resume();
     }
 
     ~process() {
