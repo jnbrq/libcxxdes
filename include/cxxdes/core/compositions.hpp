@@ -138,8 +138,8 @@ struct any_all_helper {
     };
 
     template <awaitable ...As>
-    struct tuple_based: std::tuple<As &&...>, base<tuple_based<As &&...>> {
-        using std::tuple<As &&...>::tuple;
+    struct tuple_based: std::tuple<As...>, base<tuple_based<As...>> {
+        using std::tuple<As...>::tuple;
         
         constexpr std::size_t count() const noexcept {
             return sizeof...(As);
@@ -170,7 +170,7 @@ struct any_all_helper {
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await any_of(awaitables...) or all_of(awaitables...)")]]
         constexpr auto operator()(Ts && ...ts) const {
-            return tuple_based<Ts...>{ std::forward<Ts>(ts)... };
+            return tuple_based<Ts &&...>{ std::forward<Ts>(ts)... };
         }
 
         template <typename Iterator>
