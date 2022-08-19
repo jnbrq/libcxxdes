@@ -16,6 +16,7 @@
 #include <stdexcept>
 #include <optional>
 
+#include <cxxdes/utils.hpp>
 #include <cxxdes/core/environment.hpp>
 #include <cxxdes/core/awaitable.hpp>
 
@@ -29,16 +30,6 @@ namespace core {
 
 
 struct this_process {
-    struct get_return_latency {  };
-    struct set_return_latency {
-        time_type latency;
-    };
-
-    struct get_return_priority {  };
-    struct set_return_priority {
-        priority_type priority;
-    };
-    
     struct get_priority {  };
     struct set_priority {
         priority_type priority;
@@ -47,48 +38,57 @@ struct this_process {
     struct get_environment {  };
 };
 
-struct empty_type {  };
-
 template <typename T>
 struct await_transform_extender;
 
 template <typename ReturnType = void>
 struct process {
+private:
     using return_container_type = std::conditional_t<
         std::is_same_v<ReturnType, void>,
-        empty_type,
+        cxxdes::util::empty_type,
         std::optional<ReturnType>
     >;
 
-    struct promise_type;
-
-    process(promise_type *this_promise): this_promise_{this_promise} {
+    struct process_info;
+public:
+    explicit process(util::ptr<process_info> pinfo): pinfo_{pinfo} {
         CXXDES_DEBUG_MEMBER_FUNCTION;
-        CXXDES_DEBUG_VARIABLE(this_promise);
     }
 
     void await_bind(environment *env, priority_type priority = priority_consts::zero) {
         CXXDES_DEBUG_MEMBER_FUNCTION;
 
-        if (bound_)
-            throw std::runtime_error("cannot bind an already bound process twice");
-        bound_ = true;
-        this_promise_->bind(this, env, priority);
+        if (pinfo_->env && pinfo_->env != env)
+            throw std::runtime_error("cannot bind an already bound to a different environment!");
+        
+        pinfo_->env = env;
+
+        auto start_token = pinfo_->start_token;
+        pinfo_->start_token = nullptr; // env will own the start token
+        pinfo_->priority = start_token->priority;
+
+        if (start_token->priority == priority_consts::inherit)
+            start_token->priority = priority;
+        start_token->time += env->now();
+        env->schedule_token(start_token);
     }
 
     bool await_ready() const noexcept {
-        return false;
+        return pinfo_->complete;
     }
 
     void await_suspend(coro_handle current_coro) {
         CXXDES_DEBUG_MEMBER_FUNCTION;
 
-        completion_tkn_ = new token{0, this_promise_->priority, current_coro};
-        this_promise_->completion_tkn = completion_tkn_;
+        completion_token_ = new token{ret_latency_, ret_priority_, current_coro};
+        if (completion_token_->priority == priority_consts::inherit)
+            completion_token_->priority = pinfo_->priority;
+        pinfo_->completion_tokens.push_back(completion_token_);
     }
 
     token *await_token() const noexcept {
-        return completion_tkn_;
+        return completion_token_;
     }
 
     ReturnType await_resume() {
@@ -97,34 +97,42 @@ struct process {
         if constexpr (std::is_same_v<ReturnType, void>)
             return ;
         else {
-            // at this point, the promise is already destroyed,
-            // however, the coroutine object process<T> is still alive.
-            if (!return_container_)
+            if (!pinfo_->return_container)
                 throw std::runtime_error("no return value from the process<T> [T != void]!");
-            return std::move(*return_container_);
+            
+            // NOTE ReturnType should be copy constructable
+            return (*pinfo_->return_container);
         }
     }
 
     auto &priority(priority_type priority) {
-        if (bound_)
+        if (!pinfo_->start_token)
             throw std::runtime_error("cannot change the priority of a started process");
         
-        this_promise_->start_tkn->priority = priority;
+        pinfo_->start_token->priority = priority;
         return *this;
     }
 
     auto &latency(time_type latency) {
-        if (bound_)
+        if (!pinfo_->start_token)
             throw std::runtime_error("cannot change the latency of a started process");
         
-        this_promise_->start_tkn->time = latency;
+        pinfo_->start_token->time = latency;
+        return *this;
+    }
+
+    auto &return_priority(priority_type priority) {
+        ret_priority_ = priority;
+        return *this;
+    }
+
+    auto &return_latency(time_type latency) {
+        ret_latency_ = latency;
         return *this;
     }
 
     ~process() {
         CXXDES_DEBUG_MEMBER_FUNCTION;
-
-        if (bound_ && this_promise_) this_promise_->return_object_ = nullptr;
     }
 
 private:
@@ -150,6 +158,35 @@ private:
             static_cast<Derived *>(this)->do_return();
         }
     };
+
+    struct process_info: cxxdes::util::reference_counted_base<process_info> {
+        process_info() {
+            CXXDES_DEBUG_MEMBER_FUNCTION;
+
+            completion_tokens.reserve(2);
+        }
+
+        ~process_info() {
+            CXXDES_DEBUG_MEMBER_FUNCTION;
+
+            if (start_token) delete start_token;            
+            for (auto completion_token: completion_tokens)
+                delete completion_token;
+        }
+
+        environment *env = nullptr;
+        token *start_token = nullptr;
+        std::vector<token *> completion_tokens;
+        priority_type priority = 0;
+
+        bool bound = false;
+        bool complete = false;
+
+        // this should come last, so that its padding is not reused
+        // see: https://en.cppreference.com/w/cpp/language/attributes/no_unique_address
+        [[no_unique_address]]
+        return_container_type return_container;
+    };
     
 public:
     struct promise_type:
@@ -158,36 +195,18 @@ public:
             return_void_mixin<promise_type>,
             return_value_mixin<promise_type>
         > {
-        
-        // environment that this process is bound to
-        environment *env = nullptr;
-
-        // start token
-        token *start_tkn = nullptr;
-
-        // completion token
-        token *completion_tkn = nullptr;
-
-        // correspoding coroutine object
-        coro_handle this_coro = nullptr;
-
-        // priority to be inherited by the subsequent co_await's
-        priority_type priority = 0;
-
-        // return object that this coroutine is bound to
-        // it is set to nullptr in case the return object is destroyed
-        process *return_object_;
+        util::ptr<process_info> pinfo_ = nullptr;
 
         template <typename ...Args>
         promise_type(Args && ...) {
             CXXDES_DEBUG_MEMBER_FUNCTION;
 
-            start_tkn = new token{0, priority_consts::inherit, nullptr};
-            this_coro = std::coroutine_handle<promise_type>::from_promise(*this);
+            pinfo_ = new process_info;
+            pinfo_->start_token = new token{0, priority_consts::inherit, std::coroutine_handle<promise_type>::from_promise(*this)};
         };
 
         process get_return_object() {
-            return process(this);
+            return process(pinfo_);
         }
 
         auto initial_suspend() noexcept -> std::suspend_always { return {}; }
@@ -200,7 +219,7 @@ public:
             // A{} is alive throughout the co_await expression
             // therefore, it is safe to return an rvalue-reference to it
 
-            a.await_bind(env, priority);
+            a.await_bind(pinfo_->env, pinfo_->priority);
             return std::forward<A>(a);
         }
 
@@ -216,51 +235,17 @@ public:
 
         // BEGIN implementation of the this_process interface
 
-        auto await_transform(this_process::get_return_latency) const {
-            if (!completion_tkn) {
-                throw std::runtime_error("get_return_latency cannot be called for the main process!");
-            }
-
-            return immediately_returning_awaitable{completion_tkn->time};
-        }
-
-        auto await_transform(this_process::set_return_latency x) {
-            if (!completion_tkn) {
-                throw std::runtime_error("set_return_latency cannot be called for the main process!");
-            }
-
-            completion_tkn->time = x.latency;
-            return std::suspend_never{};
-        }
-        
-        auto await_transform(this_process::get_return_priority) const {
-            if (!completion_tkn) {
-                throw std::runtime_error("get_return_priority cannot be called for the main process!");
-            }
-
-            return immediately_returning_awaitable{completion_tkn->priority};
-        }
-
-        auto await_transform(this_process::set_return_priority x) {
-            if (!completion_tkn) {
-                throw std::runtime_error("set_return_priority cannot be called for the main process!");
-            }
-
-            completion_tkn->priority = x.priority;
-            return std::suspend_never{};
-        }
-
         auto await_transform(this_process::get_priority) const {
-            return immediately_returning_awaitable{priority};
+            return immediately_returning_awaitable{pinfo_->priority};
         }
 
         auto await_transform(this_process::set_priority x) {
-            priority = x.priority;
+            pinfo_->priority = x.priority;
             return std::suspend_never{};
         }
 
         auto await_transform(this_process::get_environment) const {
-            return immediately_returning_awaitable{env};
+            return immediately_returning_awaitable{pinfo_->env};
         }
 
         // END implementation of the this_process interface
@@ -270,52 +255,34 @@ public:
             return a.await_transform(*this);
         }
 
-        void bind(process *return_object, environment *env, priority_type inherited_priority) {
-            this->return_object_ = return_object;
-            this->env = env;
-            start_tkn->coro = this_coro;
-            start_tkn->time += env->now();
-            if (start_tkn->priority == priority_consts::inherit)
-                start_tkn->priority = inherited_priority;
-            env->schedule_token(start_tkn);
-            priority = start_tkn->priority;
-            start_tkn = nullptr;
-        }
-
         template <typename T>
         void set_return_value(T &&t) {
-            if (return_object_)
-                *(return_object_->return_container_) = std::forward<T>(t);
+            *(pinfo_->return_container) = std::forward<T>(t);
         }
 
         void do_return() {
             CXXDES_DEBUG_MEMBER_FUNCTION;
-            
-            if (completion_tkn) {
-                completion_tkn->time += env->now();
-                env->schedule_token(completion_tkn);
-                completion_tkn = nullptr;
+
+            for (auto completion_token: pinfo_->completion_tokens) {
+                completion_token->time += pinfo_->env->now();
+                pinfo_->env->schedule_token(completion_token);
             }
+
+            pinfo_->completion_tokens.clear();
+            pinfo_->complete = true;
         }
 
         ~promise_type() {
             CXXDES_DEBUG_MEMBER_FUNCTION;
-
-            if (start_tkn) delete start_tkn;
-            if (return_object_) return_object_->this_promise_ = nullptr;
         }
     };
 
 private:
-    promise_type *this_promise_ = nullptr;
-    token *completion_tkn_ = nullptr;
+    util::ptr<process_info> pinfo_ = nullptr;
+    token *completion_token_ = nullptr;
 
-    bool bound_ = false;
-
-    // this should come last, so that its padding is not reused
-    // see: https://en.cppreference.com/w/cpp/language/attributes/no_unique_address
-    [[no_unique_address]]
-    return_container_type return_container_;
+    time_type ret_latency_ = 0;
+    priority_type ret_priority_ = priority_consts::inherit;
 };
 
 template <typename T>
