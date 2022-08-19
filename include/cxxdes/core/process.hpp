@@ -59,17 +59,23 @@ public:
     void await_bind(environment *env, priority_type priority = priority_consts::zero) {
         CXXDES_DEBUG_MEMBER_FUNCTION;
 
-        if (pinfo_->env && pinfo_->env != env)
-            throw std::runtime_error("cannot bind an already bound to a different environment!");
+        if (pinfo_->env) {
+            if (pinfo_->env != env)
+                throw std::runtime_error("cannot bind an already bound to a different environment!");
+            
+            if (!pinfo_->start_token)
+                // already started
+                return ;
+        }
         
         pinfo_->env = env;
 
         auto start_token = pinfo_->start_token;
         pinfo_->start_token = nullptr; // env will own the start token
-        pinfo_->priority = start_token->priority;
 
         if (start_token->priority == priority_consts::inherit)
             start_token->priority = priority;
+        pinfo_->priority = start_token->priority;
         start_token->time += env->now();
         env->schedule_token(start_token);
     }
@@ -178,8 +184,6 @@ private:
         token *start_token = nullptr;
         std::vector<token *> completion_tokens;
         priority_type priority = 0;
-
-        bool bound = false;
         bool complete = false;
 
         // this should come last, so that its padding is not reused
@@ -257,7 +261,7 @@ public:
 
         template <typename T>
         void set_return_value(T &&t) {
-            *(pinfo_->return_container) = std::forward<T>(t);
+            pinfo_->return_container = std::forward<T>(t);
         }
 
         void do_return() {
@@ -284,6 +288,35 @@ private:
     time_type ret_latency_ = 0;
     priority_type ret_priority_ = priority_consts::inherit;
 };
+
+template <awaitable T>
+struct no_return_value_type {
+    T t;
+
+    void await_bind(environment *env, priority_type priority) {
+        t.await_bind(env, priority);
+    }
+
+    bool await_ready() {
+        return t.await_ready();
+    }
+
+    void await_suspend(coro_handle coro) {
+        return t.await_suspend(coro);
+    }
+
+    token *await_token() {
+        return t.await_token();
+    }
+
+    void await_resume() {
+    }
+};
+
+template <awaitable T>
+auto no_return_value(T &&t) {
+    return no_return_value_type<T /* keep copies */>{ std::forward<T>(t) };
+}
 
 template <typename T>
 concept releasable = requires(T t) {

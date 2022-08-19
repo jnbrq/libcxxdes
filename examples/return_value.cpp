@@ -1,5 +1,3 @@
-#define CXXDES_LIBRARY_DEBUG
-
 #include <cxxdes/cxxdes.hpp>
 #include <fmt/core.h>
 
