@@ -92,7 +92,7 @@ endif()
 
 if (CXXDES_TESTS)
     enable_testing()
-    file(GLOB test_srcs ${PROJECT_SOURCE_DIR}/tests/*.cpp)
+    file(GLOB test_srcs ${PROJECT_SOURCE_DIR}/tests/*.test.cpp)
 
     foreach (src ${test_srcs})
         get_filename_component(basename ${src} NAME_WE)
