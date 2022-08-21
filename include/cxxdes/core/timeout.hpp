@@ -78,7 +78,7 @@ auto timeout(T &&t, priority_type priority = priority_consts::inherit) noexcept 
         // for some reason Apple Clang do not see time_precision() alone
         using base = timeout_base<result>;
 
-        std::remove_reference_t<T> node;
+        T node;
 
         auto latency() const noexcept {
             return base::env().real_to_sim(node);

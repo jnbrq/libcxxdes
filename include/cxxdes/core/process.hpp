@@ -323,7 +323,7 @@ struct no_return_value_type {
 
 template <awaitable T>
 auto no_return_value(T &&t) {
-    return no_return_value_type<T /* keep copies */>{ std::forward<T>(t) };
+    return no_return_value_type<T>{ std::forward<T>(t) };
 }
 
 template <typename T>
