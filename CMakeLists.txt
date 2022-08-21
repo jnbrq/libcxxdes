@@ -3,9 +3,31 @@ cmake_minimum_required(VERSION 3.12)
 project(cxxdes)
 set(CMAKE_CXX_STANDARD 20)
 
+# library dependencies
+include(FetchContent)
+
+# fmt
+FetchContent_Declare(fmt
+    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+    GIT_TAG master)
+FetchContent_MakeAvailable(fmt)
+
+# googletest
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG release-1.12.1)
+
+# For Windows: Prevent overriding the parent project's compiler/linker settings
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+include(GoogleTest)
+
 # default values to be stored in the cache
 set(CXXDES_CLANG_TIDY OFF CACHE BOOL "Use clang tidy.")
 set(CXXDES_EXAMPLES ON CACHE BOOL "Build examples.")
+set(CXXDES_TESTS ON CACHE BOOL "Build tests.")
 
 # TODO: please see
 # https://dominikberner.ch/cmake-interface-lib/
@@ -34,7 +56,6 @@ endif()
 
 add_library(cxxdes::cxxdes ALIAS cxxdes)
 
-file(GLOB cpp_files ${PROJECT_SOURCE_DIR}/examples/*.cpp)
 
 if (CXXDES_CLANG_TIDY)
     find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
@@ -46,12 +67,11 @@ if (CXXDES_CLANG_TIDY)
 endif()
 
 if (CXXDES_EXAMPLES)
+    file(GLOB example_srcs ${PROJECT_SOURCE_DIR}/examples/*.cpp)
 
-    find_package(fmt)
-
-    foreach (cpp_file ${cpp_files})
-        get_filename_component(basename ${cpp_file} NAME_WE)
-        add_executable("example_${basename}" "${cpp_file}")
+    foreach (src ${example_srcs})
+        get_filename_component(basename ${src} NAME_WE)
+        add_executable("example_${basename}" "${src}")
         target_link_libraries(
             "example_${basename}"
             PUBLIC
@@ -68,5 +88,28 @@ if (CXXDES_EXAMPLES)
         # target_compile_options("example_${basename}" PRIVATE -fsanitize=address)
         # target_link_options("example_${basename}" PRIVATE -fsanitize=address)
     endforeach()
+endif()
 
+if (CXXDES_TESTS)
+    enable_testing()
+    file(GLOB test_srcs ${PROJECT_SOURCE_DIR}/tests/*.cpp)
+
+    foreach (src ${test_srcs})
+        get_filename_component(basename ${src} NAME_WE)
+        add_executable("test_${basename}" "${src}")
+        target_link_libraries(
+            "test_${basename}"
+            PUBLIC
+            cxxdes::cxxdes
+            GTest::gtest_main
+            fmt::fmt-header-only)
+        gtest_discover_tests("test_${basename}")
+        
+        if (CXXDES_CLANG_TIDY)
+            set_target_properties(
+                "test_${basename}"
+                PROPERTIES
+                CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
+        endif()
+    endforeach()
 endif()
