@@ -207,18 +207,18 @@ public:
             return_void_mixin<promise_type>,
             return_value_mixin<promise_type>
         > {
-        util::ptr<process_info> pinfo_ = nullptr;
+        util::ptr<process_info> pinfo = nullptr;
 
         template <typename ...Args>
         promise_type(Args && ...) {
             CXXDES_DEBUG_MEMBER_FUNCTION;
 
-            pinfo_ = new process_info;
-            pinfo_->start_token = new token{0, priority_consts::inherit, std::coroutine_handle<promise_type>::from_promise(*this)};
+            pinfo = new process_info;
+            pinfo->start_token = new token{0, priority_consts::inherit, std::coroutine_handle<promise_type>::from_promise(*this)};
         };
 
         process get_return_object() {
-            return process(pinfo_);
+            return process(pinfo);
         }
 
         auto initial_suspend() noexcept -> std::suspend_always { return {}; }
@@ -231,7 +231,7 @@ public:
             // A{} is alive throughout the co_await expression
             // therefore, it is safe to return an rvalue-reference to it
 
-            a.await_bind(pinfo_->env, pinfo_->priority);
+            a.await_bind(pinfo->env, pinfo->priority);
             return std::forward<A>(a);
         }
 
@@ -248,16 +248,16 @@ public:
         // BEGIN implementation of the this_process interface
 
         auto await_transform(this_process::get_priority) const {
-            return immediately_returning_awaitable{pinfo_->priority};
+            return immediately_returning_awaitable{pinfo->priority};
         }
 
         auto await_transform(this_process::set_priority x) {
-            pinfo_->priority = x.priority;
+            pinfo->priority = x.priority;
             return std::suspend_never{};
         }
 
         auto await_transform(this_process::get_environment) const {
-            return immediately_returning_awaitable{pinfo_->env};
+            return immediately_returning_awaitable{pinfo->env};
         }
 
         // END implementation of the this_process interface
@@ -269,19 +269,19 @@ public:
 
         template <typename T>
         void set_return_value(T &&t) {
-            pinfo_->return_container = std::forward<T>(t);
+            pinfo->return_container = std::forward<T>(t);
         }
 
         void do_return() {
             CXXDES_DEBUG_MEMBER_FUNCTION;
 
-            for (auto completion_token: pinfo_->completion_tokens) {
-                completion_token->time += pinfo_->env->now();
-                pinfo_->env->schedule_token(completion_token);
+            for (auto completion_token: pinfo->completion_tokens) {
+                completion_token->time += pinfo->env->now();
+                pinfo->env->schedule_token(completion_token);
             }
 
-            pinfo_->completion_tokens.clear();
-            pinfo_->complete = true;
+            pinfo->completion_tokens.clear();
+            pinfo->complete = true;
         }
 
         ~promise_type() {

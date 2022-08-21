@@ -12,7 +12,7 @@ template <>
 struct await_transform_extender<_get_env_tag> {
     template <typename Promise>
     auto await_transform(const Promise &promise) const noexcept {
-        return immediately_returning_awaitable{ promise.env };
+        return immediately_returning_awaitable{ promise.pinfo->env };
     }
 };
 
