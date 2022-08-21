@@ -16,6 +16,22 @@
 #include <type_traits>
 #include <utility>
 
+#define CXXDES_NOT_COPIABLE(TYPE) \
+    TYPE(TYPE const &) = delete; \
+    TYPE &operator=(TYPE const &) = delete;
+
+#define CXXDES_NOT_MOVABLE(TYPE) \
+    TYPE(TYPE &&) = delete; \
+    TYPE &operator=(TYPE &&) = delete;
+
+#define CXXDES_DEFAULT_COPIABLE(TYPE) \
+    TYPE(TYPE const &) = default; \
+    TYPE &operator=(TYPE const &) = default;
+
+#define CXXDES_DEFAULT_MOVABLE(TYPE) \
+    TYPE(TYPE &&) = default; \
+    TYPE &operator=(TYPE &&) = default;
+
 namespace cxxdes {
 namespace util {
 

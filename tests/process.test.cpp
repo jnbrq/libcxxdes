@@ -4,8 +4,6 @@
 // #define CXXDES_DEBUG_CORE_PROCESS
 #include <cxxdes/cxxdes.hpp>
 
-#include "helpers.hpp"
-
 using namespace cxxdes::core;
 
 TEST(ProcessTest, BasicFunctionality) {

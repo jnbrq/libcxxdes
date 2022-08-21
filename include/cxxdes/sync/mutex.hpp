@@ -13,6 +13,7 @@
 
 #include <queue>
 #include <cxxdes/core/process.hpp>
+#include <cxxdes/utils.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
 #ifdef CXXDES_DEBUG_SYNC_MUTEX
@@ -35,6 +36,9 @@ struct release_awaitable {
         priority_type priority = priority_consts::inherit):
         mtx_{mtx}, latency_{latency}, priority_{priority} {
     }
+
+    CXXDES_NOT_COPIABLE(release_awaitable)
+    CXXDES_DEFAULT_MOVABLE(release_awaitable)
 
     void await_bind(environment *env, priority_type priority) noexcept {
         env_ = env;
@@ -65,6 +69,9 @@ struct acquire_awaitable {
         priority_type priority = priority_consts::inherit):
         mtx_{mtx}, latency_{latency}, priority_{priority} {
     }
+
+    CXXDES_NOT_COPIABLE(acquire_awaitable)
+    CXXDES_DEFAULT_MOVABLE(acquire_awaitable)
 
     void await_bind(environment *env, priority_type priority) noexcept {
         env_ = env;

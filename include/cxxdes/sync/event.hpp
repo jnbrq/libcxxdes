@@ -14,6 +14,7 @@
 #include <vector>
 #include <stdexcept>
 #include <cxxdes/core/token.hpp>
+#include <cxxdes/utils.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
 #ifdef CXXDES_DEBUG_SYNC_EVENT
@@ -36,6 +37,9 @@ struct wake_awaitable {
         priority_type priority = priority_consts::inherit):
         evt_{evt}, latency_{latency}, priority_{priority} {
     }
+
+    CXXDES_NOT_COPIABLE(wake_awaitable)
+    CXXDES_DEFAULT_MOVABLE(wake_awaitable)
 
     void await_bind(environment *env, priority_type priority) noexcept {
         CXXDES_DEBUG_MEMBER_FUNCTION;
@@ -71,6 +75,9 @@ struct wait_awaitable {
         priority_type priority = priority_consts::inherit):
         evt_{evt}, latency_{latency}, priority_{priority} {
     }
+
+    CXXDES_NOT_COPIABLE(wait_awaitable)
+    CXXDES_DEFAULT_MOVABLE(wait_awaitable)
 
     void await_bind(environment *env, priority_type priority) noexcept {
         CXXDES_DEBUG_MEMBER_FUNCTION;
