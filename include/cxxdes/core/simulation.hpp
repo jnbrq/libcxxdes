@@ -27,18 +27,12 @@ struct simulation {
     environment env;
 
     template <awaitable A>
-    void start_awaitable(A &&a) {
+    void start_awaitable(A a) {
         CXXDES_DEBUG_MEMBER_FUNCTION;
 
-        std::forward<A>(a).await_bind(&env);
-        std::forward<A>(a).await_ready();
-        std::forward<A>(a).await_suspend(nullptr);
-    }
-
-    void start_main() {
-        CXXDES_DEBUG_MEMBER_FUNCTION;
-
-        start_awaitable(static_cast<Derived *>(this)->co_main());
+        a.await_bind(&env);
+        a.await_ready();
+        a.await_suspend(nullptr);
     }
 
     auto now() const {
@@ -53,13 +47,16 @@ struct simulation {
         return env.now_seconds();
     }
 
-    void run() {
-        start_main();
-        while (env.step()) ;
+    auto run() {
+        auto p = static_cast<Derived *>(this)->co_main();
+        start_awaitable(p);
+        while (env.step());
+        return p.await_resume();
     }
 
     void run_until(time_type t) {
-        start_main();
+        auto p = static_cast<Derived *>(this)->co_main();
+        start_awaitable(p);
         while (now() <= t && env.step());
     }
 
