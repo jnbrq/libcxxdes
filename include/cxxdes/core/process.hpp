@@ -297,33 +297,46 @@ private:
     priority_type ret_priority_ = priority_consts::inherit;
 };
 
-template <awaitable T>
-struct no_return_value_type {
-    T t;
+template <typename R>
+auto async(process<R> p) {
+    // since process<> is a reference-counted object with a flexible
+    // lifetime, we can safely use process<R> with async.
+    // for other types of awaitables, they should be wrapped in
+    // a process to be used with async.
+    struct async_awaitable {
+        process<R> p;
 
-    void await_bind(environment *env, priority_type priority) {
-        t.await_bind(env, priority);
-    }
+        void await_bind(environment *env, priority_type priority) {
+            p.await_bind(env, priority);
+        }
 
-    bool await_ready() {
-        return t.await_ready();
-    }
+        bool await_ready() {
+            return true;
+        }
 
-    void await_suspend(coro_handle coro) {
-        return t.await_suspend(coro);
-    }
+        void await_suspend(coro_handle) const noexcept {
+        }
 
-    token *await_token() {
-        return t.await_token();
-    }
+        token *await_token() const noexcept {
+            return nullptr;
+        }
 
-    void await_resume() {
-    }
-};
+        auto await_resume() {
+            return p;
+        }
+    };
 
-template <awaitable T>
-auto no_return_value(T &&t) {
-    return no_return_value_type<T>{ std::forward<T>(t) };
+    return async_awaitable{p};
+}
+
+template <awaitable A>
+[[deprecated("async(a) is designed for process<T>, you might be using it wrongly.")]]
+auto async(A a) {
+    // We need to wrap the awaitable in a process to support async.
+    // There probably is not a good use case for this.
+    return async([](A a) -> process<decltype(a.await_resume())> {
+        co_return (co_await a);
+    }(std::move(a)));
 }
 
 template <typename T>

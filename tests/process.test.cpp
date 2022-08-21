@@ -93,12 +93,6 @@ TEST(ProcessTest, Latencies) {
     EXPECT_EQ(test{}.run(), 10);
 }
 
-template <awaitable A>
-auto async(A &&a) {
-    // TODO provide async() as part of the library
-    return any_of(std::forward<A>(a), immediately_returning_awaitable<int>{0});
-}
-
 TEST(ProcessTest, Priorities) {
     CXXDES_SIMULATION(test) {
         int counter = 100;
