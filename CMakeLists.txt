@@ -74,7 +74,7 @@ if (CXXDES_EXAMPLES)
         add_executable("example_${basename}" "${src}")
         target_link_libraries(
             "example_${basename}"
-            PUBLIC
+            PRIVATE
             cxxdes::cxxdes
             fmt::fmt-header-only)
         
@@ -99,12 +99,41 @@ if (CXXDES_TESTS)
         add_executable("test_${basename}" "${src}")
         target_link_libraries(
             "test_${basename}"
-            PUBLIC
+            PRIVATE
             cxxdes::cxxdes
             GTest::gtest_main
             fmt::fmt-header-only)
         gtest_discover_tests("test_${basename}")
-        
+
+        if (MSVC)
+            # TODO figure out a way to enable address sanitizer for MSVC+cmake
+        else()
+            target_compile_options(
+                "test_${basename}"
+                PRIVATE
+                "-fsanitize=address"
+                "-fsanitize=undefined")
+            
+            target_link_options(
+                "test_${basename}"
+                PRIVATE
+                "-fsanitize=address"
+                "-fsanitize=undefined")
+            # TODO verify the link flag: -fsanitize=undefined
+
+            if (NOT APPLE)
+                target_compile_options(
+                    "test_${basename}"
+                    PRIVATE
+                    "-fsanitize=leak")
+                
+                target_link_options(
+                    "test_${basename}"
+                    PRIVATE
+                    "-fsanitize=leak")
+            endif()
+        endif()
+
         if (CXXDES_CLANG_TIDY)
             set_target_properties(
                 "test_${basename}"
