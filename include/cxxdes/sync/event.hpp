@@ -38,9 +38,6 @@ struct wake_awaitable {
         evt_{evt}, latency_{latency}, priority_{priority} {
     }
 
-    CXXDES_NOT_COPIABLE(wake_awaitable)
-    CXXDES_DEFAULT_MOVABLE(wake_awaitable)
-
     void await_bind(environment *env, priority_type priority) noexcept {
         CXXDES_DEBUG_MEMBER_FUNCTION;
 

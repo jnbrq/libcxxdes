@@ -37,9 +37,6 @@ struct release_awaitable {
         mtx_{mtx}, latency_{latency}, priority_{priority} {
     }
 
-    CXXDES_NOT_COPIABLE(release_awaitable)
-    CXXDES_DEFAULT_MOVABLE(release_awaitable)
-
     void await_bind(environment *env, priority_type priority) noexcept {
         env_ = env;
 
