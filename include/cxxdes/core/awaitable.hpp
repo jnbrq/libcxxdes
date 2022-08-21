@@ -39,7 +39,7 @@ struct immediately_returning_awaitable {
     bool await_ready() const noexcept { return true; }
     void await_suspend(coro_handle) const noexcept {  }
     token *await_token() const noexcept { return nullptr; }
-    T await_resume() { return std::move(return_value); }
+    T await_resume() { return std::forward<T>(return_value); }
 };
 
 // Clang needs a deduction guide
