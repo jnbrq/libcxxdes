@@ -47,6 +47,7 @@ struct semaphore {
         return value_;
     }
 
+    [[nodiscard("expected usage: co_await semaphore.up()")]]
     process<> up() {
         while (true) {
             co_await mutex_.acquire();
@@ -58,6 +59,7 @@ struct semaphore {
         co_await (mutex_.release() && event_.wake());
     }
 
+    [[nodiscard("expected usage: co_await semaphore.down()")]]
     process<> down() {
         while (true) {
             co_await mutex_.acquire();

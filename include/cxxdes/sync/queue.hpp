@@ -8,8 +8,8 @@
  * 
  */
 
-#ifndef LIBCXXDES_INCLUDE_CXXDES_SYNC_QUEUE_HPP_INCLUDED
-#define LIBCXXDES_INCLUDE_CXXDES_SYNC_QUEUE_HPP_INCLUDED
+#ifndef CXXDES_SYNC_QUEUE_HPP_INCLUDED
+#define CXXDES_SYNC_QUEUE_HPP_INCLUDED
 
 #include <queue>
 #include <cxxdes/core/timeout.hpp>
@@ -38,6 +38,7 @@ struct queue {
     }
 
     template <typename ...Args>
+    [[nodiscard("expected usage: co_await queue.put(args...)")]]
     process<> put(Args && ...args) {
         while (true) {
             co_await mutex_.acquire();
@@ -49,6 +50,8 @@ struct queue {
         co_await (mutex_.release() && event_.wake());
     }
 
+
+    [[nodiscard("expected usage: co_await queue.pop()")]]
     process<T> pop() {
         while (true) {
             co_await mutex_.acquire();
@@ -88,4 +91,4 @@ using detail::queue;
 #   include <cxxdes/debug/end.hpp>
 #endif
 
-#endif /* LIBCXXDES_INCLUDE_CXXDES_SYNC_QUEUE_HPP_INCLUDED */
+#endif /* CXXDES_SYNC_QUEUE_HPP_INCLUDED */

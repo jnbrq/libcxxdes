@@ -30,6 +30,7 @@ struct resource_handle {
     resource_handle(semaphore<> *s): s_{s} {
     }
 
+    [[nodiscard("expected usage: co_await resource_handle.release()")]]
     process<> release() {
         co_await s_->up();
     }
@@ -41,6 +42,7 @@ struct resource {
     resource(std::size_t count): s_{count, count} {
     }
 
+    [[nodiscard("expected usage: co_await resource.acquire()")]]
     process<resource_handle> acquire() {
         co_await s_.down();
         co_return resource_handle{&s_};

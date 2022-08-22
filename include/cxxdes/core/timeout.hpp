@@ -73,6 +73,7 @@ protected:
 };
 
 template <typename T>
+[[nodiscard("expected usage: co_await timeout(t)")]]
 auto timeout(T &&t, priority_type priority = priority_consts::inherit) noexcept {
     struct result: timeout_base<result> {
         // for some reason Apple Clang do not see time_precision() alone
