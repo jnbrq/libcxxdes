@@ -219,7 +219,7 @@ struct sequential_helper {
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await sequential(awaitables...)")]]
         constexpr auto operator()(Ts && ...ts) const {
-            return seq_proc_tuple(std::forward<Ts>(ts)...);
+            return seq_proc_tuple<Ts...>(std::forward<Ts>(ts)...);
         }
 
         template <typename Iterator>
