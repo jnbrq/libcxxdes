@@ -146,3 +146,38 @@ TEST(ProcessTest, Recursion) {
 
     EXPECT_EQ(test{}.run(), 720);
 }
+
+TEST(ProcessTest, DanglingReference1) {
+    CXXDES_SIMULATION(test) {
+        process<void> co_main() {
+            // this is created in the stack
+            auto x = delay(5);
+
+            // when the async process starts to execute, x is already
+            // destroyed; therefore, we have a dangling reference.
+            co_await async(x);
+            
+            co_return ;
+        }
+    };
+
+    EXPECT_DEATH(test{}.run(), "");
+}
+
+TEST(ProcessTest, DanglingReference1Solution) {
+    CXXDES_SIMULATION(test) {
+        process<void> co_main() {
+            // this is created in the stack
+            auto x = delay(5);
+
+            // std::move(x) makes sure that x is moved into async.
+            // alternatively, do not store anything in variables
+            // except processes.
+            co_await async(std::move(x));
+            
+            co_return ;
+        }
+    };
+
+    test{}.run();
+}
