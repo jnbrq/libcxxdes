@@ -181,3 +181,25 @@ TEST(ProcessTest, DanglingReference1Solution) {
 
     test{}.run();
 }
+
+TEST(ProcessTest, NotDanglingReference1) {
+    CXXDES_SIMULATION(test) {
+        process<void> foo() {
+            co_await delay(100);
+        }
+
+        process<void> co_main() {
+            // this is created in the stack
+            auto x = foo();
+
+            // when the async process starts to execute, x is already
+            // destroyed.
+            // however, for processes, we have copy semantics and 
+            co_await async(x);
+            
+            co_return ;
+        }
+    };
+
+    EXPECT_DEATH(test{}.run(), "");
+}
