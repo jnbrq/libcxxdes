@@ -79,10 +79,7 @@ private:
 };
 
 template <typename T>
-concept reference_counted = std::is_class_v<T> && requires(T t) {
-    { t.ref() };
-    { t.unref() };
-};
+concept reference_counted = std::is_base_of_v<reference_counted_base<T>, T>;
 
 /**
  * @brief Pointer type to be used with reference counted objects.
@@ -91,6 +88,8 @@ concept reference_counted = std::is_class_v<T> && requires(T t) {
  */
 template <reference_counted T>
 struct ptr {
+    ptr() noexcept = default;
+
     ptr(T *p) noexcept: ptr_{p} {
         if (ptr_) ptr_->ref();
     }
@@ -100,8 +99,11 @@ struct ptr {
     }
 
     ptr &operator=(const ptr &other) noexcept {
-        ptr_ = other.ptr_;
-        if (ptr_) ptr_->ref();
+        if (ptr_ != other.ptr_) {
+            if (ptr_) ptr_->unref();
+            ptr_ = other.ptr_;
+            if (ptr_) ptr_->ref();
+        }
         return *this;
     }
 
@@ -110,8 +112,7 @@ struct ptr {
     }
 
     ptr &operator=(ptr &&other) {
-        ptr_ = other.ptr_;
-        other.ptr_ = nullptr;
+        std::swap(ptr_, other.ptr_);
         return *this;
     }
 
@@ -132,7 +133,7 @@ struct ptr {
     }
 
 private:
-    T *ptr_;
+    T *ptr_ = nullptr;
 };
 
 } /* namespace util */
