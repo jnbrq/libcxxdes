@@ -29,6 +29,44 @@ set(CXXDES_CLANG_TIDY OFF CACHE BOOL "Use clang tidy.")
 set(CXXDES_EXAMPLES ON CACHE BOOL "Build examples.")
 set(CXXDES_TESTS ON CACHE BOOL "Build tests.")
 
+set(CXXDES_SANITIZE_ADDRESS ON CACHE BOOL "Enable -sanitize=address for examples and tests.")
+set(CXXDES_SANITIZE_LEAK ON CACHE BOOL "Enable -sanitize=leak for examples and tests.")
+set(CXXDES_SANITIZE_UNDEFINED ON CACHE BOOL "Enable -sanitize=undefined behavior for examples and tests.")
+
+# sanitization interface target
+add_library(sanitize_config INTERFACE)
+if (MSVC)
+else()
+    if (CXXDES_SANITIZE_ADDRESS)
+        target_compile_options(sanitize_config INTERFACE "-fsanitize=address")
+        target_link_options(sanitize_config INTERFACE "-fsanitize=address")
+        target_compile_definitions(sanitize_config INTERFACE "-DCXXDES_SANITIZE_ADDRESS")
+    endif()
+
+    if (CXXDES_SANITIZE_LEAK)
+        target_compile_options(sanitize_config INTERFACE "-fsanitize=leak")
+        target_link_options(sanitize_config INTERFACE "-fsanitize=leak")
+        target_compile_definitions(sanitize_config INTERFACE "-DCXXDES_SANITIZE_LEAK")
+    endif()
+
+    if (CXXDES_SANITIZE_UNDEFINED)
+        target_compile_options(sanitize_config INTERFACE "-fsanitize=undefined")
+        target_link_options(sanitize_config INTERFACE "-fsanitize=undefined")
+        target_compile_definitions(sanitize_config INTERFACE "-DCXXDES_SANITIZE_UNDEFINED")
+    endif()
+endif()
+
+# clang tidy
+if (CXXDES_CLANG_TIDY)
+    find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
+    set(
+        CMAKE_CXX_CLANG_TIDY
+        "${CLANG_TIDY_EXE}"
+        "-header-filter=."
+        "-checks=-*,modernize-*")
+endif()
+
+
 # TODO: please see
 # https://dominikberner.ch/cmake-interface-lib/
 
@@ -56,16 +94,6 @@ endif()
 
 add_library(cxxdes::cxxdes ALIAS cxxdes)
 
-
-if (CXXDES_CLANG_TIDY)
-    find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
-    set(
-        CLANG_TIDY_COMMAND
-        "${CLANG_TIDY_EXE}"
-        "-header-filter=."
-        "-checks=-*,modernize-*")
-endif()
-
 if (CXXDES_EXAMPLES)
     file(GLOB example_srcs ${PROJECT_SOURCE_DIR}/examples/*.cpp)
 
@@ -76,17 +104,8 @@ if (CXXDES_EXAMPLES)
             "example_${basename}"
             PRIVATE
             cxxdes::cxxdes
-            fmt::fmt-header-only)
-        
-        if (CXXDES_CLANG_TIDY)
-            set_target_properties(
-                "example_${basename}"
-                PROPERTIES
-                CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
-        endif()
-        
-        # target_compile_options("example_${basename}" PRIVATE -fsanitize=address)
-        # target_link_options("example_${basename}" PRIVATE -fsanitize=address)
+            fmt::fmt-header-only
+            sanitize_config)
     endforeach()
 endif()
 
@@ -102,43 +121,8 @@ if (CXXDES_TESTS)
             PRIVATE
             cxxdes::cxxdes
             GTest::gtest_main
-            fmt::fmt-header-only)
+            fmt::fmt-header-only
+            sanitize_config)
         gtest_discover_tests("test_${basename}")
-
-        if (MSVC)
-            # TODO figure out a way to enable address sanitizer for MSVC+cmake
-        else()
-            target_compile_options(
-                "test_${basename}"
-                PRIVATE
-                "-fsanitize=address"
-                "-fsanitize=undefined")
-            
-            target_link_options(
-                "test_${basename}"
-                PRIVATE
-                "-fsanitize=address"
-                "-fsanitize=undefined")
-            # TODO verify the link flag: -fsanitize=undefined
-
-            if (NOT APPLE)
-                target_compile_options(
-                    "test_${basename}"
-                    PRIVATE
-                    "-fsanitize=leak")
-                
-                target_link_options(
-                    "test_${basename}"
-                    PRIVATE
-                    "-fsanitize=leak")
-            endif()
-        endif()
-
-        if (CXXDES_CLANG_TIDY)
-            set_target_properties(
-                "test_${basename}"
-                PROPERTIES
-                CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
-        endif()
     endforeach()
 endif()
