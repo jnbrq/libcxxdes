@@ -26,8 +26,8 @@ struct random_variable {
     }
 
 private:
-    Distribution d_;
     Engine e_;
+    Distribution d_;
 };
 
 using exponential_rv = random_variable<std::exponential_distribution<>>;

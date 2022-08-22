@@ -63,7 +63,7 @@ CXXDES_SIMULATION(async_example) {
     }
 };
 
-int main(int argc, char **argv) {
+int main(int /* argc */, char ** /* argv */) {
     async_example{}.run();
     return 0;
 }

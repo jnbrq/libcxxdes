@@ -8,9 +8,9 @@ using namespace cxxdes::time_ops;
 
 CXXDES_SIMULATION(producer_consumer_example) {
     producer_consumer_example(double lambda, double mu, std::size_t n_packets = 100000):
+        n_packets{n_packets},
         lambda{ rand_seed() /* seed */, lambda /* lambda */},
-        mu{ rand_seed() /* seed */, mu /* mu */ },
-        n_packets{n_packets} {
+        mu{ rand_seed() /* seed */, mu /* mu */ } {
         env.time_unit(1_s);
         env.time_precision(1_ms);
     }

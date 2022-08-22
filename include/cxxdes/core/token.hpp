@@ -40,7 +40,7 @@ constexpr priority_type zero = static_cast<priority_type>(0);
 struct token;
 
 struct token_handler {
-    virtual void invoke(token *tkn) {  }
+    virtual void invoke(token *) {  }
     virtual ~token_handler() {  }
 };
 

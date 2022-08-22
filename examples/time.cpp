@@ -16,7 +16,7 @@ int main() {
     constexpr auto x = u.count(c);
     constexpr auto y = v.count(b);
 
-    auto test1 = cxxdes::core::timeout(a);
+    [[maybe_unused]] auto test1 = cxxdes::core::timeout(a);
 
     fmt::print("{} {}\n", x, y);
 

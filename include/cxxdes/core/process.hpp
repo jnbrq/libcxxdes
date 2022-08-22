@@ -330,7 +330,9 @@ auto async(process<R> p) {
 }
 
 template <awaitable A>
+#ifndef CXXDES_NO_DEPRECATED
 [[deprecated("async(a) is designed for process<T>, you might be using it wrongly.")]]
+#endif
 auto async(A &&a) {
     // We need to wrap the awaitable in a process to support async.
     // There probably is not a good use case for this.

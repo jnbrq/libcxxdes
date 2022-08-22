@@ -2,6 +2,7 @@
 #include <vector>
 
 // #define CXXDES_DEBUG_CORE_PROCESS
+#define CXXDES_NO_DEPRECATED
 #include <cxxdes/cxxdes.hpp>
 
 using namespace cxxdes::core;
@@ -25,7 +26,6 @@ TEST(ProcessTest, OutOfScope) {
 
         process<int> co_main() {
             {
-                int x;
                 auto p = foo();
                 co_await any_of(p, delay(1));
                 EXPECT_EQ(now(), 1);
@@ -218,7 +218,7 @@ TEST(ProcessTest, ReturnProcess) {
             co_return ;
         }
 
-        auto f(int &&t) {
+        auto f(int && /* t */) {
             return g();
         }
 

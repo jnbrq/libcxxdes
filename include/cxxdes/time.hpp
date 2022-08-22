@@ -40,7 +40,12 @@ struct time {
         t{(Integer) tt}, u{uu} {}
     
     template <typename I>
-    constexpr time(time<I> const &other) {
+    constexpr time(time<I> const &other) noexcept {
+        *this = other;
+    }
+
+    constexpr time(time const &other) noexcept {
+        // -Wdeprecated-copy-with-user-provided-copy
         *this = other;
     }
 
@@ -214,7 +219,7 @@ constexpr auto operator/(A &&a, B &&b) {
     return make_node(
         std::forward<A>(a), std::forward<B>(b),
         [](auto const &a, auto const &b, auto const &p) {
-            return a.count() / b.count(p);
+            return a.count(p) / b.count(p);
         });
 }
 
@@ -223,7 +228,7 @@ constexpr auto operator/(A &&a, B &&b) {
     return make_node(
         std::forward<A>(a), std::forward<B>(b),
         [](auto const &a, auto const &b, auto const &p) {
-            return a.count() / b;
+            return a.count(p) / b;
         });
 }
 

@@ -192,7 +192,7 @@ struct any_of_condition {
 };
 
 struct all_of_condition {
-    constexpr bool operator()(std::size_t total, std::size_t remaining) const {
+    constexpr bool operator()(std::size_t /* total */, std::size_t remaining) const {
         return remaining == 0;
     }
 };
