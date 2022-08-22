@@ -97,7 +97,7 @@ public:
         return completion_token_;
     }
 
-    ReturnType await_resume() {
+    ReturnType await_resume() const {
         CXXDES_DEBUG_MEMBER_FUNCTION;
 
         if constexpr (std::is_same_v<ReturnType, void>)
@@ -141,7 +141,7 @@ public:
         return pinfo_->complete;
     }
 
-    auto return_value() {
+    auto return_value() const {
         return await_resume();
     }
 
