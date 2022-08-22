@@ -147,6 +147,8 @@ TEST(ProcessTest, Recursion) {
     EXPECT_EQ(test{}.run(), 720);
 }
 
+#ifdef CXXDES_SANITIZE_ADDRESS
+
 TEST(ProcessTest, DanglingReference1) {
     CXXDES_SIMULATION(test) {
         process<void> co_main() {
@@ -163,6 +165,8 @@ TEST(ProcessTest, DanglingReference1) {
 
     EXPECT_DEATH(test{}.run(), "");
 }
+
+#endif
 
 TEST(ProcessTest, DanglingReference1Solution) {
     CXXDES_SIMULATION(test) {
@@ -201,5 +205,30 @@ TEST(ProcessTest, NotDanglingReference1) {
         }
     };
 
-    EXPECT_DEATH(test{}.run(), "");
+    test{}.run();
+}
+
+// GCC address sanitizer fails with pass-by-reference f()
+// for some reason (even if the parameters are not used)
+
+TEST(ProcessTest, ReturnProcess) {
+    CXXDES_SIMULATION(test) {
+        static process<void> g() {
+            co_await delay(5);
+            co_return ;
+        }
+
+        auto f(int &&t) {
+            return g();
+        }
+
+        process<void> co_main() {
+            auto p = f(1);
+            co_await p;
+            EXPECT_EQ(now(), 5);
+            EXPECT_TRUE(p.is_complete());
+        }
+    };
+
+    test{}.run();
 }
