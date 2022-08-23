@@ -11,7 +11,7 @@
 #ifndef CXXDES_CORE_TIMEOUT_HPP_INCLUDED
 #define CXXDES_CORE_TIMEOUT_HPP_INCLUDED
 
-#include <cxxdes/time.hpp>
+#include <cxxdes/misc/time.hpp>
 #include <cxxdes/core/environment.hpp>
 
 #include <cxxdes/debug/helpers.hpp>

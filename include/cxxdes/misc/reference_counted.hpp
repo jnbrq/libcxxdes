@@ -1,41 +1,20 @@
 /**
- * @file utils.hpp
+ * @file reference_counted.hpp
  * @author Canberk Sönmez (canberk.sonmez.409@gmail.com)
- * @brief Contains utility classes and functions.
- * @date 2022-08-19
+ * @brief Utility classes for reference counted objects.
+ * @date 2022-08-23
  * 
  * Copyright (c) Canberk Sönmez 2022
  * 
  */
 
-#ifndef CXXDES_UTILS_HPP_INCLUDED
-#define CXXDES_UTILS_HPP_INCLUDED
+#ifndef CXXDES_MISC_REFERENCE_COUNTED_HPP_INCLUDED
+#define CXXDES_MISC_REFERENCE_COUNTED_HPP_INCLUDED
 
-#include <cassert>
-#include <cstddef>
 #include <type_traits>
-#include <utility>
-
-#define CXXDES_NOT_COPIABLE(TYPE) \
-    TYPE(TYPE const &) = delete; \
-    TYPE &operator=(TYPE const &) = delete;
-
-#define CXXDES_NOT_MOVABLE(TYPE) \
-    TYPE(TYPE &&) = delete; \
-    TYPE &operator=(TYPE &&) = delete;
-
-#define CXXDES_DEFAULT_COPIABLE(TYPE) \
-    TYPE(TYPE const &) = default; \
-    TYPE &operator=(TYPE const &) = default;
-
-#define CXXDES_DEFAULT_MOVABLE(TYPE) \
-    TYPE(TYPE &&) = default; \
-    TYPE &operator=(TYPE &&) = default;
 
 namespace cxxdes {
-namespace util {
-
-struct empty_type {  };
+namespace memory {
 
 /**
  * @brief Makes a type reference counted (not thread safe).
@@ -136,7 +115,7 @@ private:
     T *ptr_ = nullptr;
 };
 
-} /* namespace util */
+} /* namespace memory */
 } /* namespace cxxdes */
 
-#endif /* CXXDES_UTILS_HPP_INCLUDED */
+#endif /* CXXDES_MISC_REFERENCE_COUNTED_HPP_INCLUDED */

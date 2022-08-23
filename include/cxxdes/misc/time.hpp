@@ -8,8 +8,8 @@
  * 
  */
 
-#ifndef CXXDES_TIME_HPP_INCLUDED
-#define CXXDES_TIME_HPP_INCLUDED
+#ifndef CXXDES_MISC_TIME_HPP_INCLUDED
+#define CXXDES_MISC_TIME_HPP_INCLUDED
 
 #include <cstdint>
 #include <concepts>
@@ -263,4 +263,4 @@ using detail::operator/;
 
 } /* namespace cxxdes */
 
-#endif /* CXXDES_TIME_HPP_INCLUDED */
+#endif /* CXXDES_MISC_TIME_HPP_INCLUDED */

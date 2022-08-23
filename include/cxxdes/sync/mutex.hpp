@@ -13,7 +13,6 @@
 
 #include <queue>
 #include <cxxdes/core/process.hpp>
-#include <cxxdes/utils.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
 #ifdef CXXDES_DEBUG_SYNC_MUTEX

@@ -14,7 +14,6 @@
 #include <vector>
 #include <stdexcept>
 #include <cxxdes/core/token.hpp>
-#include <cxxdes/utils.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
 #ifdef CXXDES_DEBUG_SYNC_EVENT

@@ -12,7 +12,7 @@
 #define CXXDES_CORE_ENVIRONMENT_HPP_INCLUDED
 
 #include <queue>
-#include <cxxdes/time.hpp>
+#include <cxxdes/misc/time.hpp>
 #include <cxxdes/core/token.hpp>
 
 #include <cxxdes/debug/helpers.hpp>

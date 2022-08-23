@@ -16,7 +16,8 @@
 #include <stdexcept>
 #include <optional>
 
-#include <cxxdes/utils.hpp>
+#include <cxxdes/misc/utils.hpp>
+#include <cxxdes/misc/reference_counted.hpp>
 #include <cxxdes/core/environment.hpp>
 #include <cxxdes/core/awaitable.hpp>
 
@@ -52,7 +53,7 @@ private:
 
     struct process_info;
 public:
-    explicit process(util::ptr<process_info> pinfo): pinfo_{pinfo} {
+    explicit process(memory::ptr<process_info> pinfo): pinfo_{pinfo} {
         CXXDES_DEBUG_MEMBER_FUNCTION;
     }
 
@@ -173,7 +174,7 @@ private:
         }
     };
 
-    struct process_info: cxxdes::util::reference_counted_base<process_info> {
+    struct process_info: memory::reference_counted_base<process_info> {
         process_info() {
             CXXDES_DEBUG_MEMBER_FUNCTION;
 
@@ -207,7 +208,7 @@ public:
             return_void_mixin<promise_type>,
             return_value_mixin<promise_type>
         > {
-        util::ptr<process_info> pinfo = nullptr;
+        memory::ptr<process_info> pinfo = nullptr;
 
         template <typename ...Args>
         promise_type(Args && ...) {
@@ -290,7 +291,7 @@ public:
     };
 
 private:
-    util::ptr<process_info> pinfo_ = nullptr;
+    memory::ptr<process_info> pinfo_ = nullptr;
     token *completion_token_ = nullptr;
 
     time_type ret_latency_ = 0;
