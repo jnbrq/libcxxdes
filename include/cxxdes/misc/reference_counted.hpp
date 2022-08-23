@@ -11,6 +11,7 @@
 #ifndef CXXDES_MISC_REFERENCE_COUNTED_HPP_INCLUDED
 #define CXXDES_MISC_REFERENCE_COUNTED_HPP_INCLUDED
 
+#include <cassert>
 #include <type_traits>
 
 namespace cxxdes {
