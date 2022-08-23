@@ -1,6 +1,6 @@
 # `run_tests.md`
 
-You can execute the tests with specific configurations with the following command:
+You can execute the tests for all configurations with the following command:
 
 ```bash
 bash ./run_tests.sh test_configs/*.cfg
