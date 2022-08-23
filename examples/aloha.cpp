@@ -48,7 +48,7 @@ CXXDES_SIMULATION(aloha) {
     }
 
 private:
-    process<void> station(int id) {
+    process<void> station([[maybe_unused]] int id) {
         exponential_rv interarrival{rand_seed(), cfg_.lambda / cfg_.num_stations};
 
         for (std::size_t i = 0; i < cfg_.packets_per_station; ++i) {

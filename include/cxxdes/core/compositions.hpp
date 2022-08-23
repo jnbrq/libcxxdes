@@ -155,6 +155,11 @@ struct any_all_helper {
     struct range_based: base<range_based<Iterator>> {
         Iterator first, last;
         std::size_t size;
+
+        range_based(Iterator first_, Iterator last_, std::size_t size_):
+            first{first_}, last{last_}, size{size_} {
+            // see the note below
+        }
         
         constexpr std::size_t count() const noexcept {
             return size;
@@ -176,11 +181,16 @@ struct any_all_helper {
         template <typename Iterator>
         [[nodiscard("expected usage: co_await any_of.range(begin, end) or all_of.range(begin, end)")]]
         constexpr auto range(Iterator first, Iterator last) const {
+            // -Werror=missing-field-initializers
+            // we cannot use the following due to a GCC bug
+            /*
             return range_based<Iterator>{
                 .first = first,
                 .last = last,
                 .size = (std::size_t) std::distance(first, last)
             };
+            */
+           return range_based<Iterator>(first, last, (std::size_t) std::distance(first, last));
         }
     };
 };

@@ -215,7 +215,7 @@ public:
 
             pinfo = new process_info;
             pinfo->start_token = new token{0, priority_consts::inherit, std::coroutine_handle<promise_type>::from_promise(*this)};
-        };
+        }
 
         process get_return_object() {
             return process(pinfo);
