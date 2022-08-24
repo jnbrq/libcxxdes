@@ -1,6 +1,4 @@
 #include <gtest/gtest.h>
-
-#define CXXDES_NO_DEPRECATED
 #include <cxxdes/cxxdes.hpp>
 
 using namespace cxxdes::core;

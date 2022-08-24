@@ -1,8 +1,5 @@
 #include <gtest/gtest.h>
 #include <vector>
-
-// #define CXXDES_DEBUG_CORE_PROCESS
-#define CXXDES_NO_DEPRECATED
 #include <cxxdes/cxxdes.hpp>
 
 using namespace cxxdes::core;

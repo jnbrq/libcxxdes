@@ -367,9 +367,6 @@ struct async_functor {
     }
 
     template <awaitable A>
-    #ifndef CXXDES_NO_DEPRECATED
-    [[deprecated("async(awaitable) is designed for process<T>, you might be using it wrongly.")]]
-    #endif
     [[nodiscard("expected usage: co_await async(awaitable)")]]
     constexpr auto operator()(A &&a) const {
         // We need to wrap the awaitable in a process to support async.
@@ -378,27 +375,18 @@ struct async_functor {
     }
     
     template <awaitable A>
-    #ifndef CXXDES_NO_DEPRECATED
-    [[deprecated("async.by_value(awaitable) is designed for process<T>, you might be using it wrongly.")]]
-    #endif
     [[nodiscard("expected usage: co_await async.by_value(awaitable)")]]
     constexpr auto by_value(A &&a) const {
         return (*this)(sequential.by_value(std::forward<A>(a)));
     }
 
     template <awaitable A>
-    #ifndef CXXDES_NO_DEPRECATED
-    [[deprecated("async.by_reference(awaitable) is designed for process<T>, you might be using it wrongly.")]]
-    #endif
     [[nodiscard("expected usage: co_await async.by_reference(awaitable)")]]
     constexpr auto by_reference(A &&a) const {
         return (*this)(sequential.by_reference(std::forward<A>(a)));
     }
 
     template <awaitable A>
-    #ifndef CXXDES_NO_DEPRECATED
-    [[deprecated("async.rvalue_by_value(awaitable) is designed for process<T>, you might be using it wrongly.")]]
-    #endif
     [[nodiscard("expected usage: co_await async.rvalue_by_value(awaitable)")]]
     constexpr auto rvalue_by_value(A &&a) const {
         return (*this)(sequential.rvalues_by_value(std::forward<A>(a)));
