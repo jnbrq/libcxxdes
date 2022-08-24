@@ -29,7 +29,6 @@
 namespace cxxdes {
 namespace core {
 
-
 struct this_process {
     struct get_priority {  };
     struct set_priority {
@@ -297,50 +296,6 @@ private:
     time_type ret_latency_ = 0;
     priority_type ret_priority_ = priority_consts::inherit;
 };
-
-template <typename R>
-auto async(process<R> p) {
-    // since process<> is a reference-counted object with a flexible
-    // lifetime, we can safely use process<R> with async.
-    // for other types of awaitables, they should be wrapped in
-    // a process to be used with async.
-    struct async_awaitable {
-        process<R> p;
-
-        void await_bind(environment *env, priority_type priority) {
-            p.await_bind(env, priority);
-        }
-
-        bool await_ready() {
-            return true;
-        }
-
-        void await_suspend(coro_handle) const noexcept {
-        }
-
-        token *await_token() const noexcept {
-            return nullptr;
-        }
-
-        auto await_resume() {
-            return p;
-        }
-    };
-
-    return async_awaitable{p};
-}
-
-template <awaitable A>
-#ifndef CXXDES_NO_DEPRECATED
-[[deprecated("async(a) is designed for process<T>, you might be using it wrongly.")]]
-#endif
-auto async(A &&a) {
-    // We need to wrap the awaitable in a process to support async.
-    // There probably is not a good use case for this.
-    return async([](A a) -> process<decltype(a.await_resume())> {
-        co_return (co_await a);
-    }(std::forward<A>(a)));
-}
 
 template <typename T>
 concept releasable = requires(T t) {

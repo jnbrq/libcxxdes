@@ -157,7 +157,7 @@ TEST(ProcessTest, DanglingReference1) {
 
             // when the async process starts to execute, x is already
             // destroyed; therefore, we have a dangling reference.
-            co_await async(x);
+            co_await async.rvalue_by_value(x);
             
             co_return ;
         }
@@ -175,9 +175,7 @@ TEST(ProcessTest, DanglingReference1Solution) {
             auto x = delay(5);
 
             // std::move(x) makes sure that x is moved into async.
-            // alternatively, do not store anything in variables
-            // except processes.
-            co_await async(std::move(x));
+            co_await async.rvalue_by_value(std::move(x));
             
             co_return ;
         }
@@ -207,9 +205,6 @@ TEST(ProcessTest, NotDanglingReference1) {
 
     test{}.run();
 }
-
-// GCC address sanitizer fails with pass-by-reference f()
-// for some reason (even if the parameters are not used)
 
 TEST(ProcessTest, ReturnProcess) {
     CXXDES_SIMULATION(test) {

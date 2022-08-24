@@ -14,7 +14,11 @@
 
 #include <tuple>
 #include <iterator>
+#include <type_traits>
+#include <vector>
+#include <iterator>
 #include <cxxdes/core/process.hpp>
+#include <cxxdes/misc/utils.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
 #ifdef CXXDES_DEBUG_CORE_COMPOSITIONS
@@ -171,16 +175,65 @@ struct any_all_helper {
         }
     };
 
+    template <typename ValueType>
+    struct vector_based: base<vector_based<ValueType>> {
+        std::vector<ValueType> v;
+
+        template <typename Iterator>
+        vector_based(Iterator begin, Iterator end): v(begin, end) {
+        }
+        
+        constexpr std::size_t count() const noexcept {
+            return v.size();
+        }
+
+        template <typename UnaryFunction>
+        void apply(UnaryFunction f) {
+            std::for_each(v.begin(), v.end(), f);
+        }
+    };
+
     struct functor {
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await any_of(awaitables...) or all_of(awaitables...)")]]
         constexpr auto operator()(Ts && ...ts) const {
+            return by_value(std::forward<Ts>(ts)...);
+        }
+
+        template <typename ...Ts>
+        [[nodiscard("expected usage: co_await {any_of, all_of}.by_value(awaitables...)")]]
+        constexpr auto by_value(Ts && ...ts) const {
+            return tuple_based<std::remove_reference_t<Ts>...>{ std::forward<Ts>(ts)... };
+        }
+
+        template <typename ...Ts>
+        [[nodiscard("expected usage: co_await {any_of, all_of}.by_reference(awaitables...)")]]
+        constexpr auto by_reference(Ts && ...ts) {
+            return tuple_based<Ts &&...>{ std::forward<Ts>(ts)... };
+        }
+
+        template <typename ...Ts>
+        [[nodiscard("expected usage: co_await {any_of, all_of}.rvalues_by_value(awaitables...)")]]
+        constexpr auto rvalues_by_value(Ts && ...ts) {
             return tuple_based<Ts...>{ std::forward<Ts>(ts)... };
         }
 
         template <typename Iterator>
-        [[nodiscard("expected usage: co_await any_of.range(begin, end) or all_of.range(begin, end)")]]
+        [[nodiscard("expected usage: co_await {any_of, all_of}.range(begin, end)")]]
         constexpr auto range(Iterator first, Iterator last) const {
+            return range_copy(first, last);
+        }
+
+        template <typename Iterator>
+        [[nodiscard("expected usage: co_await {any_of, all_of}.range_copy(begin, end)")]]
+        constexpr auto range_copy(Iterator first, Iterator last) const {
+            using value_type = typename std::iterator_traits<Iterator>::value_type;
+            return vector_based<value_type>(first, last);
+        }
+
+        template <typename Iterator>
+        [[nodiscard("expected usage: co_await {any_of, all_of}.range_no_copy(begin, end)")]]
+        constexpr auto range_no_copy(Iterator first, Iterator last) const {
             // -Werror=missing-field-initializers
             // we cannot use the following due to a GCC bug
             /*
@@ -190,7 +243,7 @@ struct any_all_helper {
                 .size = (std::size_t) std::distance(first, last)
             };
             */
-           return range_based<Iterator>(first, last, (std::size_t) std::distance(first, last));
+            return range_based<Iterator>(first, last, (std::size_t) std::distance(first, last));
         }
     };
 };
@@ -219,9 +272,15 @@ struct sequential_helper {
 
     template <typename Iterator>
     static process<void> seq_proc_range(Iterator begin, Iterator end) {
-        for (Iterator it = begin; it != end; ++it) {
+        for (Iterator it = begin; it != end; ++it)
             co_await (*it);
-        }
+        co_return;
+    }
+
+    template <typename ValueType>
+    static process<void> seq_proc_vector(std::vector<ValueType> v) {
+        for (auto &a: v)
+            co_await a;
         co_return;
     }
     
@@ -229,12 +288,43 @@ struct sequential_helper {
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await sequential(awaitables...)")]]
         constexpr auto operator()(Ts && ...ts) const {
+            return by_value(std::forward<Ts>(ts)...);
+        }
+
+        template <typename ...Ts>
+        [[nodiscard("expected usage: co_await sequential.by_value(awaitables...)")]]
+        constexpr auto by_value(Ts && ...ts) const {
+            return seq_proc_tuple<std::remove_reference_t<Ts>...>(std::forward<Ts>(ts)... );
+        }
+
+        template <typename ...Ts>
+        [[nodiscard("expected usage: co_await sequential.by_reference(awaitables...)")]]
+        constexpr auto by_reference(Ts && ...ts) const {
+            return seq_proc_tuple<Ts &&...>(std::forward<Ts>(ts)...);
+        }
+
+        template <typename ...Ts>
+        [[nodiscard("expected usage: co_await sequential.rvalues_by_value(awaitables...)")]]
+        constexpr auto rvalues_by_value(Ts && ...ts) const {
             return seq_proc_tuple<Ts...>(std::forward<Ts>(ts)...);
         }
 
         template <typename Iterator>
         [[nodiscard("expected usage: co_await sequential.range(begin, end)")]]
         constexpr auto range(Iterator first, Iterator last) const {
+            return range_copy(first, last);
+        }
+
+        template <typename Iterator>
+        [[nodiscard("expected usage: co_await sequential.range_copy(begin, end)")]]
+        constexpr auto range_copy(Iterator first, Iterator last) const {
+            using value_type = typename std::iterator_traits<Iterator>::value_type;
+            return seq_proc_vector(std::vector<value_type>(first, last));
+        }
+
+        template <typename Iterator>
+        [[nodiscard("expected usage: co_await sequential.range_no_copy(begin, end)")]]
+        constexpr auto range_no_copy(Iterator first, Iterator last) const {
             return seq_proc_range(first, last);
         }
     };
@@ -242,11 +332,87 @@ struct sequential_helper {
 
 constexpr sequential_helper::functor sequential;
 
+struct async_functor {
+    template <typename T>
+    [[nodiscard("expected usage: co_await async(process<T>)")]]
+    constexpr auto operator()(process<T> p) const {
+        // since process<T> is a reference-counted object with a flexible
+        // lifetime, we can safely use process<R> with async.
+        // for other types of awaitables, they should be wrapped in
+        // a process to be used with async.
+        struct async_awaitable {
+            process<T> p;
+
+            void await_bind(environment *env, priority_type priority) {
+                p.await_bind(env, priority);
+            }
+
+            bool await_ready() {
+                return true;
+            }
+
+            void await_suspend(coro_handle) const noexcept {
+            }
+
+            token *await_token() const noexcept {
+                return nullptr;
+            }
+
+            auto await_resume() {
+                return p;
+            }
+        };
+
+        return async_awaitable{p};
+    }
+
+    template <awaitable A>
+    #ifndef CXXDES_NO_DEPRECATED
+    [[deprecated("async(awaitable) is designed for process<T>, you might be using it wrongly.")]]
+    #endif
+    [[nodiscard("expected usage: co_await async(awaitable)")]]
+    constexpr auto operator()(A &&a) const {
+        // We need to wrap the awaitable in a process to support async.
+        // There probably is not a good use case for this.
+        return by_value(std::forward<A>(a));
+    }
+    
+    template <awaitable A>
+    #ifndef CXXDES_NO_DEPRECATED
+    [[deprecated("async.by_value(awaitable) is designed for process<T>, you might be using it wrongly.")]]
+    #endif
+    [[nodiscard("expected usage: co_await async.by_value(awaitable)")]]
+    constexpr auto by_value(A &&a) const {
+        return (*this)(sequential.by_value(std::forward<A>(a)));
+    }
+
+    template <awaitable A>
+    #ifndef CXXDES_NO_DEPRECATED
+    [[deprecated("async.by_reference(awaitable) is designed for process<T>, you might be using it wrongly.")]]
+    #endif
+    [[nodiscard("expected usage: co_await async.by_reference(awaitable)")]]
+    constexpr auto by_reference(A &&a) const {
+        return (*this)(sequential.by_reference(std::forward<A>(a)));
+    }
+
+    template <awaitable A>
+    #ifndef CXXDES_NO_DEPRECATED
+    [[deprecated("async.rvalue_by_value(awaitable) is designed for process<T>, you might be using it wrongly.")]]
+    #endif
+    [[nodiscard("expected usage: co_await async.rvalue_by_value(awaitable)")]]
+    constexpr auto rvalue_by_value(A &&a) const {
+        return (*this)(sequential.rvalues_by_value(std::forward<A>(a)));
+    }
+};
+
+constexpr async_functor async;
+
 } /* namespace detail */
 
 using detail::any_of;
 using detail::all_of;
 using detail::sequential;
+using detail::async;
 
 template <awaitable A1, awaitable A2>
 auto operator||(A1 &&a1, A2 &&a2) {
