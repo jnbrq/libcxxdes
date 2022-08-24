@@ -5,7 +5,7 @@ using namespace cxxdes::core;
 
 TEST(ControlFlowTest, Async1) {
     CXXDES_SIMULATION(test) {
-        process<void> co_main() {
+        process<> co_main() {
             auto x = co_await async(delay(100));
             EXPECT_EQ(now(), 0);
 
@@ -24,17 +24,17 @@ TEST(ControlFlowTest, Async2) {
     CXXDES_SIMULATION(test) {
         cxxdes::sync::event evt;
 
-        process<void> bar() {
+        process<> bar() {
             co_await delay(50);
             co_await evt.wake();
         }
 
-        process<void> foo() {
+        process<> foo() {
             co_await async(bar());
             EXPECT_EQ(now(), 0);
         }
 
-        process<void> co_main() {
+        process<> co_main() {
             auto x = foo();
             auto y = co_await async(x);
             EXPECT_EQ(now(), 0);
@@ -55,7 +55,7 @@ TEST(ControlFlowTest, Async2) {
 
 TEST(ControlFlowTest, Compositions1) {
     CXXDES_SIMULATION(test) {
-        process<void> co_main() {
+        process<> co_main() {
             time_integral expected_now = 0;
 
             co_await all_of(timeout(10), timeout(20));
@@ -95,7 +95,7 @@ TEST(ControlFlowTest, Compositions1) {
 
 TEST(ControlFlowTest, Compositions2) {
     CXXDES_SIMULATION(test) {
-        process<void> co_main() {
+        process<> co_main() {
             time_integral expected_now = 0;
 
             co_await all_of(async(delay(10)), async(delay(20)));

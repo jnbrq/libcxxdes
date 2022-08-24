@@ -52,7 +52,7 @@ private:
 
     struct process_info;
 public:
-    explicit process(memory::ptr<process_info> pinfo): pinfo_{pinfo} {
+    explicit process(memory::ptr<process_info> pinfo = nullptr): pinfo_{pinfo} {
         CXXDES_DEBUG_MEMBER_FUNCTION;
     }
 
@@ -142,7 +142,12 @@ public:
     }
 
     auto return_value() const {
+        // TODO make presence of this function conditional on ReturnType
         return await_resume();
+    }
+
+    bool is_valid() const noexcept {
+        return pinfo_;
     }
 
     ~process() {

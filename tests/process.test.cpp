@@ -6,12 +6,17 @@ using namespace cxxdes::core;
 
 TEST(ProcessTest, BasicFunctionality) {
     CXXDES_SIMULATION(test) {
-        process<int> co_main() {
+        process<int> foo() {
             co_return 10;
+        }
+
+        process<> co_main() {
+            auto r = co_await foo();
+            EXPECT_EQ(r, 10);
         }
     };
 
-    EXPECT_EQ(test{}.run(), 10);
+    test{}.run();
 }
 
 TEST(ProcessTest, OutOfScope) {
@@ -21,7 +26,7 @@ TEST(ProcessTest, OutOfScope) {
             co_return 10;
         }
 
-        process<int> co_main() {
+        process<> co_main() {
             {
                 auto p = foo();
                 co_await any_of(p, delay(1));
@@ -29,12 +34,12 @@ TEST(ProcessTest, OutOfScope) {
                 // p is now destroyed
                 // foo() still runs
             }
-            co_return 10;
+
             // co_main() is now done
         }
     };
 
-    EXPECT_EQ(test{}.run(), 10);
+    test{}.run();
 }
 
 TEST(ProcessTest, ReturnValueInspection) {
@@ -44,7 +49,7 @@ TEST(ProcessTest, ReturnValueInspection) {
             co_return 10;
         }
 
-        process<int> co_main() {
+        process<> co_main() {
             auto p = foo();
             co_await any_of(p, delay(1));
             EXPECT_FALSE(p.is_complete());
@@ -57,12 +62,11 @@ TEST(ProcessTest, ReturnValueInspection) {
             co_await p;
             EXPECT_TRUE(p.is_complete());
             EXPECT_EQ(now(), 10);
-            
-            co_return p.return_value();
+            EXPECT_EQ(p.return_value(), 10);
         }
     };
 
-    EXPECT_EQ(test{}.run(), 10);
+    test{}.run();
 }
 
 TEST(ProcessTest, Latencies) {
@@ -78,16 +82,15 @@ TEST(ProcessTest, Latencies) {
             co_return 5;
         }
 
-        process<int> co_main() {
+        process<> co_main() {
             co_await f().
                 latency(start_latency).
                 return_latency(return_latency);
             EXPECT_EQ(now(), start_latency + process_time + return_latency);
-            co_return 10;
         }
     };
 
-    EXPECT_EQ(test{}.run(), 10);
+    test{}.run();
 }
 
 TEST(ProcessTest, Priorities) {
@@ -136,19 +139,24 @@ TEST(ProcessTest, Recursion) {
             co_return k * (co_await factorial(k - 1));
         }
 
-        process<int> co_main() {
+        process<int> foo() {
             co_return co_await factorial(6);
+        }
+        
+        process<> co_main() {
+            auto r = co_await foo();
+            EXPECT_EQ(r, 720);
         }
     };
 
-    EXPECT_EQ(test{}.run(), 720);
+    test{}.run();
 }
 
 #ifdef CXXDES_SANITIZE_ADDRESS
 
 TEST(ProcessTest, DanglingReference1) {
     CXXDES_SIMULATION(test) {
-        process<void> co_main() {
+        process<> co_main() {
             // this is created in the stack
             auto x = delay(5);
 
@@ -167,7 +175,7 @@ TEST(ProcessTest, DanglingReference1) {
 
 TEST(ProcessTest, DanglingReference1Solution) {
     CXXDES_SIMULATION(test) {
-        process<void> co_main() {
+        process<> co_main() {
             // this is created in the stack
             auto x = delay(5);
 
@@ -183,11 +191,11 @@ TEST(ProcessTest, DanglingReference1Solution) {
 
 TEST(ProcessTest, NotDanglingReference1) {
     CXXDES_SIMULATION(test) {
-        process<void> foo() {
+        process<> foo() {
             co_await delay(100);
         }
 
-        process<void> co_main() {
+        process<> co_main() {
             // this is created in the stack
             auto x = foo();
 
@@ -214,7 +222,7 @@ TEST(ProcessTest, ReturnProcess) {
             return g();
         }
 
-        process<void> co_main() {
+        process<> co_main() {
             auto p = f(1);
             co_await p;
             EXPECT_EQ(now(), 5);
