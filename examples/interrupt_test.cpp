@@ -13,22 +13,8 @@ CXXDES_SIMULATION(test) {
         }
     }
 
-    process<> bar() {
-        try {
-            while (true)
-                co_await delay(1000);
-        }
-        catch (interrupted_exception &ex) {
-            flag = true;
-            co_return ;
-        }
-    }
-
     process<> co_main() {
-        while (true) {
-            co_await delay(10);
-        }
-        // co_await foo();
+        co_await (foo() && foo());
     }
 };
 

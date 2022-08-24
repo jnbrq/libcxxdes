@@ -97,7 +97,6 @@ private:
     struct process_info;
 public:
     explicit process(memory::ptr<process_info> pinfo = nullptr): pinfo_{pinfo} {
-        CXXDES_DEBUG_MEMBER_FUNCTION;
     }
 
     void await_bind(environment *env, priority_type priority = priority_consts::zero) {
@@ -198,7 +197,6 @@ public:
     }
 
     ~process() {
-        CXXDES_DEBUG_MEMBER_FUNCTION;
     }
 
 private:
@@ -295,7 +293,21 @@ public:
 
         auto initial_suspend() noexcept -> std::suspend_always { return {}; }
         auto final_suspend() noexcept -> std::suspend_never { return {}; }
-        auto unhandled_exception() { std::rethrow_exception(std::current_exception()); }
+        auto unhandled_exception() {
+#ifdef CXXDES_INTERRUPTABLE
+            try {
+                std::rethrow_exception(std::current_exception());
+            }
+            catch (interrupted_exception &ex) {
+                // it is fine
+            }
+            catch (...) {
+                std::rethrow_exception(std::current_exception());
+            }
+#else
+            std::rethrow_exception(std::current_exception());
+#endif
+        }
 
 #ifdef CXXDES_INTERRUPTABLE
         template <awaitable A>

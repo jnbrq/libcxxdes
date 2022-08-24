@@ -43,9 +43,6 @@ struct any_all_helper {
             CXXDES_DEBUG_MEMBER_FUNCTION;
 
             --remaining;
-
-            // do not delete the handler while still in use
-            tkn->handler = nullptr;
             
             if (!done) {
                 if (Condition::operator()(total, remaining)) {
@@ -56,11 +53,6 @@ struct any_all_helper {
                     env->schedule_token(completion_tkn);
                     done = true;
                 }
-            }
-
-            if (remaining == 0) {
-                // delete the handler
-                tkn->handler = this;
             }
         }
     };

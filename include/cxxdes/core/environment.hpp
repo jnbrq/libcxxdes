@@ -49,15 +49,7 @@ struct coro_manager {
     void stop() {
         stopped_ = true;
         for (auto coro: coros_)
-            if (!coro.done())
-                try {
-                    coro.resume();
-                }
-                catch (interrupted_exception &ex) {
-                }
-                catch (...) {
-                    std::rethrow_exception(std::current_exception());
-                }
+            coro.resume();
         coros_.clear();
         stopped_ = false;
     }
@@ -173,7 +165,6 @@ struct environment {
 #ifdef CXXDES_INTERRUPTABLE
         stop();
 #endif
-        
         while (!tokens_.empty()) {
             auto tkn = tokens_.top();
             tokens_.pop();
