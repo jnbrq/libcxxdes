@@ -31,7 +31,7 @@ struct mutex;
 struct release_awaitable {
     constexpr release_awaitable(
         mutex *mtx,
-        time_type latency,
+        time_integral latency,
         priority_type priority = priority_consts::inherit):
         mtx_{mtx}, latency_{latency}, priority_{priority} {
     }
@@ -54,14 +54,14 @@ private:
 
     environment *env_ = nullptr;
     token *tkn_ = nullptr;
-    time_type latency_;
+    time_integral latency_;
     priority_type priority_;
 };
 
 struct acquire_awaitable {
     constexpr acquire_awaitable(
         mutex *mtx,
-        time_type latency,
+        time_integral latency,
         priority_type priority = priority_consts::inherit):
         mtx_{mtx}, latency_{latency}, priority_{priority} {
     }
@@ -84,18 +84,18 @@ private:
 
     environment *env_ = nullptr;
     token *tkn_ = nullptr;
-    time_type latency_;
+    time_integral latency_;
     priority_type priority_;
 };
 
 struct mutex {
     [[nodiscard("expected usage: co_await mtx.acquire()")]]
-    auto acquire(time_type latency = 0, priority_type priority = priority_consts::inherit) {
+    auto acquire(time_integral latency = 0, priority_type priority = priority_consts::inherit) {
         return acquire_awaitable(this, latency, priority);
     }
 
     [[nodiscard("expected usage: co_await mtx.release()")]]
-    auto release(time_type latency = 0, priority_type priority = priority_consts::inherit) {
+    auto release(time_integral latency = 0, priority_type priority = priority_consts::inherit) {
         return release_awaitable(this, latency, priority);
     }
 

@@ -119,7 +119,7 @@ public:
         return *this;
     }
 
-    auto &latency(time_type latency) {
+    auto &latency(time_integral latency) {
         if (!pinfo_->start_token)
             throw std::runtime_error("cannot change the latency of a started process");
         
@@ -132,7 +132,7 @@ public:
         return *this;
     }
 
-    auto &return_latency(time_type latency) noexcept {
+    auto &return_latency(time_integral latency) noexcept {
         ret_latency_ = latency;
         return *this;
     }
@@ -293,7 +293,7 @@ private:
     memory::ptr<process_info> pinfo_ = nullptr;
     token *completion_token_ = nullptr;
 
-    time_type ret_latency_ = 0;
+    time_integral ret_latency_ = 0;
     priority_type ret_priority_ = priority_consts::inherit;
 };
 

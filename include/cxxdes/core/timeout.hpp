@@ -92,7 +92,7 @@ auto timeout(T &&t, priority_type priority = priority_consts::inherit) noexcept 
 struct delay_type: timeout_base<delay_type> {
     using base = timeout_base<delay_type>;
 
-    time_type integer;
+    time_integral integer;
 
     auto latency() const noexcept {
         return integer;
@@ -101,7 +101,7 @@ struct delay_type: timeout_base<delay_type> {
 
 template <std::integral Integer>
 auto delay(Integer delay, priority_type priority = priority_consts::inherit) noexcept {
-    return delay_type{ { priority }, static_cast<time_type>(delay) };
+    return delay_type{ { priority }, static_cast<time_integral>(delay) };
 }
 
 inline auto yield() noexcept {

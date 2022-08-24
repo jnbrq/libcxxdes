@@ -2,10 +2,10 @@
 #include <fmt/core.h>
 #include <vector>
 
-using namespace cxxdes;
+using namespace cxxdes::core;
 
 CXXDES_SIMULATION(complicated_example) {
-    sync::event evt;
+    cxxdes::sync::event evt;
 
     process<> p0() {
         co_await timeout(5);
@@ -53,7 +53,7 @@ CXXDES_SIMULATION(complicated_example) {
     }
 
     process<> p5() {
-        time_type t = 0;
+        time_integral t = 0;
 
         fmt::print("Example 5: dynamic versions. now = {}\n", env.now());
         auto to_wait = std::vector{ timeout(5),  timeout(10), timeout(20) };

@@ -32,7 +32,7 @@ struct event;
 struct wake_awaitable {
     constexpr wake_awaitable(
         event *evt,
-        time_type latency,
+        time_integral latency,
         priority_type priority = priority_consts::inherit):
         evt_{evt}, latency_{latency}, priority_{priority} {
     }
@@ -60,14 +60,14 @@ private:
 
     environment *env_ = nullptr;
     token *tkn_ = nullptr;
-    time_type latency_;
+    time_integral latency_;
     priority_type priority_;
 };
 
 struct wait_awaitable {
     constexpr wait_awaitable(
         event *evt,
-        time_type latency,
+        time_integral latency,
         priority_type priority = priority_consts::inherit):
         evt_{evt}, latency_{latency}, priority_{priority} {
     }
@@ -95,18 +95,18 @@ private:
 
     environment *env_ = nullptr;
     token *tkn_ = nullptr;
-    time_type latency_;
+    time_integral latency_;
     priority_type priority_;
 };
 
 struct event {
     [[nodiscard("expected usage: co_await event.wake()")]]
-    auto wake(time_type latency = 0, priority_type priority = priority_consts::inherit) {
+    auto wake(time_integral latency = 0, priority_type priority = priority_consts::inherit) {
         return wake_awaitable(this, latency, priority);
     }
 
     [[nodiscard("expected usage: co_await event.wait()")]]
-    auto wait(time_type latency = 0, priority_type priority = priority_consts::inherit) {
+    auto wait(time_integral latency = 0, priority_type priority = priority_consts::inherit) {
         return wait_awaitable(this, latency, priority);
     }
 

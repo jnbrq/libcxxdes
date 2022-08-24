@@ -1,12 +1,12 @@
 #include <cxxdes/cxxdes.hpp>
 #include <fmt/core.h>
 
-using namespace cxxdes;
+using namespace cxxdes::core;
 
 CXXDES_SIMULATION(resource_example) {
-    sync::resource resource{3};
+    cxxdes::sync::resource resource{3};
 
-    process<> p(int id, time_type duration) {
+    process<> p(int id, time_integral duration) {
         fmt::print("process #{}: try acquire the resource. @{}\n", id, now());
         auto handle = co_await resource.acquire();
         fmt::print("process #{}: acquired, start using the resource. @{}\n", id, now());

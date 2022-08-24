@@ -3,8 +3,8 @@
 
 #include "random_variable.hpp"
 
-using namespace cxxdes;
-using namespace cxxdes::time_ops;
+using namespace cxxdes::core;
+using namespace cxxdes::core::time_ops;
 
 CXXDES_SIMULATION(producer_consumer_example) {
     producer_consumer_example(double lambda, double mu, std::size_t n_packets = 100000):
@@ -15,7 +15,7 @@ CXXDES_SIMULATION(producer_consumer_example) {
         env.time_precision(1_ms);
     }
 
-    sync::queue<double> q;
+    cxxdes::sync::queue<double> q;
     std::size_t n_packets;
     double total_latency = 0;
 

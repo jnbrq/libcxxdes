@@ -8,15 +8,17 @@
  * 
  */
 
-#ifndef CXXDES_MISC_TIME_HPP_INCLUDED
-#define CXXDES_MISC_TIME_HPP_INCLUDED
+#ifndef LIBCXXDES_INCLUDE_CXXDES_MISC_TIME_HPP_INCLUDED
+#define LIBCXXDES_INCLUDE_CXXDES_MISC_TIME_HPP_INCLUDED
 
 #include <cstdint>
 #include <concepts>
 #include <type_traits>
 #include <limits>
+#include <memory>
 
 namespace cxxdes {
+namespace time_utils {
 
 enum class time_unit_type {
     seconds = 0,
@@ -24,6 +26,7 @@ enum class time_unit_type {
     microseconds,
     nanoseconds,
     picoseconds,
+    unitless,
     count
 };
 
@@ -102,18 +105,16 @@ struct time {
     }
 };
 
-namespace time_ops {
-
-namespace detail {
-
 template <typename T>
-concept node = requires(T t, time<int> precision) {
-    { t.count(precision) } -> std::same_as<int>;
+concept node = requires {
+    { std::declval<typename std::remove_cvref_t<T>::node_tag>() };
 };
 
 template <typename T>
 concept scalar =
-    std::floating_point<std::remove_reference_t<T>> || std::integral<std::remove_reference_t<T>>;
+    std::floating_point<std::remove_cvref_t<T>> || std::integral<std::remove_cvref_t<T>>;
+
+namespace ops {
 
 template <typename A, typename B, typename Operation>
 struct binary_node {
@@ -144,9 +145,9 @@ struct unary_node {
 
 template <typename L, typename R, typename Operation>
 constexpr auto make_node(L &&l, R &&r, Operation &&op) {
-    using _L = std::remove_reference_t<L>;
-    using _R = std::remove_reference_t<R>;
-    using _Operation = std::remove_reference_t<Operation>;
+    using _L = std::remove_cvref_t<L>;
+    using _R = std::remove_cvref_t<R>;
+    using _Operation = std::remove_cvref_t<Operation>;
     return binary_node<_L, _R, _Operation>{
         std::forward<L>(l),
         std::forward<R>(r),
@@ -156,8 +157,8 @@ constexpr auto make_node(L &&l, R &&r, Operation &&op) {
 
 template <typename L, typename Operation>
 constexpr auto make_node(L &&l, Operation &&op) {
-    using _L = std::remove_reference_t<L>;
-    using _Operation = std::remove_reference_t<Operation>;
+    using _L = std::remove_cvref_t<L>;
+    using _Operation = std::remove_cvref_t<Operation>;
     return unary_node<_L, _Operation>{
         std::forward<L>(l),
         std::forward<Operation>(op)
@@ -232,8 +233,6 @@ constexpr auto operator/(A &&a, B &&b) {
         });
 }
 
-} /* namespace detail */
-
 constexpr time<std::intmax_t> operator ""_s(unsigned long long x) {
     return time<std::intmax_t>{ (std::intmax_t) x, time_unit_type::seconds };
 }
@@ -254,13 +253,86 @@ constexpr time<std::intmax_t> operator ""_ps(unsigned long long x) {
     return time<std::intmax_t>{ (std::intmax_t) x, time_unit_type::picoseconds };
 }
 
-using detail::operator+;
-using detail::operator-;
-using detail::operator*;
-using detail::operator/;
+constexpr time<std::intmax_t> operator ""_x(unsigned long long x) {
+    return time<std::intmax_t>{ (std::intmax_t) x, time_unit_type::unitless };
+}
 
-} /* namespace time_ops */
+} /* namespace ops */
 
+template <std::integral Integer = std::intmax_t>
+struct time_expr {
+    struct node_tag {  };
+
+    time_expr() = default;
+
+    time_expr(time_expr const &other) {
+        *this = other;
+    }
+
+    time_expr(time_expr &&other) {
+        *this = std::move(other);
+    }
+
+    template <node T>
+    requires (not std::is_same_v<std::remove_cvref_t<T>, time_expr>)
+    time_expr(T &&t) {
+        *this = std::forward<T>(t);
+    }
+
+    Integer count(time<Integer> const &p) const noexcept {
+        if (not impl_) return 0;
+        return impl_->count(p);
+    }
+
+    bool is_valid() const noexcept {
+        return impl_;
+    }
+
+    template <node T>
+    requires (not std::is_same_v<std::remove_cvref_t<T>, time_expr>)
+    time_expr &operator=(T &&t) {
+        struct impl: underlying_type {
+            std::remove_cvref_t<T> value;
+
+            impl(T &&t): value{std::move(t)} {
+            }
+
+            Integer count(time<Integer> const &p) const noexcept override {
+                return value.count(p);
+            }
+
+            underlying_type *clone() const override {
+                return (underlying_type *) (new impl{*this});
+            }
+        };
+        impl_.reset(new impl(std::forward<T>(t)));
+        return *this;
+    }
+
+    time_expr &operator=(time_expr const &other) {
+        if (this != &other) {
+            impl_.reset(other.impl_->clone());
+        }
+        return *this;
+    }
+
+    time_expr &operator=(time_expr &&other) {
+        if (this != &other) {
+            impl_ = std::move(other.impl_);
+        }
+        return *this;
+    }
+private:
+    struct underlying_type {
+        virtual Integer count(time<Integer> const &p) const noexcept = 0;
+        virtual underlying_type *clone() const = 0;
+        virtual ~underlying_type() = default;
+    };
+
+    std::unique_ptr<underlying_type> impl_;
+};
+
+} /* namespace time_utils */
 } /* namespace cxxdes */
 
-#endif /* CXXDES_MISC_TIME_HPP_INCLUDED */
+#endif /* LIBCXXDES_INCLUDE_CXXDES_MISC_TIME_HPP_INCLUDED */

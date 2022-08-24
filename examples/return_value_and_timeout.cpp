@@ -1,7 +1,7 @@
 #include <cxxdes/cxxdes.hpp>
 #include <fmt/core.h>
 
-using namespace cxxdes;
+using namespace cxxdes::core;
 
 CXXDES_SIMULATION(bug) {
     process<int> test() {

@@ -2,7 +2,7 @@
 #include <fmt/core.h>
 #include <iostream>
 
-using namespace cxxdes;
+using namespace cxxdes::core;
 
 
 CXXDES_SIMULATION(example) {

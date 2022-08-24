@@ -8,7 +8,7 @@
 
 #include <fmt/core.h>
 
-using namespace cxxdes;
+using namespace cxxdes::core;
 
 process<> p1() {
     fmt::print("p1.a\n");

@@ -56,7 +56,7 @@ TEST(ControlFlowTest, Async2) {
 TEST(ControlFlowTest, Compositions1) {
     CXXDES_SIMULATION(test) {
         process<void> co_main() {
-            time_type expected_now = 0;
+            time_integral expected_now = 0;
 
             co_await all_of(timeout(10), timeout(20));
             expected_now += 20;
@@ -96,7 +96,7 @@ TEST(ControlFlowTest, Compositions1) {
 TEST(ControlFlowTest, Compositions2) {
     CXXDES_SIMULATION(test) {
         process<void> co_main() {
-            time_type expected_now = 0;
+            time_integral expected_now = 0;
 
             co_await all_of(async(delay(10)), async(delay(20)));
             expected_now += 0;

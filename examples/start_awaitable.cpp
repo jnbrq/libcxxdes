@@ -2,7 +2,7 @@
 #include <fmt/core.h>
 #include <optional>
 
-using namespace cxxdes;
+using namespace cxxdes::core;
 
 CXXDES_SIMULATION(start_awaitable_example) {
     process<int> test() {

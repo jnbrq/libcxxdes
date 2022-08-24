@@ -2,11 +2,11 @@
 #include <iostream>
 #include <string>
 
-using namespace cxxdes;
+using namespace cxxdes::core;
 
 CXXDES_SIMULATION(mutex_example)
 {
-    sync::mutex m;
+    cxxdes::sync::mutex m;
 
     template <typename A = const char *>
     void print_time(A &&a = "") {

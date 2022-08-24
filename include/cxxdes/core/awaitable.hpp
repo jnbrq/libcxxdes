@@ -44,7 +44,7 @@ struct immediately_returning_awaitable {
 
 // Clang needs a deduction guide
 template <typename A>
-immediately_returning_awaitable(A &&a) -> immediately_returning_awaitable<std::remove_reference_t<A>>;
+immediately_returning_awaitable(A &&a) -> immediately_returning_awaitable<std::remove_cvref_t<A>>;
 
 } /* namespace core */
 } /* namespace cxxdes */

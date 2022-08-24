@@ -2,12 +2,12 @@
 #include <cxxdes/cxxdes.hpp>
 #include <fmt/core.h>
 
-using namespace cxxdes;
+using namespace cxxdes::core;
 
 CXXDES_SIMULATION(raii_trick) {
-    sync::resource res{1};
+    cxxdes::sync::resource res{1};
     
-    process<> p(int id, time_type wait_time) {
+    process<> p(int id, time_integral wait_time) {
         /*
         auto handle = co_await res.acquire();
         co_await timeout(wait_time);

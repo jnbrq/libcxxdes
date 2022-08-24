@@ -2,10 +2,10 @@
 #include <iostream>
 #include <string>
 
-using namespace cxxdes;
+using namespace cxxdes::core;
 
 environment env;
-sync::event evt;
+cxxdes::sync::event evt;
 
 process<> p1() {
     std::cout << "p1.a now " << env.now() << std::endl;

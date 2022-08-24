@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <cxxdes/cxxdes.hpp>
 
-using namespace cxxdes::time_ops;
+using namespace cxxdes::time_utils::ops;
 
 TEST(TimeTest, BasicFunctionality) {
     constexpr auto a = 1_s;
@@ -30,4 +30,19 @@ TEST(TimeTest, BasicFunctionality) {
 
     // TODO add more tests
     // TODO add tests for checking the sizes in compile time
+}
+
+TEST(TimeTest, TimeExpr) {
+    using time_expr = cxxdes::time_utils::time_expr<>;
+
+    constexpr auto prec = 1_ms;
+    time_expr a = 1_s;
+    EXPECT_EQ(a.count(prec), 1000);
+    EXPECT_EQ((a + 5_ms).count(prec), 1005);
+    EXPECT_EQ(a.count(prec), 1000);
+    EXPECT_EQ((a + 2_ms).count(prec), 1002);
+    EXPECT_EQ((a + a).count(prec), 2000);
+
+    time_expr b = 2 * a + a / 10;
+    EXPECT_EQ(b.count(prec), 2100);
 }

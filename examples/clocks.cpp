@@ -2,12 +2,12 @@
 #include <fmt/core.h>
 #include <string>
 
-using namespace cxxdes;
+using namespace cxxdes::core;
 
 environment env;
 
 struct clock_class {
-    time_type period;
+    time_integral period;
     std::string name;
 
     process<> operator()() {
@@ -18,7 +18,7 @@ struct clock_class {
     }
 };
 
-process<> clock(time_type period, std::string name) {
+process<> clock(time_integral period, std::string name) {
     while (true) {
         fmt::print("{}: now = {}\n", name, env.now());
         co_await timeout(period);

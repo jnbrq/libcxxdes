@@ -54,13 +54,13 @@ struct simulation {
         return p.await_resume();
     }
 
-    void run_until(time_type t) {
+    void run_until(time_integral t) {
         auto p = static_cast<Derived *>(this)->co_main();
         start_awaitable(p);
         while (now() <= t && env.step());
     }
 
-    void run_for(time_type t) {
+    void run_for(time_integral t) {
         run_until(now() + t);
     }
 private:

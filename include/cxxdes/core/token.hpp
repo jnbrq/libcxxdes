@@ -13,7 +13,9 @@
 
 #include <cstdint>
 #include <limits>
+#include <cxxdes/core/defs.hpp>
 #include <cxxdes/core/coroutine.hpp>
+#include <cxxdes/misc/time.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
 #ifdef CXXDES_DEBUG_CORE_TOKEN
@@ -22,11 +24,6 @@
 
 namespace cxxdes {
 namespace core {
-
-
-using priority_type = std::intmax_t;
-using time_type = std::intmax_t;
-using real_type = double;
 
 namespace priority_consts {
 
@@ -45,14 +42,14 @@ struct token_handler {
 };
 
 struct token {
-    token(time_type time, priority_type priority, coro_handle coro):
+    token(time_integral time, priority_type priority, coro_handle coro):
         time{time},
         priority{priority},
         coro{coro} {  }
         
 
     // schedule time
-    time_type time = 0;
+    time_integral time = 0;
 
     // schedule priority
     priority_type priority = 0;

@@ -3,7 +3,7 @@
 
 #include <unordered_map>
 
-using namespace cxxdes;
+using namespace cxxdes::core;
 
 namespace arch {
 
@@ -11,12 +11,12 @@ using size_type = std::size_t;
 using addr_type = std::size_t;
 
 struct memory {
-    memory(time_type latency, size_type capacity, memory *next):
+    memory(time_integral latency, size_type capacity, memory *next):
         latency_{latency}, capacity_{capacity}, next_{next} {
     }
 
     process<> load(addr_type addr) {
-        time_type timestamp = (co_await this_process::get_environment())->now();
+        time_integral timestamp = (co_await this_process::get_environment())->now();
 
         // co_await timeout(extra_latency_); // additional latency to be added here
         co_await mtx_.acquire();
@@ -48,7 +48,7 @@ struct memory {
     }
 
     process<> store(addr_type addr) {
-        // time_type timestamp = (co_await this_process::get_environment())->now();
+        // time_integral timestamp = (co_await this_process::get_environment())->now();
 
         // co_await timeout(extra_latency_); // additional latency to be added here
         co_await mtx_.acquire();
@@ -62,15 +62,15 @@ struct memory {
     }
 
 private:
-    time_type latency_;
+    time_integral latency_;
     size_type capacity_;
     memory *next_;
-    sync::mutex mtx_; // for the shared bandwidth
+    cxxdes::sync::mutex mtx_; // for the shared bandwidth
 
     struct block {
         addr_type addr = 0;
         bool dirty = false;
-        time_type last_access = 0;
+        time_integral last_access = 0;
     };
 
     std::unordered_map<addr_type, block> blocks_;

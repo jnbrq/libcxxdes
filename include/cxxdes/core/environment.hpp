@@ -23,18 +23,16 @@
 namespace cxxdes {
 namespace core {
 
-constexpr auto one_second = time<time_type>{1, time_unit_type::seconds};
-
 struct environment {
-    environment(time<time_type> const &unit = one_second, time<time_type> const &prec = one_second):
-        now_{(time_type) 0}, unit_{unit}, prec_{prec} {
+    environment(time const &unit = one_second, time const &prec = one_second):
+        now_{(time_integral) 0}, unit_{unit}, prec_{prec} {
     }
 
-    time_type now() const noexcept {
+    time_integral now() const noexcept {
         return now_;
     }
 
-    time<time_type> t() const noexcept {
+    time t() const noexcept {
         return { now() * prec_.t, prec_.u };
     }
 
@@ -42,36 +40,36 @@ struct environment {
         return t().seconds<real_type>();
     }
 
-    void time_unit(time<time_type> x) noexcept {
+    void time_unit(time x) noexcept {
         if (used_)
             CXXDES_UNSAFE(__PRETTY_FUNCTION__, " called on a used environment!");
         
         unit_ = x;
     }
 
-    time<time_type> time_unit() const noexcept {
+    time time_unit() const noexcept {
         return unit_;
     }
 
-    void time_precision(time<time_type> x) noexcept {
+    void time_precision(time x) noexcept {
         if (used_)
             CXXDES_UNSAFE(__PRETTY_FUNCTION__, " called on a used environment!");
         
         prec_ = x;
     }
 
-    time<time_type> time_precision() const noexcept {
+    time time_precision() const noexcept {
         return prec_;
     }
 
-    template <cxxdes::time_ops::detail::node Node>
-    time_type real_to_sim(Node const &n) const noexcept {
+    template <cxxdes::time_utils::node Node>
+    time_integral real_to_sim(Node const &n) const noexcept {
         return n.count(time_precision());
     }
 
-    template <cxxdes::time_ops::detail::scalar Scalar>
-    time_type real_to_sim(Scalar const &s) const noexcept {
-        using cxxdes::time_ops::operator*;
+    template <cxxdes::time_utils::scalar Scalar>
+    time_integral real_to_sim(Scalar const &s) const noexcept {
+        using time_ops::operator*;
         return (s * time_unit()).count(time_precision());
     }
 
@@ -114,11 +112,11 @@ struct environment {
     }
 
 private:
-    time_type now_ = 0;
+    time_integral now_ = 0;
     bool used_ = false;
 
-    time<time_type> unit_;
-    time<time_type> prec_;
+    time unit_;
+    time prec_;
 
     struct token_comp {
         bool operator()(token *tkn_a, token *tkn_b) const {

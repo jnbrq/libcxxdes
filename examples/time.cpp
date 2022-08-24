@@ -3,7 +3,7 @@
 #include <cxxdes/core/timeout.hpp>
 
 using namespace std;
-using namespace cxxdes::time_ops;
+using namespace cxxdes::time_utils::ops;
 
 int main() {
     constexpr auto a = 1_s;

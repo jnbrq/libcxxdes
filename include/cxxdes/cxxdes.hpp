@@ -23,10 +23,4 @@
 #include <cxxdes/sync/semaphore.hpp>
 #include <cxxdes/sync/resource.hpp>
 
-namespace cxxdes {
-
-using namespace core;
-
-}
-
 #endif /* CXXDES_CXXDES_HPP_INCLUDED */

@@ -5,8 +5,8 @@
 
 #include <fmt/core.h>
 
-using namespace cxxdes;
-using namespace cxxdes::time_ops;
+using namespace cxxdes::core;
+using namespace cxxdes::core::time_ops;
 
 // https://www.southampton.ac.uk/~sqc/EL336/CNL-7.pdf
 

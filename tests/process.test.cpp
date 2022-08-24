@@ -67,9 +67,9 @@ TEST(ProcessTest, ReturnValueInspection) {
 
 TEST(ProcessTest, Latencies) {
     CXXDES_SIMULATION(test) {
-        const time_type start_latency = 6;
-        const time_type process_time = 5;
-        const time_type return_latency = 8;
+        const time_integral start_latency = 6;
+        const time_integral process_time = 5;
+        const time_integral return_latency = 8;
 
         process<int> f() {
             EXPECT_EQ(now(), start_latency);

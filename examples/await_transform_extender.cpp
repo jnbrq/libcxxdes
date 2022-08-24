@@ -1,7 +1,7 @@
 #include <cxxdes/cxxdes.hpp>
 #include <fmt/core.h>
 
-using namespace cxxdes;
+using namespace cxxdes::core;
 
 struct _get_env_tag {};
 

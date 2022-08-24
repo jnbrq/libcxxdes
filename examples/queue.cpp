@@ -1,10 +1,10 @@
 #include <cxxdes/cxxdes.hpp>
 #include <fmt/core.h>
 
-using namespace cxxdes;
+using namespace cxxdes::core;
 
 CXXDES_SIMULATION(queue_example) {
-    sync::queue<int> q{1};
+    cxxdes::sync::queue<int> q{1};
     
     process<> p1() {
         auto r1 = co_await q.pop();

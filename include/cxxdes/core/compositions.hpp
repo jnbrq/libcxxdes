@@ -72,7 +72,7 @@ struct any_all_helper {
             return *this;
         }
 
-        auto &return_latency(time_type latency) noexcept {
+        auto &return_latency(time_integral latency) noexcept {
             latency_ = latency;
             return *this;
         }
@@ -137,7 +137,7 @@ struct any_all_helper {
         
         environment *env_ = nullptr;
         token *tkn_ = nullptr;
-        time_type latency_ = 0;
+        time_integral latency_ = 0;
         priority_type priority_ = priority_consts::inherit;
     };
 
@@ -203,7 +203,7 @@ struct any_all_helper {
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await {any_of, all_of}.by_value(awaitables...)")]]
         constexpr auto by_value(Ts && ...ts) const {
-            return tuple_based<std::remove_reference_t<Ts>...>{ std::forward<Ts>(ts)... };
+            return tuple_based<std::remove_cvref_t<Ts>...>{ std::forward<Ts>(ts)... };
         }
 
         template <typename ...Ts>
@@ -294,7 +294,7 @@ struct sequential_helper {
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await sequential.by_value(awaitables...)")]]
         constexpr auto by_value(Ts && ...ts) const {
-            return seq_proc_tuple<std::remove_reference_t<Ts>...>(std::forward<Ts>(ts)... );
+            return seq_proc_tuple<std::remove_cvref_t<Ts>...>(std::forward<Ts>(ts)... );
         }
 
         template <typename ...Ts>

@@ -1,9 +1,9 @@
 #include <cxxdes/cxxdes.hpp>
 
-using namespace cxxdes;
+using namespace cxxdes::core;
 
 struct example {
-    constexpr example(time_type latency, priority_type priority = priority_consts::inherit):
+    constexpr example(time_integral latency, priority_type priority = priority_consts::inherit):
         latency_{latency}, priority_{priority} {
     }
 
@@ -38,7 +38,7 @@ struct example {
 private:
     environment *env_ = nullptr;
     token *tkn_ = nullptr;
-    time_type latency_;
+    time_integral latency_;
     priority_type priority_;
 };
 

@@ -30,7 +30,7 @@ struct systolic_array_basic {
 
     memory mem_w, mem_x;
 
-    time_type delay_model(unsigned k) { /* microarchitecture-dependent computation model */ }
+    time_integral delay_model(unsigned k) { /* microarchitecture-dependent computation model */ }
 
     void run() {
         p();
