@@ -29,6 +29,50 @@
 namespace cxxdes {
 namespace core {
 
+
+#ifdef CXXDES_INTERRUPTABLE
+
+namespace detail {
+
+template <awaitable A>
+struct interruptable {
+    A a;
+
+    template <typename T>
+    explicit interruptable(T &&t): a{std::forward<T>(t)} {
+    }
+
+    void await_bind(environment *env, priority_type priority) {
+        env_ = env;
+        a.await_bind(env, priority);
+    }
+    
+    bool await_ready() {
+        return a.await_ready();
+    }
+    
+    void await_suspend(coro_handle current_coro) {
+        a.await_suspend(current_coro);
+    }
+
+    token *await_token() {
+        return a.await_token();
+    }
+
+    auto await_resume() {
+        if (env_->get_coro_manager().stopped())
+            throw interrupted_exception{};
+        return a.await_resume();
+    }
+
+private:
+    environment *env_ = nullptr;
+};
+
+} /* namespace detail */
+
+#endif
+
 struct this_process {
     struct get_priority {  };
     struct set_priority {
@@ -78,6 +122,9 @@ public:
         pinfo_->priority = start_token->priority;
         start_token->time += env->now();
         env->schedule_token(start_token);
+#ifdef CXXDES_INTERRUPTABLE
+        pinfo_->add_coro();
+#endif
     }
 
     bool await_ready() const noexcept {
@@ -199,6 +246,22 @@ private:
         priority_type priority = 0;
         bool complete = false;
 
+#ifdef CXXDES_INTERRUPTABLE
+        coro_handle coro;
+
+        void add_coro() {
+            if (env && coro) {
+                env->get_coro_manager().add_coro(coro);
+            }
+        }
+
+        void remove_coro() {
+            if (env && coro) {
+                env->get_coro_manager().remove_coro(coro);
+            }
+        }
+#endif
+
         // this should come last, so that its padding is not reused
         // see: https://en.cppreference.com/w/cpp/language/attributes/no_unique_address
         [[no_unique_address]]
@@ -219,7 +282,11 @@ public:
             CXXDES_DEBUG_MEMBER_FUNCTION;
 
             pinfo = new process_info;
-            pinfo->start_token = new token{0, priority_consts::inherit, std::coroutine_handle<promise_type>::from_promise(*this)};
+            auto coro = std::coroutine_handle<promise_type>::from_promise(*this);
+#ifdef CXXDES_INTERRUPTABLE
+            pinfo->coro = coro;
+#endif
+            pinfo->start_token = new token{0, priority_consts::inherit, coro};
         }
 
         process get_return_object() {
@@ -230,6 +297,18 @@ public:
         auto final_suspend() noexcept -> std::suspend_never { return {}; }
         auto unhandled_exception() { std::rethrow_exception(std::current_exception()); }
 
+#ifdef CXXDES_INTERRUPTABLE
+        template <awaitable A>
+        auto await_transform(A &&a) const {
+            // co_await (A{});
+            // A{} is alive throughout the co_await expression
+            // therefore, it is safe to bind a reference to it
+
+            auto result = detail::interruptable<std::remove_cvref_t<A>>(std::forward<A>(a));
+            result.await_bind(pinfo->env, pinfo->priority);
+            return result;
+        }
+#else
         template <awaitable A>
         auto &&await_transform(A &&a) const {
             // co_await (A{});
@@ -239,6 +318,7 @@ public:
             a.await_bind(pinfo->env, pinfo->priority);
             return std::forward<A>(a);
         }
+#endif
 
         // for co_with (experimental)
         #ifdef CXXDES_CO_WITH
@@ -287,6 +367,9 @@ public:
 
             pinfo->completion_tokens.clear();
             pinfo->complete = true;
+#ifdef CXXDES_INTERRUPTABLE
+            pinfo->remove_coro();
+#endif
         }
 
         ~promise_type() {

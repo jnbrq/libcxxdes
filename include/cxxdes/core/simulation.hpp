@@ -77,6 +77,10 @@ struct simulation {
         run_until(now() + env.real_to_sim(t));
         return *this;
     }
+
+    void stop() {
+        env.stop();
+    }
 private:
     template <awaitable A>
     void start_awaitable(A a) {
