@@ -3,26 +3,9 @@ cmake_minimum_required(VERSION 3.12)
 project(cxxdes)
 set(CMAKE_CXX_STANDARD 20)
 
-# library dependencies
-include(FetchContent)
-
-# fmt
-FetchContent_Declare(fmt
-    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-    GIT_TAG master)
-FetchContent_MakeAvailable(fmt)
-
-# googletest
-FetchContent_Declare(
-    googletest
-    GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG release-1.12.1)
-
-# For Windows: Prevent overriding the parent project's compiler/linker settings
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(googletest)
-
-include(GoogleTest)
+function (print_var VARNAME)
+    message(STATUS "${VARNAME}=${${VARNAME}}")
+endfunction ()
 
 # default values to be stored in the cache
 set(CXXDES_CLANG_TIDY OFF CACHE BOOL "Use clang tidy.")
@@ -33,37 +16,71 @@ set(CXXDES_SANITIZE_ADDRESS ON CACHE BOOL "Enable -sanitize=address for examples
 set(CXXDES_SANITIZE_LEAK ON CACHE BOOL "Enable -sanitize=leak for examples and tests.")
 set(CXXDES_SANITIZE_UNDEFINED ON CACHE BOOL "Enable -sanitize=undefined behavior for examples and tests.")
 
+set(CXXDES_NO_FETCH OFF CACHE BOOL "Do not automatically fetch content.")
+
+message(STATUS "libcxxdes build variables:")
+print_var(CXXDES_CLANG_TIDY)
+print_var(CXXDES_EXAMPLES)
+print_var(CXXDES_TESTS)
+print_var(CXXDES_SANITIZE_ADDRESS)
+print_var(CXXDES_SANITIZE_LEAK)
+print_var(CXXDES_SANITIZE_UNDEFINED)
+print_var(CXXDES_NO_FETCH)
+
+if (NOT CXXDES_NO_FETCH)
+    # library dependencies
+    include(FetchContent)
+
+    # fmt
+    FetchContent_Declare(fmt
+        GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+        GIT_TAG master)
+    FetchContent_MakeAvailable(fmt)
+
+    # googletest
+    FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG release-1.12.1)
+
+    # For Windows: Prevent overriding the parent project's compiler/linker settings
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+
+    include(GoogleTest)
+endif ()
+
 # sanitization interface target
 add_library(sanitize_config INTERFACE)
 if (MSVC)
-else()
+else ()
     if (CXXDES_SANITIZE_ADDRESS)
         target_compile_options(sanitize_config INTERFACE "-fsanitize=address")
         target_link_options(sanitize_config INTERFACE "-fsanitize=address")
         target_compile_definitions(sanitize_config INTERFACE "-DCXXDES_SANITIZE_ADDRESS")
-    endif()
+    endif ()
 
     if (CXXDES_SANITIZE_LEAK)
         target_compile_options(sanitize_config INTERFACE "-fsanitize=leak")
         target_link_options(sanitize_config INTERFACE "-fsanitize=leak")
         target_compile_definitions(sanitize_config INTERFACE "-DCXXDES_SANITIZE_LEAK")
-    endif()
+    endif ()
 
     if (CXXDES_SANITIZE_UNDEFINED)
         target_compile_options(sanitize_config INTERFACE "-fsanitize=undefined")
         target_link_options(sanitize_config INTERFACE "-fsanitize=undefined")
         target_compile_definitions(sanitize_config INTERFACE "-DCXXDES_SANITIZE_UNDEFINED")
-    endif()
-endif()
+    endif ()
+endif ()
 
 # default error levels
 if (MSVC)
     # warning level 4 and all warnings as errors
     add_compile_options(/W4 /WX)
-else()
+else ()
     # lots of warnings and all warnings as errors
     add_compile_options(-Wall -Wextra -pedantic -Werror)
-endif()
+endif ()
 
 # clang tidy
 if (CXXDES_CLANG_TIDY)
@@ -73,7 +90,7 @@ if (CXXDES_CLANG_TIDY)
         "${CLANG_TIDY_EXE}"
         "-header-filter=."
         "-checks=-*,modernize-*")
-endif()
+endif ()
 
 
 # TODO: please see
@@ -89,19 +106,20 @@ target_include_directories(
 )
 if(MSVC)
     target_compile_options(cxxdes INTERFACE "/std:c++20")
-else()
+else ()
     target_compile_options(cxxdes INTERFACE "--std=c++20")
-endif()
+endif ()
 
 # target_compile_definitions(cxxdes INTERFACE "-DMACRO_DEFINITIONS=HERE")
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_compile_options(cxxdes INTERFACE "-fcoroutines")
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(cxxdes INTERFACE "-fcoroutines-ts")
-endif()
+endif ()
 
 add_library(cxxdes::cxxdes ALIAS cxxdes)
+add_library(cxxdes::sanitize_config ALIAS sanitize_config)
 
 if (CXXDES_EXAMPLES)
     file(GLOB example_srcs ${PROJECT_SOURCE_DIR}/examples/*.cpp)
@@ -115,8 +133,8 @@ if (CXXDES_EXAMPLES)
             cxxdes::cxxdes
             fmt::fmt-header-only
             sanitize_config)
-    endforeach()
-endif()
+    endforeach ()
+endif ()
 
 if (CXXDES_TESTS)
     enable_testing()
@@ -133,5 +151,5 @@ if (CXXDES_TESTS)
             fmt::fmt-header-only
             sanitize_config)
         gtest_discover_tests("test_${basename}")
-    endforeach()
-endif()
+    endforeach ()
+endif ()
