@@ -92,3 +92,25 @@ TEST(ControlFlowTest, Compositions1) {
 
     test{}.run();
 }
+
+TEST(ControlFlowTest, Compositions2) {
+    CXXDES_SIMULATION(test) {
+        process<void> co_main() {
+            time_type expected_now = 0;
+
+            co_await all_of(async(delay(10)), async(delay(20)));
+            expected_now += 0;
+            EXPECT_EQ(now(), expected_now);
+
+            auto x = co_await async(all_of(delay(10), delay(100)));
+            expected_now += 0;
+            EXPECT_EQ(now(), expected_now);
+
+            co_await x;
+            expected_now += 100;
+            EXPECT_EQ(now(), expected_now);
+        }
+    };
+
+    test{}.run();
+}
