@@ -26,7 +26,6 @@ enum class time_unit_type {
     microseconds,
     nanoseconds,
     picoseconds,
-    unitless,
     count
 };
 
@@ -251,10 +250,6 @@ constexpr time<std::intmax_t> operator ""_ns(unsigned long long x) {
 
 constexpr time<std::intmax_t> operator ""_ps(unsigned long long x) {
     return time<std::intmax_t>{ (std::intmax_t) x, time_unit_type::picoseconds };
-}
-
-constexpr time<std::intmax_t> operator ""_x(unsigned long long x) {
-    return time<std::intmax_t>{ (std::intmax_t) x, time_unit_type::unitless };
 }
 
 } /* namespace ops */
