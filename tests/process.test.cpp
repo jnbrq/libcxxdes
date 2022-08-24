@@ -2,11 +2,10 @@
 #include <vector>
 
 #define CXXDES_INTERRUPTABLE
+#define CXXDES_DEBUG_CORE_PROCESS
 #include <cxxdes/cxxdes.hpp>
 
 using namespace cxxdes::core;
-
-#if 0
 
 TEST(ProcessTest, BasicFunctionality) {
     CXXDES_SIMULATION(test) {
@@ -237,9 +236,7 @@ TEST(ProcessTest, ReturnProcess) {
     test{}.run();
 }
 
-#endif
-
-#ifdef CXXDES_INTERRUPTABLE
+#if 0
 
 TEST(ProcessTest, Interrupt) {
     CXXDES_SIMULATION(test) {
