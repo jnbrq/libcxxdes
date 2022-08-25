@@ -17,6 +17,7 @@
 #include <type_traits>
 #include <vector>
 #include <iterator>
+#include <algorithm>
 #include <cxxdes/core/process.hpp>
 #include <cxxdes/misc/utils.hpp>
 
