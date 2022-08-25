@@ -202,8 +202,8 @@ struct any_all_helper {
         }
 
         template <typename ...Ts>
-        [[nodiscard("expected usage: co_await {any_of, all_of}.rvalues_by_value(awaitables...)")]]
-        constexpr auto rvalues_by_value(Ts && ...ts) {
+        [[nodiscard("expected usage: co_await {any_of, all_of}.copy_rvalues(awaitables...)")]]
+        constexpr auto copy_rvalues(Ts && ...ts) {
             return tuple_based<Ts...>{ std::forward<Ts>(ts)... };
         }
 
@@ -293,8 +293,8 @@ struct sequential_helper {
         }
 
         template <typename ...Ts>
-        [[nodiscard("expected usage: co_await sequential.rvalues_by_value(awaitables...)")]]
-        constexpr auto rvalues_by_value(Ts && ...ts) const {
+        [[nodiscard("expected usage: co_await sequential.copy_rvalues(awaitables...)")]]
+        constexpr auto copy_rvalues(Ts && ...ts) const {
             return seq_proc_tuple<Ts...>(std::forward<Ts>(ts)...);
         }
 
@@ -376,9 +376,9 @@ struct async_functor {
     }
 
     template <awaitable A>
-    [[nodiscard("expected usage: co_await async.rvalue_by_value(awaitable)")]]
-    constexpr auto rvalue_by_value(A &&a) const {
-        return (*this)(sequential.rvalues_by_value(std::forward<A>(a)));
+    [[nodiscard("expected usage: co_await async.copy_rvalue(awaitable)")]]
+    constexpr auto copy_rvalue(A &&a) const {
+        return (*this)(sequential.copy_rvalues(std::forward<A>(a)));
     }
 };
 
