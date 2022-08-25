@@ -304,7 +304,7 @@ public:
             try {
                 std::rethrow_exception(std::current_exception());
             }
-            catch (interrupted_exception &ex) {
+            catch (interrupted_exception & /* ex */) {
                 // it is fine
             }
             catch (...) {

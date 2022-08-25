@@ -1,8 +1,10 @@
 #include <gtest/gtest.h>
 #include <vector>
 
-#define CXXDES_INTERRUPTABLE
-#define CXXDES_DEBUG_CORE_PROCESS
+#ifndef CXXDES_INTERRUPTABLE
+#   define CXXDES_INTERRUPTABLE
+#endif
+// #define CXXDES_DEBUG_CORE_PROCESS
 #include <cxxdes/cxxdes.hpp>
 
 using namespace cxxdes::core;
@@ -251,7 +253,7 @@ TEST(ProcessTest, Interrupt) {
                 while (true)
                     co_await delay(1000);
             }
-            catch (interrupted_exception &ex) {
+            catch (interrupted_exception & /* ex */) {
                 flag = true;
                 co_return ;
             }

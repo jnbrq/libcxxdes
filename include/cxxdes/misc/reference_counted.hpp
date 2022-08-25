@@ -91,7 +91,7 @@ struct ptr {
         *this = std::move(other);
     }
 
-    ptr &operator=(ptr &&other) {
+    ptr &operator=(ptr &&other) noexcept {
         std::swap(ptr_, other.ptr_);
         return *this;
     }
