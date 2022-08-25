@@ -15,7 +15,7 @@ set(CXXDES_TESTS ON CACHE BOOL "Build tests.")
 set(CXXDES_SANITIZE_ADDRESS ON CACHE BOOL "Enable -sanitize=address for examples and tests.")
 set(CXXDES_SANITIZE_LEAK ON CACHE BOOL "Enable -sanitize=leak for examples and tests.")
 set(CXXDES_SANITIZE_UNDEFINED ON CACHE BOOL "Enable -sanitize=undefined behavior for examples and tests.")
-
+set(CXXDES_ENABLE_INTERRUPTABLE_PROCESSES OFF CACHE BOOL "Enable interruptable processes.")
 set(CXXDES_NO_FETCH OFF CACHE BOOL "Do not automatically fetch content.")
 
 message(STATUS "libcxxdes build variables:")
@@ -25,6 +25,7 @@ print_var(CXXDES_TESTS)
 print_var(CXXDES_SANITIZE_ADDRESS)
 print_var(CXXDES_SANITIZE_LEAK)
 print_var(CXXDES_SANITIZE_UNDEFINED)
+print_var(CXXDES_ENABLE_INTERRUPTABLE_PROCESSES)
 print_var(CXXDES_NO_FETCH)
 
 if (NOT CXXDES_NO_FETCH)
@@ -57,19 +58,19 @@ else ()
     if (CXXDES_SANITIZE_ADDRESS)
         target_compile_options(sanitize_config INTERFACE "-fsanitize=address")
         target_link_options(sanitize_config INTERFACE "-fsanitize=address")
-        target_compile_definitions(sanitize_config INTERFACE "-DCXXDES_SANITIZE_ADDRESS")
+        target_compile_definitions(sanitize_config INTERFACE "CXXDES_SANITIZE_ADDRESS")
     endif ()
 
     if (CXXDES_SANITIZE_LEAK)
         target_compile_options(sanitize_config INTERFACE "-fsanitize=leak")
         target_link_options(sanitize_config INTERFACE "-fsanitize=leak")
-        target_compile_definitions(sanitize_config INTERFACE "-DCXXDES_SANITIZE_LEAK")
+        target_compile_definitions(sanitize_config INTERFACE "CXXDES_SANITIZE_LEAK")
     endif ()
 
     if (CXXDES_SANITIZE_UNDEFINED)
         target_compile_options(sanitize_config INTERFACE "-fsanitize=undefined")
         target_link_options(sanitize_config INTERFACE "-fsanitize=undefined")
-        target_compile_definitions(sanitize_config INTERFACE "-DCXXDES_SANITIZE_UNDEFINED")
+        target_compile_definitions(sanitize_config INTERFACE "CXXDES_SANITIZE_UNDEFINED")
     endif ()
 endif ()
 
@@ -104,13 +105,16 @@ target_include_directories(
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
-if(MSVC)
+
+if (MSVC)
     target_compile_options(cxxdes INTERFACE "/std:c++20")
 else ()
     target_compile_options(cxxdes INTERFACE "--std=c++20")
 endif ()
 
-# target_compile_definitions(cxxdes INTERFACE "-DMACRO_DEFINITIONS=HERE")
+if (CXXDES_ENABLE_INTERRUPTABLE_PROCESSES)
+    target_compile_definitions(cxxdes INTERFACE "CXXDES_INTERRUPTABLE")
+endif ()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_compile_options(cxxdes INTERFACE "-fcoroutines")
