@@ -34,7 +34,6 @@ namespace detail {
 template <typename Condition>
 struct any_all_helper {
     struct custom_handler: token_handler, Condition {
-        bool done = false;
         std::size_t total = 0;
         std::size_t remaining = 0;
         memory::ptr<token> completion_tkn = nullptr;
@@ -45,15 +44,13 @@ struct any_all_helper {
 
             --remaining;
             
-            if (!done) {
-                if (Condition::operator()(total, remaining)) {
-                    // inherit the output_event features
-                    completion_tkn->time += tkn->time;
-                    completion_tkn->priority = tkn->priority;
-                    completion_tkn->coro = tkn->coro;
-                    env->schedule_token(completion_tkn.get());
-                    done = true;
-                }
+            if (completion_tkn && Condition::operator()(total, remaining)) {
+                // inherit the output_event features
+                completion_tkn->time += tkn->time;
+                completion_tkn->priority = tkn->priority;
+                completion_tkn->coro = tkn->coro;
+                env->schedule_token(completion_tkn.get());
+                completion_tkn = nullptr;
             }
         }
     };
