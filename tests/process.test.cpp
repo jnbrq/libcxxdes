@@ -236,8 +236,6 @@ TEST(ProcessTest, ReturnProcess) {
     test{}.run();
 }
 
-#if 0
-
 TEST(ProcessTest, Interrupt) {
     CXXDES_SIMULATION(test) {
         bool flag = false;
@@ -271,5 +269,3 @@ TEST(ProcessTest, Interrupt) {
     obj.run_for(100).stop();
     // EXPECT_TRUE(obj.flag);
 }
-
-#endif

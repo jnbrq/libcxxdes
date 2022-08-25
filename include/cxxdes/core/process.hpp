@@ -197,6 +197,15 @@ public:
     }
 
     ~process() {
+        if (pinfo_ && pinfo_->ref_count() == 2) {
+            if (pinfo_->env == nullptr) {
+                // not yet started
+                // last process<> reference
+                // no way to be destroyed
+
+                pinfo_->coro.destroy();
+            }
+        }
     }
 
 private:
@@ -243,10 +252,9 @@ private:
         std::vector<token *> completion_tokens;
         priority_type priority = 0;
         bool complete = false;
-
-#ifdef CXXDES_INTERRUPTABLE
         coro_handle coro;
 
+#ifdef CXXDES_INTERRUPTABLE
         void add_coro() {
             if (env && coro) {
                 env->get_coro_manager().add_coro(coro);
@@ -281,9 +289,7 @@ public:
 
             pinfo = new process_info;
             auto coro = std::coroutine_handle<promise_type>::from_promise(*this);
-#ifdef CXXDES_INTERRUPTABLE
             pinfo->coro = coro;
-#endif
             pinfo->start_token = new token{0, priority_consts::inherit, coro};
         }
 
@@ -420,6 +426,23 @@ process<void> operator+(A &a, F &&f) {
 #define co_with(x) co_yield (x) + [&]() mutable -> process<void>
 
 #endif // CXXDES_CO_WITH
+
+#ifdef CXXDES_UNDER_PROCESS
+
+namespace detail {
+
+struct under_helper {  };
+
+}
+
+template <typename F>
+auto operator+(detail::under_helper, F f) {
+    return f();
+}
+
+#define _Process(...) detail::under_helper{} + [](__VA_ARGS__) -> process<void>
+
+#endif
 
 } /* namespace core */
 } /* namespace cxxdes */

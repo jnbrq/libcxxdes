@@ -125,6 +125,7 @@ struct environment {
         CXXDES_DEBUG_VARIABLE(tkn);
 
         used_ = true;
+        tkn->ref();
         tokens_.push(tkn);
     }
 
@@ -140,7 +141,7 @@ struct environment {
         now_ = std::max(tkn->time, now_);
         tkn->process();
 
-        delete tkn;
+        tkn->unref();
 
         return true;
     }
@@ -168,7 +169,7 @@ struct environment {
         while (!tokens_.empty()) {
             auto tkn = tokens_.top();
             tokens_.pop();
-            delete tkn;
+            tkn->unref();
         }
     }
 

@@ -36,7 +36,7 @@ struct any_all_helper {
         bool done = false;
         std::size_t total = 0;
         std::size_t remaining = 0;
-        token *completion_tkn = nullptr;
+        memory::ptr<token> completion_tkn = nullptr;
         environment *env = nullptr;
 
         void invoke(token *tkn) override {
@@ -50,7 +50,7 @@ struct any_all_helper {
                     completion_tkn->time += tkn->time;
                     completion_tkn->priority = tkn->priority;
                     completion_tkn->coro = tkn->coro;
-                    env->schedule_token(completion_tkn);
+                    env->schedule_token(completion_tkn.get());
                     done = true;
                 }
             }
@@ -115,7 +115,6 @@ struct any_all_helper {
             // As we cannot return a value from compositions, no need call await_resume()
             // derived().apply([&](auto &a) { a.await_resume(); });
         }
-
     private:
         std::size_t remaining_ = 0;
 

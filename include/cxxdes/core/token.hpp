@@ -42,12 +42,11 @@ struct token_handler: memory::reference_counted_base<token_handler> {
     virtual ~token_handler() {  }
 };
 
-struct token {
+struct token: memory::reference_counted_base<token> {
     token(time_integral time, priority_type priority, coro_handle coro):
         time{time},
         priority{priority},
         coro{coro} {  }
-        
 
     // schedule time
     time_integral time = 0;
