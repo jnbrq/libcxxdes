@@ -13,6 +13,7 @@
 
 #include <cstdint>
 #include <limits>
+#include <cxxdes/misc/reference_counted.hpp>
 #include <cxxdes/core/defs.hpp>
 #include <cxxdes/core/coroutine.hpp>
 #include <cxxdes/misc/time.hpp>
@@ -36,17 +37,16 @@ constexpr priority_type zero = static_cast<priority_type>(0);
 
 struct token;
 
-struct token_handler {
+struct token_handler: memory::reference_counted_base<token_handler> {
     virtual void invoke(token *) {  }
     virtual ~token_handler() {  }
 };
 
-struct token {
+struct token: memory::reference_counted_base<token> {
     token(time_integral time, priority_type priority, coro_handle coro):
         time{time},
         priority{priority},
         coro{coro} {  }
-        
 
     // schedule time
     time_integral time = 0;
@@ -58,12 +58,12 @@ struct token {
     coro_handle coro = nullptr;
 
     // token handler can be modified only by all and any compositions
-    token_handler *handler = nullptr;
+    memory::ptr<token_handler> handler = nullptr;
 
     void process() {
         CXXDES_DEBUG_MEMBER_FUNCTION;
         
-        if (handler != nullptr) {
+        if (handler) {
             handler->invoke(this);
             return ;
         }
@@ -73,7 +73,6 @@ struct token {
     }
 
     ~token() {
-        if (handler) delete handler;
     }
 };
 

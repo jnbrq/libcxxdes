@@ -48,7 +48,7 @@ struct simulation {
             main_process_ = derived().co_main();
             start_awaitable(main_process_);
         }
-
+        
         while (env.step());
     }
 
@@ -77,6 +77,12 @@ struct simulation {
         run_until(now() + env.real_to_sim(t));
         return *this;
     }
+
+#ifdef CXXDES_INTERRUPTABLE
+    void stop() {
+        env.stop();
+    }
+#endif
 private:
     template <awaitable A>
     void start_awaitable(A a) {

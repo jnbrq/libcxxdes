@@ -108,6 +108,14 @@ struct ptr {
         return ptr_ != nullptr;
     }
 
+    T *get() noexcept {
+        return ptr_;
+    }
+
+    T const *get() const noexcept {
+        return ptr_;
+    }
+
     ~ptr() {
         if (ptr_) ptr_->unref();
     }

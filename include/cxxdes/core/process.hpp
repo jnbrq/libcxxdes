@@ -29,6 +29,50 @@
 namespace cxxdes {
 namespace core {
 
+
+#ifdef CXXDES_INTERRUPTABLE
+
+namespace detail {
+
+template <awaitable A>
+struct interruptable {
+    A a;
+
+    template <typename T>
+    explicit interruptable(T &&t): a{std::forward<T>(t)} {
+    }
+
+    void await_bind(environment *env, priority_type priority) {
+        env_ = env;
+        a.await_bind(env, priority);
+    }
+    
+    bool await_ready() {
+        return a.await_ready();
+    }
+    
+    void await_suspend(coro_handle current_coro) {
+        a.await_suspend(current_coro);
+    }
+
+    token *await_token() {
+        return a.await_token();
+    }
+
+    auto await_resume() {
+        if (env_->get_coro_manager().stopped())
+            throw interrupted_exception{};
+        return a.await_resume();
+    }
+
+private:
+    environment *env_ = nullptr;
+};
+
+} /* namespace detail */
+
+#endif
+
 struct this_process {
     struct get_priority {  };
     struct set_priority {
@@ -53,7 +97,6 @@ private:
     struct process_info;
 public:
     explicit process(memory::ptr<process_info> pinfo = nullptr): pinfo_{pinfo} {
-        CXXDES_DEBUG_MEMBER_FUNCTION;
     }
 
     void await_bind(environment *env, priority_type priority = priority_consts::zero) {
@@ -78,6 +121,9 @@ public:
         pinfo_->priority = start_token->priority;
         start_token->time += env->now();
         env->schedule_token(start_token);
+#ifdef CXXDES_INTERRUPTABLE
+        pinfo_->add_coro();
+#endif
     }
 
     bool await_ready() const noexcept {
@@ -151,7 +197,15 @@ public:
     }
 
     ~process() {
-        CXXDES_DEBUG_MEMBER_FUNCTION;
+        if (pinfo_ && pinfo_->ref_count() == 2) {
+            if (pinfo_->env == nullptr) {
+                // not yet started
+                // last process<> reference
+                // no way to be destroyed
+
+                pinfo_->coro.destroy();
+            }
+        }
     }
 
 private:
@@ -198,6 +252,21 @@ private:
         std::vector<token *> completion_tokens;
         priority_type priority = 0;
         bool complete = false;
+        coro_handle coro;
+
+#ifdef CXXDES_INTERRUPTABLE
+        void add_coro() {
+            if (env && coro) {
+                env->get_coro_manager().add_coro(coro);
+            }
+        }
+
+        void remove_coro() {
+            if (env && coro) {
+                env->get_coro_manager().remove_coro(coro);
+            }
+        }
+#endif
 
         // this should come last, so that its padding is not reused
         // see: https://en.cppreference.com/w/cpp/language/attributes/no_unique_address
@@ -219,7 +288,9 @@ public:
             CXXDES_DEBUG_MEMBER_FUNCTION;
 
             pinfo = new process_info;
-            pinfo->start_token = new token{0, priority_consts::inherit, std::coroutine_handle<promise_type>::from_promise(*this)};
+            auto coro = std::coroutine_handle<promise_type>::from_promise(*this);
+            pinfo->coro = coro;
+            pinfo->start_token = new token{0, priority_consts::inherit, coro};
         }
 
         process get_return_object() {
@@ -228,8 +299,34 @@ public:
 
         auto initial_suspend() noexcept -> std::suspend_always { return {}; }
         auto final_suspend() noexcept -> std::suspend_never { return {}; }
-        auto unhandled_exception() { std::rethrow_exception(std::current_exception()); }
+        auto unhandled_exception() {
+#ifdef CXXDES_INTERRUPTABLE
+            try {
+                std::rethrow_exception(std::current_exception());
+            }
+            catch (interrupted_exception &ex) {
+                // it is fine
+            }
+            catch (...) {
+                std::rethrow_exception(std::current_exception());
+            }
+#else
+            std::rethrow_exception(std::current_exception());
+#endif
+        }
 
+#ifdef CXXDES_INTERRUPTABLE
+        template <awaitable A>
+        auto await_transform(A &&a) const {
+            // co_await (A{});
+            // A{} is alive throughout the co_await expression
+            // therefore, it is safe to bind a reference to it
+
+            auto result = detail::interruptable<std::remove_cvref_t<A>>(std::forward<A>(a));
+            result.await_bind(pinfo->env, pinfo->priority);
+            return result;
+        }
+#else
         template <awaitable A>
         auto &&await_transform(A &&a) const {
             // co_await (A{});
@@ -239,6 +336,7 @@ public:
             a.await_bind(pinfo->env, pinfo->priority);
             return std::forward<A>(a);
         }
+#endif
 
         // for co_with (experimental)
         #ifdef CXXDES_CO_WITH
@@ -287,6 +385,9 @@ public:
 
             pinfo->completion_tokens.clear();
             pinfo->complete = true;
+#ifdef CXXDES_INTERRUPTABLE
+            pinfo->remove_coro();
+#endif
         }
 
         ~promise_type() {
@@ -325,6 +426,23 @@ process<void> operator+(A &a, F &&f) {
 #define co_with(x) co_yield (x) + [&]() mutable -> process<void>
 
 #endif // CXXDES_CO_WITH
+
+#ifdef CXXDES_UNDER_PROCESS
+
+namespace detail {
+
+struct under_helper {  };
+
+}
+
+template <typename F>
+auto operator+(detail::under_helper, F f) {
+    return f();
+}
+
+#define _Process(...) detail::under_helper{} + [](__VA_ARGS__) -> process<void>
+
+#endif
 
 } /* namespace core */
 } /* namespace cxxdes */

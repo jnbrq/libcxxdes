@@ -12,6 +12,7 @@
 #define CXXDES_CORE_ENVIRONMENT_HPP_INCLUDED
 
 #include <queue>
+#include <unordered_set>
 #include <cxxdes/misc/time.hpp>
 #include <cxxdes/core/token.hpp>
 
@@ -22,6 +23,49 @@
 
 namespace cxxdes {
 namespace core {
+
+#ifdef CXXDES_INTERRUPTABLE
+
+struct interrupted_exception: std::exception {
+    const char *what() const noexcept override {
+        return "interrupted.";
+    }
+};
+
+struct coro_manager {
+    void add_coro(coro_handle coro) {
+        coros_.insert(coro);
+    }
+
+    void remove_coro(coro_handle coro) {
+        if (!stopped())
+            coros_.erase(coro);
+    }
+
+    bool stopped() const noexcept {
+        return stopped_;
+    }
+
+    void stop() {
+        stopped_ = true;
+        for (auto coro: coros_)
+            coro.resume();
+        coros_.clear();
+        stopped_ = false;
+    }
+
+private:
+    struct hash: std::hash<void *> {
+        size_t operator()(coro_handle x) const noexcept {
+            return std::hash<void *>::operator()(x.address());
+        }
+    };
+
+    std::unordered_set<coro_handle, hash> coros_;
+    bool stopped_ = false;
+};
+
+#endif
 
 struct environment {
     environment(time const &unit = one_second, time const &prec = one_second):
@@ -81,6 +125,7 @@ struct environment {
         CXXDES_DEBUG_VARIABLE(tkn);
 
         used_ = true;
+        tkn->ref();
         tokens_.push(tkn);
     }
 
@@ -96,18 +141,35 @@ struct environment {
         now_ = std::max(tkn->time, now_);
         tkn->process();
 
-        delete tkn;
+        tkn->unref();
 
         return true;
     }
 
+#ifdef CXXDES_INTERRUPTABLE
+    coro_manager &get_coro_manager() noexcept {
+        return coro_manager_;
+    }
+
+    coro_manager const &get_coro_manager() const noexcept {
+        return coro_manager_;
+    }
+
+    void stop() {
+        coro_manager_.stop();
+    }
+#endif
+
     ~environment() {
         CXXDES_DEBUG_MEMBER_FUNCTION;
-        
+
+#ifdef CXXDES_INTERRUPTABLE
+        stop();
+#endif
         while (!tokens_.empty()) {
             auto tkn = tokens_.top();
             tokens_.pop();
-            delete tkn;
+            tkn->unref();
         }
     }
 
@@ -126,6 +188,10 @@ private:
     };
 
     std::priority_queue<token *, std::vector<token *>, token_comp> tokens_;
+
+#ifdef CXXDES_INTERRUPTABLE
+    coro_manager coro_manager_;
+#endif
 };
 
 } /* namespace core */

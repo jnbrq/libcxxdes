@@ -1,5 +1,8 @@
 #include <gtest/gtest.h>
 #include <vector>
+
+#define CXXDES_INTERRUPTABLE
+#define CXXDES_DEBUG_CORE_PROCESS
 #include <cxxdes/cxxdes.hpp>
 
 using namespace cxxdes::core;
@@ -231,4 +234,38 @@ TEST(ProcessTest, ReturnProcess) {
     };
 
     test{}.run();
+}
+
+TEST(ProcessTest, Interrupt) {
+    CXXDES_SIMULATION(test) {
+        bool flag = false;
+
+        process<> foo() {
+            while (true) {
+                co_await delay(10);
+            }
+        }
+
+        process<> bar() {
+            try {
+                while (true)
+                    co_await delay(1000);
+            }
+            catch (interrupted_exception &ex) {
+                flag = true;
+                co_return ;
+            }
+        }
+
+        process<> co_main() {
+            while (true) {
+                co_await delay(10);
+            }
+            // co_await foo();
+        }
+    };
+
+    auto obj = test{};
+    obj.run_for(100).stop();
+    // EXPECT_TRUE(obj.flag);
 }

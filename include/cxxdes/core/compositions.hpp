@@ -17,6 +17,7 @@
 #include <type_traits>
 #include <vector>
 #include <iterator>
+#include <algorithm>
 #include <cxxdes/core/process.hpp>
 #include <cxxdes/misc/utils.hpp>
 
@@ -36,16 +37,13 @@ struct any_all_helper {
         bool done = false;
         std::size_t total = 0;
         std::size_t remaining = 0;
-        token *completion_tkn = nullptr;
+        memory::ptr<token> completion_tkn = nullptr;
         environment *env = nullptr;
 
         void invoke(token *tkn) override {
             CXXDES_DEBUG_MEMBER_FUNCTION;
 
             --remaining;
-
-            // do not delete the handler while still in use
-            tkn->handler = nullptr;
             
             if (!done) {
                 if (Condition::operator()(total, remaining)) {
@@ -53,14 +51,9 @@ struct any_all_helper {
                     completion_tkn->time += tkn->time;
                     completion_tkn->priority = tkn->priority;
                     completion_tkn->coro = tkn->coro;
-                    env->schedule_token(completion_tkn);
+                    env->schedule_token(completion_tkn.get());
                     done = true;
                 }
-            }
-
-            if (remaining == 0) {
-                // delete the handler
-                tkn->handler = this;
             }
         }
     };
@@ -123,7 +116,6 @@ struct any_all_helper {
             // As we cannot return a value from compositions, no need call await_resume()
             // derived().apply([&](auto &a) { a.await_resume(); });
         }
-
     private:
         std::size_t remaining_ = 0;
 
