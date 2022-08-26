@@ -22,6 +22,8 @@ using time_integral = std::intmax_t;
 using real_type = double;
 
 using time = time_utils::time<time_integral>;
+using time_utils::unitless_time;
+
 using time_expr = time_utils::time_expr<time_integral>;
 using time_units = time_utils::time_unit_type;
 

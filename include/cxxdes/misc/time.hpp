@@ -16,6 +16,7 @@
 #include <type_traits>
 #include <limits>
 #include <memory>
+#include <cassert>
 
 namespace cxxdes {
 namespace time_utils {
@@ -38,8 +39,8 @@ struct time {
     time_unit_type u = time_unit_type::seconds;
 
     template <std::integral I>
-    constexpr time(I tt, time_unit_type uu):
-        t{(Integer) tt}, u{uu} {}
+    constexpr time(I tt, time_unit_type uu = time_unit_type::seconds):
+        t{(Integer) tt}, u{uu} {  }
     
     template <typename I>
     constexpr time(time<I> const &other) noexcept {
@@ -47,12 +48,11 @@ struct time {
     }
 
     constexpr time(time const &other) noexcept {
-        // -Wdeprecated-copy-with-user-provided-copy
         *this = other;
     }
 
-    template <typename I>
-    constexpr auto count(time<I> const &precision) const noexcept -> I {
+    template <typename I1, typename I2 = int>
+    constexpr auto count(time<I1> const &precision, time<I2> const & /* unit */ = time<I2>(1)) const noexcept {
         constexpr Integer conv [(int) time_unit_type::count] = {
             1, 1'000, 1'000'000, 1'000'000'000, 1'000'000'000'000
         };
@@ -89,7 +89,7 @@ struct time {
                 break;
         }
 
-        t = new_t;
+        t = (integer_type) new_t;
         u = (time_unit_type) new_u;
 
         return *this;
@@ -101,6 +101,22 @@ struct time {
             1, 1e-3, 1e-6, 1e-9, 1e-12
         };
         return (RealType) t * conv[(int) u];
+    }
+};
+
+template <typename Integer>
+constexpr auto one_second = time<Integer>((Integer) 1, time_unit_type::seconds);
+
+template <typename Integer>
+struct unitless_time {
+    struct node_tag {  };
+    using integer_type = Integer;
+
+    integer_type t = 0;
+
+    template <typename I1, typename I2>
+    constexpr auto count(time<I1> const &precision, time<I2> const &unit = one_second<I2>) const noexcept {
+        return t * unit.count(precision);
     }
 };
 
@@ -123,9 +139,9 @@ struct binary_node {
     [[no_unique_address]] B b;
     [[no_unique_address]] Operation op;
 
-    template <typename I>
-    constexpr auto count(time<I> const &precision) const noexcept -> I {
-        return op(a, b, precision);
+    template <typename I1, typename I2 = int>
+    constexpr auto count(time<I1> const &precision, time<I2> const &unit = one_second<I2>) const noexcept {
+        return op(a, b, precision, unit);
     }
 };
 
@@ -136,9 +152,9 @@ struct unary_node {
     [[no_unique_address]] A a;
     [[no_unique_address]] Operation op;
 
-    template <typename I>
-    constexpr auto count(time<I> const &precision) const noexcept -> I {
-        return op(a, precision);
+    template <typename I1, typename I2 = int>
+    constexpr auto count(time<I1> const &precision, time<I2> const &unit = one_second<I2>) const noexcept {
+        return op(a, precision, unit);
     }
 };
 
@@ -173,8 +189,8 @@ template <node A>
 constexpr auto operator-(A &&a) {
     return make_node(
         std::forward<A>(a),
-        [](auto const &a, auto const &p) {
-            return -a.count(p);
+        [](auto const &a, auto const &precision, auto const &unit) {
+            return -a.count(precision, unit);
         });
 }
 
@@ -182,8 +198,8 @@ template <node A, node B>
 constexpr auto operator+(A &&a, B &&b) {
     return make_node(
         std::forward<A>(a), std::forward<B>(b),
-        [](auto const &a, auto const &b, auto const &p) {
-            return a.count(p) + b.count(p);
+        [](auto const &a, auto const &b, auto const &precision, auto const &unit) {
+            return a.count(precision, unit) + b.count(precision, unit);
         });
 }
 
@@ -191,8 +207,8 @@ template <node A, node B>
 constexpr auto operator-(A &&a, B &&b) {
     return make_node(
         std::forward<A>(a), std::forward<B>(b),
-        [](auto const &a, auto const &b, auto const &p) {
-            return a.count(p) - b.count(p);
+        [](auto const &a, auto const &b, auto const &precision, auto const &unit) {
+            return a.count(precision, unit) - b.count(precision, unit);
         });
 }
 
@@ -200,8 +216,8 @@ template <node A, scalar B>
 constexpr auto operator*(A &&a, B &&b) {
     return make_node(
         std::forward<A>(a), std::forward<B>(b),
-        [](auto const &a, auto const &b, auto const &p) {
-            return a.count(p) * b;
+        [](auto const &a, auto const &b, auto const &precision, auto const &unit) {
+            return a.count(precision, unit) * b;
         });
 }
 
@@ -209,52 +225,58 @@ template <scalar A, node B>
 constexpr auto operator*(A &&a, B &&b) {
     return make_node(
         std::forward<A>(a), std::forward<B>(b),
-        [](auto const &a, auto const &b, auto const &p) {
-            return a * b.count(p);
+        [](auto const &a, auto const &b, auto const &precision, auto const &unit) {
+            return a * b.count(precision, unit);
         });
 }
 
+// meaningless
 template <node A, node B>
-constexpr auto operator/(A &&a, B &&b) {
-    return make_node(
-        std::forward<A>(a), std::forward<B>(b),
-        [](auto const &a, auto const &b, auto const &p) {
-            return a.count(p) / b.count(p);
-        });
-}
+constexpr auto operator*(A &&a, B &&b) = delete;
+
+// meaningless
+template <node A, node B>
+constexpr auto operator/(A &&a, B &&b) = delete;
 
 template <node A, scalar B>
 constexpr auto operator/(A &&a, B &&b) {
     return make_node(
         std::forward<A>(a), std::forward<B>(b),
-        [](auto const &a, auto const &b, auto const &p) {
-            return a.count(p) / b;
+        [](auto const &a, auto const &b, auto const &precision, auto const &unit) {
+            return a.count(precision, unit) / b;
         });
 }
 
-constexpr time<std::intmax_t> operator ""_s(unsigned long long x) {
+constexpr auto operator ""_s(unsigned long long x) {
     return time<std::intmax_t>{ (std::intmax_t) x, time_unit_type::seconds };
 }
 
-constexpr time<std::intmax_t> operator ""_ms(unsigned long long x) {
+constexpr auto operator ""_ms(unsigned long long x) {
     return time<std::intmax_t>{ (std::intmax_t) x, time_unit_type::milliseconds };
 }
 
-constexpr time<std::intmax_t> operator ""_us(unsigned long long x) {
+constexpr auto operator ""_us(unsigned long long x) {
     return time<std::intmax_t>{ (std::intmax_t) x, time_unit_type::microseconds };
 }
 
-constexpr time<std::intmax_t> operator ""_ns(unsigned long long x) {
+constexpr auto operator ""_ns(unsigned long long x) {
     return time<std::intmax_t>{ (std::intmax_t) x, time_unit_type::nanoseconds };
 }
 
-constexpr time<std::intmax_t> operator ""_ps(unsigned long long x) {
+constexpr auto operator ""_ps(unsigned long long x) {
     return time<std::intmax_t>{ (std::intmax_t) x, time_unit_type::picoseconds };
+}
+
+constexpr auto operator ""_x(unsigned long long x) {
+    return unitless_time<std::intmax_t>{ (std::intmax_t) x };
 }
 
 } /* namespace ops */
 
-template <std::integral Integer = std::intmax_t>
+template <
+    std::integral Iprecision = std::intmax_t,
+    std::integral Iunit = Iprecision,
+    std::integral Icount = Iprecision>
 struct time_expr {
     struct node_tag {  };
 
@@ -274,9 +296,14 @@ struct time_expr {
         *this = std::forward<T>(t);
     }
 
-    Integer count(time<Integer> const &p) const noexcept {
+    template <scalar T>
+    time_expr(T &&t) {
+        *this = std::forward<T>(t);
+    }
+
+    Icount count(time<Iprecision> const &precision, time<Iunit> const &unit = one_second<Iunit>) const noexcept {
         if (not impl_) return 0;
-        return impl_->count(p);
+        return impl_->count(precision, unit);
     }
 
     bool is_valid() const noexcept {
@@ -292,8 +319,8 @@ struct time_expr {
             impl(T &&t): value{std::move(t)} {
             }
 
-            Integer count(time<Integer> const &p) const noexcept override {
-                return value.count(p);
+            Icount count(time<Iprecision> const &precision, time<Iunit> const &unit) const noexcept override {
+                return value.count(precision, unit);
             }
 
             underlying_type *clone() const override {
@@ -302,6 +329,11 @@ struct time_expr {
         };
         impl_.reset(new impl(std::forward<T>(t)));
         return *this;
+    }
+
+    template <scalar T>
+    time_expr &operator=(T &&t) {
+        return (*this = unitless_time<std::remove_cvref_t<T>>{std::forward<T>(t)});
     }
 
     time_expr &operator=(time_expr const &other) {
@@ -319,7 +351,7 @@ struct time_expr {
     }
 private:
     struct underlying_type {
-        virtual Integer count(time<Integer> const &p) const noexcept = 0;
+        virtual Icount count(time<Iprecision> const &precision, time<Iunit> const &unit) const noexcept = 0;
         virtual underlying_type *clone() const = 0;
         virtual ~underlying_type() = default;
     };

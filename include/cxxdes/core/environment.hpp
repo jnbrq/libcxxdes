@@ -108,13 +108,12 @@ struct environment {
 
     template <cxxdes::time_utils::node Node>
     time_integral real_to_sim(Node const &n) const noexcept {
-        return n.count(time_precision());
+        return n.count(time_precision(), time_unit());
     }
 
     template <cxxdes::time_utils::scalar Scalar>
     time_integral real_to_sim(Scalar const &s) const noexcept {
-        using time_ops::operator*;
-        return (s * time_unit()).count(time_precision());
+        return unitless_time<Scalar>{s}.count(time_precision(), time_unit());
     }
 
     template <typename T>

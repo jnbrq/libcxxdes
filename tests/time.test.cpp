@@ -45,4 +45,7 @@ TEST(TimeTest, TimeExpr) {
 
     time_expr b = 2 * a + a / 10;
     EXPECT_EQ(b.count(prec), 2100);
+
+    time_expr c = 5;
+    EXPECT_EQ(c.count(prec, prec), 5);
 }
