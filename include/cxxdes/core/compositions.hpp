@@ -249,8 +249,8 @@ struct all_of_condition {
     }
 };
 
-constexpr any_all_helper<any_of_condition>::functor any_of;
-constexpr any_all_helper<all_of_condition>::functor all_of;
+inline constexpr any_all_helper<any_of_condition>::functor any_of;
+inline constexpr any_all_helper<all_of_condition>::functor all_of;
 
 struct sequential_helper {
     template <typename ...Ts>
@@ -319,7 +319,7 @@ struct sequential_helper {
     };
 };
 
-constexpr sequential_helper::functor sequential;
+inline constexpr sequential_helper::functor sequential;
 
 struct async_functor {
     template <typename T>
@@ -382,7 +382,7 @@ struct async_functor {
     }
 };
 
-constexpr async_functor async;
+inline constexpr async_functor async;
 
 } /* namespace detail */
 

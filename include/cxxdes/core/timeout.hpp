@@ -24,7 +24,7 @@ namespace core {
 
 template <typename Derived>
 struct timeout_base {
-    timeout_base(priority_type priority = priority_consts::inherit): priority_{priority} {
+    constexpr timeout_base(priority_type priority = priority_consts::inherit): priority_{priority} {
     }
 
     void await_bind(environment *env, priority_type priority) noexcept {
@@ -74,7 +74,7 @@ protected:
 
 template <typename T>
 [[nodiscard("expected usage: co_await timeout(t)")]]
-auto timeout(T &&t, priority_type priority = priority_consts::inherit) noexcept {
+constexpr auto timeout(T &&t, priority_type priority = priority_consts::inherit) noexcept {
     struct result: timeout_base<result> {
         // for some reason Apple Clang do not see time_precision() alone
         using base = timeout_base<result>;
@@ -100,11 +100,11 @@ struct delay_type: timeout_base<delay_type> {
 };
 
 template <std::integral Integer>
-auto delay(Integer delay, priority_type priority = priority_consts::inherit) noexcept {
+constexpr auto delay(Integer delay, priority_type priority = priority_consts::inherit) noexcept {
     return delay_type{ { priority }, static_cast<time_integral>(delay) };
 }
 
-inline auto yield() noexcept {
+constexpr auto yield() noexcept {
     return delay(0);
 }
 
