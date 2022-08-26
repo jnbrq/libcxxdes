@@ -109,7 +109,7 @@ inline auto yield() noexcept {
 }
 
 template <typename T>
-auto environment::timeout(T &&t) const noexcept {
+inline auto environment::timeout(T &&t) const noexcept {
     return delay(real_to_sim(t));
 }
 
