@@ -338,6 +338,11 @@ public:
         }
 #endif
 
+        template <awaitable_factory F>
+        auto await_transform(F &&f) const {
+            return await_transform(f.await());
+        }
+
         // for co_with (experimental)
         #ifdef CXXDES_CO_WITH
 
@@ -440,7 +445,7 @@ auto operator+(detail::under_helper, F f) {
     return f();
 }
 
-#define _Process(...) detail::under_helper{} + [](__VA_ARGS__) -> process<void>
+#define _Process(...) detail::under_helper{} + [&](__VA_ARGS__) -> process<void>
 
 #endif
 

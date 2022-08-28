@@ -32,6 +32,11 @@ concept awaitable = requires(
 };
 
 template <typename T>
+concept awaitable_factory = requires(T t) {
+    { t.await() } -> awaitable;
+};
+
+template <typename T>
 struct immediately_returning_awaitable {
     T return_value;
 
