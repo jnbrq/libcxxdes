@@ -76,17 +76,56 @@ template <typename T>
 [[nodiscard("expected usage: co_await timeout(t)")]]
 constexpr auto timeout(T &&t, priority_type priority = priority_consts::inherit) noexcept {
     struct result: timeout_base<result> {
-        // for some reason Apple Clang do not see time_precision() alone
         using base = timeout_base<result>;
 
-        T node;
+        T t;
 
         auto latency() const noexcept {
-            return base::env().real_to_sim(node);
+            return base::env().real_to_sim(t);
         }
     };
 
     return result{ { priority }, std::forward<T>(t) };
+}
+
+struct instant_type: timeout_base<instant_type> {
+    const time_integral t = 0;
+
+    bool await_ready() {
+        return env().now() >= t;
+    }
+
+    auto latency() const noexcept {
+        return t - env().now();
+    }
+};
+
+template <typename T>
+constexpr auto lazy_timeout(T &&t, priority_type priority = priority_consts::inherit) {
+    struct result_type {
+        // TODO for both timeout() and instant(), should they copy always?
+        T t; // should we use std::remove_cvref_t?
+        priority_type priority;
+        time_integral tsim = 0;
+
+        void await_bind(environment *env, priority_type) noexcept {
+            tsim = env->now() + env->real_to_sim(t);
+        }
+
+        bool await_ready() const noexcept {
+            return true;
+        }
+
+        void await_suspend(coro_handle) const noexcept {  }
+
+        token *await_token() const noexcept { return nullptr; }
+
+        auto await_resume() {
+            return instant_type{ { priority }, tsim };
+        }
+    };
+
+    return result_type{std::forward<T>(t), priority};
 }
 
 struct delay_type: timeout_base<delay_type> {
