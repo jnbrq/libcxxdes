@@ -59,21 +59,6 @@ struct token: memory::reference_counted_base<token> {
 
     // token handler can be modified only by all and any compositions
     memory::ptr<token_handler> handler = nullptr;
-
-    void process() {
-        CXXDES_DEBUG_MEMBER_FUNCTION;
-        
-        if (handler) {
-            handler->invoke(this);
-            return ;
-        }
-
-        if (coro && !coro.done())
-            coro.resume();
-    }
-
-    ~token() {
-    }
 };
 
 } /* namespace core */

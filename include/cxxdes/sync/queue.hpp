@@ -15,7 +15,6 @@
 #include <cxxdes/core/timeout.hpp>
 #include <cxxdes/core/compositions.hpp>
 #include <cxxdes/core/process.hpp>
-#include <cxxdes/sync/mutex.hpp>
 #include <cxxdes/sync/event.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
@@ -41,27 +40,25 @@ struct queue {
     [[nodiscard("expected usage: co_await queue.put(args...)")]]
     process<> put(Args && ...args) {
         while (true) {
-            co_await mutex_.acquire();
             if (max_size_ == 0 || q_.size() < max_size_)
                 break ;
-            co_await (mutex_.release() && event_.wait());
+            co_await event_.wait();
         }
         q_.emplace(std::forward<Args>(args)...);
-        co_await (mutex_.release() && event_.wake());
+        co_await event_.wake();
     }
 
 
     [[nodiscard("expected usage: co_await queue.pop()")]]
     process<T> pop() {
         while (true) {
-            co_await mutex_.acquire();
             if (q_.size() > 0)
                 break ;
-            co_await (mutex_.release() && event_.wait());
+            co_await event_.wait();
         }
         auto v = std::move(q_.front());
         q_.pop();
-        co_await (mutex_.release() && event_.wake());
+        co_await event_.wake();
         co_return v;
     }
 
@@ -77,7 +74,6 @@ private:
     std::queue<T> q_;
 
     sync::event event_;
-    sync::mutex mutex_;
 };
 
 } /* namespace detail */

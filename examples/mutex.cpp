@@ -14,17 +14,17 @@ CXXDES_SIMULATION(mutex_example)
     }
 
     process<> p1() {
-        co_await m.acquire();
+        auto h = co_await m.acquire();
         std::cout << "p1 works\n";
         co_await timeout(5);
-        co_await m.release();
+        co_await h.release();
     }
 
     process<> p2() {
-        co_await m.acquire();
+        auto h = co_await m.acquire();
         std::cout << "p2 works\n";
         co_await timeout(5);
-        co_await m.release();
+        co_await h.release();
     }
 
     process<> co_main() {

@@ -78,8 +78,8 @@ struct this_process {
     struct set_priority {
         priority_type priority;
     };
-
     struct get_environment {  };
+    struct get_coro_handle {  };
 };
 
 template <typename T>
@@ -283,8 +283,7 @@ public:
         > {
         memory::ptr<process_info> pinfo = nullptr;
 
-        template <typename ...Args>
-        promise_type(Args && ...) {
+        promise_type() {
             CXXDES_DEBUG_MEMBER_FUNCTION;
 
             pinfo = new process_info;
@@ -366,6 +365,10 @@ public:
 
         auto await_transform(this_process::get_environment) const {
             return immediately_returning_awaitable{pinfo->env};
+        }
+
+        auto await_transform(this_process::get_coro_handle) const {
+            return immediately_returning_awaitable{pinfo->coro};
         }
 
         // END implementation of the this_process interface

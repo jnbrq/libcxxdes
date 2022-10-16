@@ -138,7 +138,13 @@ struct environment {
         tokens_.pop();
 
         now_ = std::max(tkn->time, now_);
-        tkn->process();
+
+        if (tkn->handler) {
+            tkn->handler->invoke(tkn);
+        }
+        else if (tkn->coro) {
+            tkn->coro.resume();
+        }
 
         tkn->unref();
 
