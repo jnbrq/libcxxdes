@@ -320,8 +320,8 @@ public:
             // co_await (A{});
             // A{} is alive throughout the co_await expression
             // therefore, it is safe to bind a reference to it
-
-            auto result = detail::interruptable<std::remove_cvref_t<A>>(std::forward<A>(a));
+            
+            auto result = detail::interruptable<A &&>(std::forward<A>(a));
             result.await_bind(pinfo->env, pinfo->priority);
             return result;
         }
