@@ -22,39 +22,55 @@
 namespace cxxdes {
 namespace sync {
 
-namespace detail {
-
 using core::process;
 
-struct resource_handle {
-    resource_handle(semaphore<> *s): s_{s} {
-    }
-
-    [[nodiscard("expected usage: co_await resource_handle.release()")]]
-    process<> release() {
-        co_await s_->up();
-    }
-private:
-    semaphore<> *s_;
-};
-
 struct resource {
+    struct handle {
+        handle() = default;
+
+        handle(handle const &) = delete;
+        handle &operator=(handle const &) = delete;
+
+        handle(handle &&other) {
+            *this = std::move(other);
+        }
+
+        handle &operator=(handle &&other) {
+            std::swap(r_, other.r_);
+            return *this;
+        }
+
+        [[nodiscard("expected usage: co_await resource_handle.release()")]]
+        process<> release() {
+            if (!r_)
+                throw std::runtime_error("called release() on invalid resource handle");
+            
+            auto r = r_;
+            r_ = nullptr;
+
+            co_await r->s_.up();
+        }
+
+    private:
+        friend struct resource;
+
+        handle(resource *r): r_{r} {
+        }
+
+        resource *r_ = nullptr;
+    };
+
     resource(std::size_t count): s_{count, count} {
     }
 
     [[nodiscard("expected usage: co_await resource.acquire()")]]
-    process<resource_handle> acquire() {
+    process<handle> acquire() {
         co_await s_.down();
-        co_return resource_handle{&s_};
+        co_return handle(this);
     }
 private:
     semaphore<> s_;
 };
-
-} /* namespace detail */
-
-using detail::resource_handle;
-using detail::resource;
 
 } /* namespace sync */
 } /* namespace cxxdes */

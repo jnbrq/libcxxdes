@@ -14,6 +14,7 @@
 #include <queue>
 #include <cxxdes/sync/event.hpp>
 #include <cxxdes/core/process.hpp>
+#include <cxxdes/misc/utils.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
 #ifdef CXXDES_DEBUG_SYNC_MUTEX
@@ -27,16 +28,38 @@ using namespace cxxdes::core;
 
 struct mutex {
     struct handle {
-        handle(mutex *m): m_{m} {
+        handle() = default;
+
+        handle(handle const &) = delete;
+        handle &operator=(handle const &) = delete;
+
+        handle(handle &&other) {
+            *this = std::move(other);
+        }
+
+        handle &operator=(handle &&other) {
+            std::swap(m_, other.m_);
+            return *this;
         }
 
         [[nodiscard("expected usage: co_await handle.release()")]]
         process<> release() {
-            m_->owned_ = false;
-            co_await m_->event_.wake();
+            if (!m_)
+                throw std::runtime_error("called release() on invalid mutex handle");
+            
+            auto m = m_;
+            m_ = nullptr;
+
+            m->owned_ = false;
+            co_await m->event_.wake();
         }
     private:
-        mutex *m_;
+        friend struct mutex;
+
+        handle(mutex *m): m_{m} {
+        }
+
+        mutex *m_ = nullptr;
     };
 
     [[nodiscard("expected usage: co_await mtx.acquire()")]]
@@ -47,7 +70,7 @@ struct mutex {
             co_await event_.wait();
         }
         owned_ = true;
-        co_return handle{this};
+        co_return handle(this);
     }
 
     [[nodiscard]]

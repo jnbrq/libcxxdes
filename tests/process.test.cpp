@@ -47,6 +47,7 @@ TEST(ProcessTest, OutOfScope) {
     test{}.run();
 }
 
+#if 0
 TEST(ProcessTest, ReturnValueInspection) {
     CXXDES_SIMULATION(test) {
         process<int> foo() {
@@ -73,6 +74,7 @@ TEST(ProcessTest, ReturnValueInspection) {
 
     test{}.run();
 }
+#endif
 
 TEST(ProcessTest, Latencies) {
     CXXDES_SIMULATION(test) {

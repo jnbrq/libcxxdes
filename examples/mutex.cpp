@@ -1,4 +1,6 @@
+#define CXXDES_CO_WITH
 #include <cxxdes/cxxdes.hpp>
+#include <fmt/core.h>
 #include <iostream>
 #include <string>
 
@@ -8,27 +10,23 @@ CXXDES_SIMULATION(mutex_example)
 {
     cxxdes::sync::mutex m;
 
-    template <typename A = const char *>
-    void print_time(A &&a = "") {
-        std::cout << a << " " << now() << std::endl;
-    }
-
-    process<> p1() {
-        auto h = co_await m.acquire();
-        std::cout << "p1 works\n";
-        co_await timeout(5);
-        co_await h.release();
-    }
-
-    process<> p2() {
-        auto h = co_await m.acquire();
-        std::cout << "p2 works\n";
-        co_await timeout(5);
-        co_await h.release();
+    process<> p(int idx, time_integral t) {
+        co_with(m) {
+            fmt::print("idx = {}, now = {}\n", idx, now());
+            co_await delay(t);
+            fmt::print("idx = {}, now = {}\n", idx, now());
+        };
     }
 
     process<> co_main() {
-        co_await (p1() && p2().priority(-10));
+        using namespace cxxdes::core::time_ops;
+        co_await all_of(
+            p(1, 5).priority(5),
+            p(2, 5).priority(3),
+            p(3, 5).priority(2),
+            p(4, 5).priority(4),
+            p(5, 5).priority(1)
+        );
     }
 };
 

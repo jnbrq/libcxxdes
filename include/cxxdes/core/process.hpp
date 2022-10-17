@@ -143,7 +143,7 @@ public:
         return completion_token_;
     }
 
-    ReturnType await_resume() const {
+    ReturnType await_resume() {
         CXXDES_DEBUG_MEMBER_FUNCTION;
 
         if constexpr (std::is_same_v<ReturnType, void>)
@@ -152,8 +152,7 @@ public:
             if (!pinfo_->return_container)
                 throw std::runtime_error("no return value from the process<T> [T != void]!");
             
-            // NOTE ReturnType should be copy constructable
-            return (*pinfo_->return_container);
+            return std::move(*pinfo_->return_container);
         }
     }
 
@@ -185,11 +184,6 @@ public:
 
     bool is_complete() const noexcept {
         return pinfo_->complete;
-    }
-
-    auto return_value() const {
-        // TODO make presence of this function conditional on ReturnType
-        return await_resume();
     }
 
     bool is_valid() const noexcept {
@@ -426,7 +420,7 @@ concept acquirable = requires(T t) {
 
 template <acquirable A, typename F>
 process<void> operator+(A &a, F &&f) {
-    auto handle = co_await a.acquire();
+    auto &&handle = co_await a.acquire();
     co_await std::forward<F>(f)();
     co_await handle.release();
 }
