@@ -13,7 +13,6 @@
 
 #include <limits>
 #include <concepts>
-#include <cxxdes/core/compositions.hpp>
 #include <cxxdes/core/process.hpp>
 #include <cxxdes/sync/event.hpp>
 
@@ -25,11 +24,7 @@
 namespace cxxdes {
 namespace sync {
 
-namespace detail {
-
-using core::timeout;
 using core::process;
-using core::operator&&;
 
 template <std::unsigned_integral U = std::size_t>
 struct semaphore {
@@ -74,10 +69,6 @@ protected:
 
     sync::event event_;
 };
-
-} /* namespace detail */
-
-using detail::semaphore;
 
 } /* namespace sync */
 } /* namespace cxxdes */
