@@ -70,15 +70,15 @@ template <reference_counted T>
 struct ptr {
     ptr() noexcept = default;
 
-    ptr(T *p) noexcept: ptr_{p} {
+    ptr(T *p): ptr_{p} {
         if (ptr_) ptr_->ref();
     }
 
-    ptr(const ptr& other) noexcept {
+    ptr(const ptr& other) {
         *this = other;
     }
 
-    ptr &operator=(const ptr &other) noexcept {
+    ptr &operator=(const ptr &other) {
         if (ptr_ != other.ptr_) {
             if (ptr_) ptr_->unref();
             ptr_ = other.ptr_;
@@ -104,8 +104,12 @@ struct ptr {
         return ptr_;
     }
 
-    operator bool() const noexcept {
+    bool valid() const noexcept {
         return ptr_ != nullptr;
+    }
+
+    operator bool() const noexcept {
+        return valid();
     }
 
     T *get() noexcept {
