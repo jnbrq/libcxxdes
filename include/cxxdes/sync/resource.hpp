@@ -36,28 +36,36 @@ struct resource {
         }
 
         handle &operator=(handle &&other) {
-            std::swap(r_, other.r_);
+            std::swap(x_, other.x_);
             return *this;
+        }
+
+        bool valid() const noexcept {
+            return x_ != nullptr;
+        }
+
+        operator bool() const noexcept {
+            return valid();
         }
 
         [[nodiscard("expected usage: co_await resource_handle.release()")]]
         process<> release() {
-            if (!r_)
+            if (!valid())
                 throw std::runtime_error("called release() on invalid resource handle");
             
-            auto r = r_;
-            r_ = nullptr;
+            auto x = x_;
+            x_ = nullptr;
 
-            co_await r->s_.up();
+            co_await x->s_.up();
         }
 
     private:
         friend struct resource;
 
-        handle(resource *r): r_{r} {
+        handle(resource *x): x_{x} {
         }
 
-        resource *r_ = nullptr;
+        resource *x_ = nullptr;
     };
 
     resource(std::size_t count): s_{count, count} {

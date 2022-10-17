@@ -38,28 +38,36 @@ struct mutex {
         }
 
         handle &operator=(handle &&other) {
-            std::swap(m_, other.m_);
+            std::swap(x_, other.x_);
             return *this;
+        }
+
+        bool valid() const noexcept {
+            return x_ != nullptr;
+        }
+
+        operator bool() const noexcept {
+            return valid();
         }
 
         [[nodiscard("expected usage: co_await handle.release()")]]
         process<> release() {
-            if (!m_)
+            if (!valid())
                 throw std::runtime_error("called release() on invalid mutex handle");
             
-            auto m = m_;
-            m_ = nullptr;
+            auto x = x_;
+            x_ = nullptr;
 
-            m->owned_ = false;
-            co_await m->event_.wake();
+            x->owned_ = false;
+            co_await x->event_.wake();
         }
     private:
         friend struct mutex;
 
-        handle(mutex *m): m_{m} {
+        handle(mutex *x): x_{x} {
         }
 
-        mutex *m_ = nullptr;
+        mutex *x_ = nullptr;
     };
 
     [[nodiscard("expected usage: co_await mtx.acquire()")]]
