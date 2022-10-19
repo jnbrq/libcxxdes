@@ -37,10 +37,10 @@ public:
         ++count_;
     }
 
-    void unref() {
+    void unref() const {
         assert(count_ > 0 && "object is already destroyed.");
         if (--count_ == 0) {
-            delete static_cast<Derived *>(this);
+            delete static_cast<Derived const *>(this);
         }
     }
 
