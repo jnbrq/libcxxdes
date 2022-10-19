@@ -28,7 +28,7 @@ using namespace cxxdes::core;
 
 struct mutex {
     struct handle {
-        handle() = default;
+        handle() = delete;
 
         handle(handle const &) = delete;
         handle &operator=(handle const &) = delete;
