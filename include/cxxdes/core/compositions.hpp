@@ -195,13 +195,13 @@ struct any_all_helper {
 
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await {any_of, all_of}.by_reference(awaitables...)")]]
-        constexpr auto by_reference(Ts && ...ts) {
+        constexpr auto by_reference(Ts && ...ts) const {
             return tuple_based<Ts &&...>{ std::forward<Ts>(ts)... };
         }
 
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await {any_of, all_of}.copy_rvalues(awaitables...)")]]
-        constexpr auto copy_rvalues(Ts && ...ts) {
+        constexpr auto copy_rvalues(Ts && ...ts) const {
             return tuple_based<Ts...>{ std::forward<Ts>(ts)... };
         }
 
