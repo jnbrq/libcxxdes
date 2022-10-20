@@ -30,7 +30,8 @@ namespace core {
 struct environment;
 
 struct basic_process_data;
-using process_handle = basic_process_data const *;
+using process_handle = basic_process_data *;
+using const_process_handle = basic_process_data const *;
 
 template <typename ReturnType, bool Unique>
 struct process;
@@ -105,6 +106,12 @@ struct basic_process_data: memory::reference_counted_base<basic_process_data> {
         coro_{coro}, created_{created} {
     }
 
+    basic_process_data(const basic_process_data &) = delete;
+    basic_process_data &operator=(const basic_process_data &) = delete;
+
+    basic_process_data(basic_process_data &&) = delete;
+    basic_process_data &operator=(basic_process_data &&) = delete;
+
     util::source_location const &loc_created() const noexcept {
         return created_;
     }
@@ -131,6 +138,16 @@ struct basic_process_data: memory::reference_counted_base<basic_process_data> {
     [[nodiscard]]
     environment const *env() const noexcept {
         return env_;
+    }
+
+    [[nodiscard]]
+    process_handle parent() noexcept {
+        return parent_.get();
+    }
+
+    [[nodiscard]]
+    const_process_handle parent() const noexcept {
+        return parent_.get();
     }
 
     [[nodiscard]]
@@ -176,7 +193,7 @@ protected:
     template <typename ReturnType, bool Unique>
     friend struct process;
 
-    void bind_(environment *env, priority_type priority, util::source_location awaited);
+    void bind_(environment *env, priority_type priority);
     void manage_();
     void unmanage_();
 
@@ -187,6 +204,7 @@ protected:
     util::source_location awaited_;
     priority_type priority_ = priority_consts::inherit;
     time_integral latency_ = 0;
+    memory::ptr<basic_process_data> parent_;
     bool complete_ = false;
     bool interrupt_ = false;
 };
@@ -276,6 +294,15 @@ struct environment {
         return current_process_;
     }
 
+    [[nodiscard]]
+    util::source_location const &loc() const noexcept {
+        return loc_;
+    }
+
+    void loc(util::source_location const &loc) noexcept {
+        loc_ = loc;
+    }
+
     ~environment() {
         for (auto process: processes_) {
             if (!process->complete()) {
@@ -310,15 +337,13 @@ private:
     
     friend struct basic_process_data;
 
-    template <awaitable A, typename Exception>
-    friend struct awaitable_wrapper;
-
     std::unordered_set<memory::ptr<basic_process_data>> processes_;
     process_handle current_process_ = nullptr;
+    util::source_location loc_;
 };
 
 inline
-void basic_process_data::bind_(environment *env, priority_type priority, util::source_location awaited) {
+void basic_process_data::bind_(environment *env, priority_type priority) {
     if (env_) {
         if (env_ != env)
             throw std::runtime_error("cannot bind an already bound process to another environment.");
@@ -328,7 +353,8 @@ void basic_process_data::bind_(environment *env, priority_type priority, util::s
     }
     
     env_ = env;
-    awaited_ = awaited;
+    awaited_ = env_->loc();
+    parent_ = env_->current_process();
 
     if (priority_ == priority_consts::inherit)
         priority_ = priority;
@@ -552,8 +578,8 @@ struct process {
         return *this;
     }
 
-    void await_bind(environment *env, priority_type priority = 0 /* , source_location loc */) {
-        pdata_->bind_(env, priority, {} /* loc */);
+    void await_bind(environment *env, priority_type priority = 0) {
+        pdata_->bind_(env, priority);
     }
 
     bool await_ready() const noexcept {
@@ -638,11 +664,10 @@ public:
         > {
     
         template <typename ...Args>
-        promise_type(Args && .../* args */) {
-            // TODO extract source loc
-
+        promise_type(Args && ...args) {
+            auto loc = util::extract_first_type<util::source_location>(args...);
             auto coro = std::coroutine_handle<promise_type>::from_promise(*this);
-            pdata_ = new process_data_type(coro, /* loc */ {});
+            pdata_ = new process_data_type(coro, loc);
         }
 
         process get_return_object() {
@@ -656,7 +681,6 @@ public:
                 std::rethrow_exception(std::current_exception());
             }
             catch (interrupted_exception & /* ex */) {
-                // it is fine
             }
             catch (...) {
                 std::rethrow_exception(std::current_exception());
@@ -664,20 +688,25 @@ public:
         }
 
         template <awaitable A>
-        auto await_transform(A &&a) {
+        auto await_transform(
+            A &&a,
+            util::source_location const loc = util::source_location::current()) {
             // co_await (A{});
             // A{} is alive throughout the co_await expression
             // therefore, it is safe to return keep a reference to it
 
             auto result = awaitable_wrapper<A, interrupted_exception>(
                 a, pdata_.get(), pdata_->env()->current_process());
+            pdata_->env()->loc(loc);
             a.await_bind(pdata_->env(), pdata_->priority());
             return result;
         }
 
         template <typename T>
-        auto await_transform(await_transform_extender<T> const &a) {
-            return a.await_transform(pdata_.get());
+        auto await_transform(
+            await_transform_extender<T> const &a,
+            util::source_location const loc = util::source_location::current()) {
+            return a.await_transform(pdata_.get(), loc);
         }
 
         auto await_transform(this_process) noexcept {

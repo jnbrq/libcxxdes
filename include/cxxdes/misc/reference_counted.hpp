@@ -58,19 +58,12 @@ private:
     mutable std::size_t count_ = 0;
 };
 
-template <typename T>
-concept reference_counted = requires (T t) {
-    { t.ref() };
-    { t.unref() };
-    { t.ref_count() };
-};
-
 /**
  * @brief Pointer type to be used with reference counted objects.
  * 
  * @tparam T 
  */
-template <reference_counted T>
+template <typename T>
 struct ptr {
     ptr() noexcept = default;
 

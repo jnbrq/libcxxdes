@@ -11,7 +11,7 @@ namespace core {
 template <>
 struct await_transform_extender<_get_env_tag> {
     template <typename ProcessData>
-    auto await_transform(ProcessData *pdata) const noexcept {
+    auto await_transform(ProcessData *pdata, util::source_location const loc = util::source_location::current()) const noexcept {
         return immediately_return{pdata->env()};
     }
 };

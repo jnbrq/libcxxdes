@@ -47,6 +47,8 @@ struct source_location {
         return valid();
     }
 
+    [[nodiscard]]
+    static
     source_location current(
         const char * const function_name = __builtin_FUNCTION(),
         const char * const file = __builtin_FILE(),
@@ -55,6 +57,30 @@ struct source_location {
         return source_location{ function_name, file, line };
     }
 };
+
+namespace detail {
+
+template <typename T>
+struct extract_first_type_tag {
+    template <typename ...Rest>
+    constexpr T operator()(const T &t, const Rest & ...rest) const {
+        return t;
+    }
+
+    template <typename Head, typename ...Rest>
+    constexpr T operator()(const Head &, const Rest &...rest) const {
+        return operator()(rest...);
+    }
+
+    constexpr T operator()() const {
+        return {};
+    }
+};
+
+} /* namespace detail */
+
+template <typename T>
+inline constexpr detail::extract_first_type_tag<T> extract_first_type;
 
 } /* namespace util */
 } /* namespace cxxdes */
