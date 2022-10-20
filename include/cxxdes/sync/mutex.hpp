@@ -13,7 +13,7 @@
 
 #include <queue>
 #include <cxxdes/sync/event.hpp>
-#include <cxxdes/core/process.hpp>
+#include <cxxdes/core/core.hpp>
 #include <cxxdes/misc/utils.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
@@ -42,16 +42,18 @@ struct mutex {
             return *this;
         }
 
+        [[nodiscard]]
         bool valid() const noexcept {
             return x_ != nullptr;
         }
 
+        [[nodiscard]]
         operator bool() const noexcept {
             return valid();
         }
 
         [[nodiscard("expected usage: co_await handle.release()")]]
-        process<> release() {
+        unique_process<> release() {
             if (!valid())
                 throw std::runtime_error("called release() on invalid mutex handle");
             
@@ -71,7 +73,7 @@ struct mutex {
     };
 
     [[nodiscard("expected usage: co_await mtx.acquire()")]]
-    process<handle> acquire() {
+    unique_process<handle> acquire() {
         while (true) {
             if (!owned_)
                 break ;

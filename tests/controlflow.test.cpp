@@ -114,21 +114,3 @@ TEST(ControlFlowTest, Compositions2) {
 
     test{}.run();
 }
-
-TEST(ControlFlowTest, AwaitableFactory) {
-    struct factory_test {
-        process<void> await() {
-            co_await delay(100);
-        }
-    };
-
-    CXXDES_SIMULATION(test) {
-        process<> co_main() {
-            auto f = factory_test{};
-            co_await f;
-            EXPECT_EQ(now(), 100);
-        }
-    };
-
-    test{}.run();
-}

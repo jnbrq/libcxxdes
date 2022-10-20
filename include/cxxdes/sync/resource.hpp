@@ -11,7 +11,7 @@
 #ifndef CXXDES_SYNC_RESOURCE_HPP_INCLUDED
 #define CXXDES_SYNC_RESOURCE_HPP_INCLUDED
 
-#include <cxxdes/core/process.hpp>
+#include <cxxdes/core/core.hpp>
 #include <cxxdes/sync/semaphore.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
@@ -40,16 +40,18 @@ struct resource {
             return *this;
         }
 
+        [[nodiscard]]
         bool valid() const noexcept {
             return x_ != nullptr;
         }
-
+        
+        [[nodiscard]]
         operator bool() const noexcept {
             return valid();
         }
 
         [[nodiscard("expected usage: co_await resource_handle.release()")]]
-        process<> release() {
+        unique_process<> release() {
             if (!valid())
                 throw std::runtime_error("called release() on invalid resource handle");
             
@@ -72,7 +74,7 @@ struct resource {
     }
 
     [[nodiscard("expected usage: co_await resource.acquire()")]]
-    process<handle> acquire() {
+    unique_process<handle> acquire() {
         co_await s_.down();
         co_return handle(this);
     }

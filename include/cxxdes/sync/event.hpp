@@ -13,7 +13,7 @@
 
 #include <vector>
 #include <stdexcept>
-#include <cxxdes/core/token.hpp>
+#include <cxxdes/core/core.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
 #ifdef CXXDES_DEBUG_SYNC_EVENT
@@ -48,12 +48,9 @@ struct wake_awaitable {
     }
 
     bool await_ready() const noexcept { return false; }
-    void await_suspend(coro_handle current_coro);
+    void await_suspend(process_handle);
     token *await_token() const noexcept { return tkn_; }
-
-    void await_resume() const noexcept {
-        CXXDES_DEBUG_MEMBER_FUNCTION;
-    }
+    void await_resume(no_return_value_tag = {}) const noexcept {  }
 
 private:
     event *evt_ = nullptr;
@@ -83,12 +80,9 @@ struct wait_awaitable {
     }
 
     bool await_ready() const noexcept { return false; }
-    void await_suspend(coro_handle current_coro);
+    void await_suspend(process_handle phandle);
     token *await_token() const noexcept { return tkn_; }
-
-    void await_resume() const noexcept {
-        CXXDES_DEBUG_MEMBER_FUNCTION;
-    }
+    void await_resume(no_return_value_tag = {}) const noexcept {  }
 
 private:
     event *evt_ = nullptr;
@@ -123,7 +117,7 @@ private:
     std::vector<token *> tokens_;
 };
 
-inline void wake_awaitable::await_suspend(coro_handle current_coro) {
+inline void wake_awaitable::await_suspend(process_handle phandle) {
     CXXDES_DEBUG_MEMBER_FUNCTION;
 
     for (auto tkn: evt_->tokens_) {
@@ -133,14 +127,14 @@ inline void wake_awaitable::await_suspend(coro_handle current_coro) {
 
     evt_->tokens_.clear();
 
-    tkn_ = new token(env_->now() + latency_, priority_, current_coro);
+    tkn_ = new token(env_->now() + latency_, priority_, phandle);
     env_->schedule_token(tkn_);
 }
 
-inline void wait_awaitable::await_suspend(coro_handle current_coro) {
+inline void wait_awaitable::await_suspend(process_handle phandle) {
     CXXDES_DEBUG_MEMBER_FUNCTION;
     
-    tkn_ = new token(latency_, priority_, current_coro);
+    tkn_ = new token(latency_, priority_, phandle);
     evt_->tokens_.push_back(tkn_);
 }
 

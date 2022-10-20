@@ -18,7 +18,7 @@
 #include <vector>
 #include <iterator>
 #include <algorithm>
-#include <cxxdes/core/process.hpp>
+#include <cxxdes/core/core.hpp>
 #include <cxxdes/misc/utils.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
@@ -48,7 +48,7 @@ struct any_all_helper {
                 // inherit the output_event features
                 completion_tkn->time += tkn->time;
                 completion_tkn->priority = tkn->priority;
-                completion_tkn->coro = tkn->coro;
+                completion_tkn->phandle = tkn->phandle;
                 env->schedule_token(completion_tkn.get());
                 completion_tkn = nullptr;
             }
@@ -85,10 +85,10 @@ struct any_all_helper {
             return Condition::operator()(total, remaining_);
         }
 
-        void await_suspend(coro_handle current_coro) {
+        void await_suspend(process_handle phandle) {
             CXXDES_DEBUG_MEMBER_FUNCTION;
 
-            tkn_ = new token(latency_, priority_, current_coro);
+            tkn_ = new token(latency_, priority_, phandle);
 
             auto handler = new custom_handler;
             handler->total = derived().count();
@@ -97,7 +97,7 @@ struct any_all_helper {
             handler->completion_tkn = tkn_;
 
             derived().apply([&](auto &a) {
-                a.await_suspend(current_coro);
+                a.await_suspend(phandle);
                 if (a.await_token())
                     a.await_token()->handler = handler;
             });
@@ -107,11 +107,9 @@ struct any_all_helper {
             return tkn_;
         }
 
-        void await_resume() {
+        void await_resume(no_return_value_tag = {}) {
             CXXDES_DEBUG_MEMBER_FUNCTION;
-            
-            // As we cannot return a value from compositions, no need call await_resume()
-            // derived().apply([&](auto &a) { a.await_resume(); });
+            derived().apply([&](auto &a) { a.await_resume(no_return_value_tag{}); });
         }
     private:
         std::size_t remaining_ = 0;
@@ -340,16 +338,18 @@ struct async_functor {
                 return true;
             }
 
-            void await_suspend(coro_handle) const noexcept {
+            void await_suspend(process_handle) const noexcept {
             }
 
             token *await_token() const noexcept {
                 return nullptr;
             }
 
-            auto await_resume() {
+            auto await_resume() const noexcept {
                 return p;
             }
+
+            void await_resume(no_return_value_tag) const noexcept {  }
         };
 
         return async_awaitable{p};

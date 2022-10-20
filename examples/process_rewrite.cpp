@@ -15,12 +15,12 @@ process<int> f() {
 }
 
 process<void> test() {
-    auto this_env = co_await this_process::get_environment();
+    auto this_env = co_await this_environment();
     co_await sequential(all_of(timeout(10), timeout(30)), timeout(5));
     fmt::print("from {}, now = {}\n", __PRETTY_FUNCTION__, this_env->now());
     auto result = co_await f();
     fmt::print("from {}, now = {} and result = {}\n", __PRETTY_FUNCTION__, this_env->now(), result);
-    auto priority = co_await this_process::get_priority();
+    auto priority = (co_await this_process())->priority();
     fmt::print("from {}, now = {} and priority = {}\n", __PRETTY_FUNCTION__, this_env->now(), priority);
 }
 

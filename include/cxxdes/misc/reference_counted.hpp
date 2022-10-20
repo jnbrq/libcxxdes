@@ -59,7 +59,11 @@ private:
 };
 
 template <typename T>
-concept reference_counted = std::is_base_of_v<reference_counted_base<T>, T>;
+concept reference_counted = requires (T t) {
+    { t.ref() };
+    { t.unref() };
+    { t.ref_count() };
+};
 
 /**
  * @brief Pointer type to be used with reference counted objects.
@@ -70,11 +74,12 @@ template <reference_counted T>
 struct ptr {
     ptr() noexcept = default;
 
-    ptr(T *p): ptr_{p} {
+    ptr(T *p) noexcept: ptr_{p} {
         if (ptr_) ptr_->ref();
     }
 
-    ptr(const ptr& other) {
+    ptr(const ptr& other) noexcept {
+        // noexcept, initially nullptr
         *this = other;
     }
 
@@ -104,6 +109,20 @@ struct ptr {
         return ptr_;
     }
 
+#define REFERENCE_COUNTED_PTR_IMPLEMENT_REL_OP(OPNAME) \
+    bool operator OPNAME (ptr const &other) const noexcept { \
+        return ptr_ OPNAME other.ptr_; \
+    }
+
+    REFERENCE_COUNTED_PTR_IMPLEMENT_REL_OP(==)
+    REFERENCE_COUNTED_PTR_IMPLEMENT_REL_OP(!=)
+    REFERENCE_COUNTED_PTR_IMPLEMENT_REL_OP(>)
+    REFERENCE_COUNTED_PTR_IMPLEMENT_REL_OP(>=)
+    REFERENCE_COUNTED_PTR_IMPLEMENT_REL_OP(<)
+    REFERENCE_COUNTED_PTR_IMPLEMENT_REL_OP(<=)
+
+#undef REFERENCE_COUNTED_PTR_IMPLEMENT_REL_OP
+
     bool valid() const noexcept {
         return ptr_ != nullptr;
     }
@@ -120,6 +139,30 @@ struct ptr {
         return ptr_;
     }
 
+    template <typename U>
+    memory::ptr<U> cast() noexcept {
+        return { static_cast<U *>(ptr_) };
+    }
+
+    template <typename U>
+    memory::ptr<const U> cast() const noexcept {
+        return { static_cast<U const *>(ptr_) };
+    }
+
+    template <typename U>
+    memory::ptr<U> dyncast() noexcept {
+        return { dynamic_cast<U *>(ptr_) };
+    }
+
+    template <typename U>
+    memory::ptr<const U> dyncast() const noexcept {
+        return { dynamic_cast<U const *>(ptr_) };
+    }
+
+    memory::ptr<const T> constcast() const noexcept {
+        return { (const T *) ptr_ };
+    }
+
     ~ptr() {
         if (ptr_) ptr_->unref();
     }
@@ -130,5 +173,16 @@ private:
 
 } /* namespace memory */
 } /* namespace cxxdes */
+
+#include <functional>
+
+namespace std {
+    template <typename T>
+    struct hash<cxxdes::memory::ptr<T>>: std::hash<const T *> {
+        auto operator()(const cxxdes::memory::ptr<T> &x) const {
+            return std::hash<const T *>::operator()(x.get());
+        }
+    };
+} /* namespace std */
 
 #endif /* CXXDES_MISC_REFERENCE_COUNTED_HPP_INCLUDED */

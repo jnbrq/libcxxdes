@@ -13,7 +13,7 @@
 
 #include <limits>
 #include <concepts>
-#include <cxxdes/core/process.hpp>
+#include <cxxdes/core/core.hpp>
 #include <cxxdes/sync/event.hpp>
 
 #include <cxxdes/debug/helpers.hpp>

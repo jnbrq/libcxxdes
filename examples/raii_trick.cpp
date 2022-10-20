@@ -1,4 +1,3 @@
-#define CXXDES_CO_WITH
 #include <cxxdes/cxxdes.hpp>
 #include <fmt/core.h>
 
@@ -15,7 +14,7 @@ CXXDES_SIMULATION(raii_trick) {
         co_await handle.release();
         */
 
-        fmt::print("p id = {}, priority = {}\n", id, co_await this_process::get_priority());
+        fmt::print("p id = {}, priority = {}\n", id, (co_await this_process())->priority());
 
         co_with(res) {
             co_await timeout(wait_time);

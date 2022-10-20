@@ -12,7 +12,7 @@ using namespace cxxdes::core;
 
 process<> p1() {
     fmt::print("p1.a\n");
-    auto env = co_await this_process::get_environment(); // it should not yield control here
+    auto env = co_await this_environment(); // it should not yield control here
     fmt::print("p1.b\n");
     co_await timeout(4);
     fmt::print("p1.c {}\n", env->now());

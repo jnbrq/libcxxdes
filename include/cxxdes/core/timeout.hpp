@@ -11,8 +11,8 @@
 #ifndef CXXDES_CORE_TIMEOUT_HPP_INCLUDED
 #define CXXDES_CORE_TIMEOUT_HPP_INCLUDED
 
+#include <cxxdes/core/core.hpp>
 #include <cxxdes/misc/time.hpp>
-#include <cxxdes/core/environment.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
 #ifdef CXXDES_DEBUG_CORE_TIMEOUT
@@ -41,11 +41,11 @@ struct timeout_base {
         return false;
     }
 
-    void await_suspend(coro_handle current_coro) {
+    void await_suspend(process_handle phandle) {
         CXXDES_DEBUG_MEMBER_FUNCTION;
 
         auto latency = derived().latency();
-        tkn_ = new token(env_->now() + latency, priority_, current_coro);
+        tkn_ = new token(env_->now() + latency, priority_, phandle);
         env_->schedule_token(tkn_);
     }
 
@@ -53,7 +53,7 @@ struct timeout_base {
         return tkn_;
     }
 
-    void await_resume() const noexcept {
+    void await_resume(no_return_value_tag = {}) const noexcept {
         CXXDES_DEBUG_MEMBER_FUNCTION;
     }
 
@@ -116,13 +116,15 @@ constexpr auto lazy_timeout(T &&t, priority_type priority = priority_consts::inh
             return true;
         }
 
-        void await_suspend(coro_handle) const noexcept {  }
+        void await_suspend(process_handle) const noexcept {  }
 
         token *await_token() const noexcept { return nullptr; }
 
         auto await_resume() {
             return instant_type{ { priority }, tsim };
         }
+
+        void await_resume(no_return_value_tag) {  }
     };
 
     return result_type{std::forward<T>(t), priority};

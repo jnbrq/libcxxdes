@@ -306,7 +306,8 @@ struct time_expr {
         return impl_->count(precision, unit);
     }
 
-    bool is_valid() const noexcept {
+    [[nodiscard]]
+    bool valid() const noexcept {
         return impl_;
     }
 

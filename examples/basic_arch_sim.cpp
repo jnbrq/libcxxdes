@@ -1,4 +1,3 @@
-#define CXXDES_CO_WITH
 #include <cxxdes/cxxdes.hpp>
 #include <fmt/core.h>
 
@@ -17,7 +16,7 @@ struct memory {
     }
 
     process<> load(addr_type addr) {
-        time_integral timestamp = (co_await this_process::get_environment())->now();
+        time_integral timestamp = (co_await this_environment())->now();
 
         // co_await timeout(extra_latency_); // additional latency to be added here
         co_with(mtx_) {

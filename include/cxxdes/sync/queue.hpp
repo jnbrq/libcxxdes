@@ -14,7 +14,7 @@
 #include <queue>
 #include <cxxdes/core/timeout.hpp>
 #include <cxxdes/core/compositions.hpp>
-#include <cxxdes/core/process.hpp>
+#include <cxxdes/core/core.hpp>
 #include <cxxdes/sync/event.hpp>
 
 #include <cxxdes/debug/helpers.hpp>

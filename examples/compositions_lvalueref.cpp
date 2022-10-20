@@ -35,13 +35,13 @@ CXXDES_SIMULATION(async_example) {
             co_await p;
 
             auto f1 = [](process<int> p) -> process<void> {
-                auto env = co_await this_process::get_environment();
+                auto env = co_await this_environment();
                 co_await p;
                 fmt::print("f1: now = {}\n", env->now());
             }(p);
 
             auto f2 = [](process<int> p) -> process<void> {
-                auto env = co_await this_process::get_environment();
+                auto env = co_await this_environment();
                 co_await p;
                 fmt::print("f2: now = {}\n", env->now());
             }(p);

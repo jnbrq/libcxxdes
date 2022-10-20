@@ -7,7 +7,7 @@ using namespace cxxdes::core;
 
 CXXDES_SIMULATION(example) {
     process<int> f(int x) {
-        fmt::print("x = {}, priority = {}\n", x, co_await this_process::get_priority());
+        fmt::print("x = {}, priority = {}\n", x, (co_await this_process())->priority());
         std::cout.flush();
         co_return x;
     }

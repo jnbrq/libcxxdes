@@ -32,6 +32,30 @@ namespace util {
 
 struct empty_type {  };
 
+struct source_location {
+    const char * function_name = nullptr;
+    const char * file = nullptr;
+    unsigned long line = 0;
+
+    [[nodiscard]]
+    bool valid() const noexcept {
+        return file != nullptr;
+    }
+
+    [[nodiscard]]
+    operator bool() const noexcept {
+        return valid();
+    }
+
+    source_location current(
+        const char * const function_name = __builtin_FUNCTION(),
+        const char * const file = __builtin_FILE(),
+        unsigned long const line = __builtin_LINE()
+    ) {
+        return source_location{ function_name, file, line };
+    }
+};
+
 } /* namespace util */
 } /* namespace cxxdes */
 

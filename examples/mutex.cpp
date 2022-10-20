@@ -1,4 +1,3 @@
-#define CXXDES_CO_WITH
 #include <cxxdes/cxxdes.hpp>
 #include <fmt/core.h>
 #include <iostream>
