@@ -1,13 +1,8 @@
-# TODO List
+# TODO List for libcxxdes
 
-## Basic cache hierarchy
-
-Question: Why a cache hierarchy?
-
-1. Not much different than using explicit scratchpads and globally-understood mechanism. For simulation purposes, they work fine. One can simply extend to explicitly-managed mechanisms. We leave the question of workload-dependent caches later.
-2. Easy to implement structure. Plays well with double-buffered scratchpads. (do we really need double buffered scratchpads?)
-3. Composable. Cache hierarchy naturally fit in the hierarchical design that we talk about.
-
-## A simple systolic array model
-
-Take a look at ScaleSim for the details of such a model.
+1. Support priority resources. The infrastructure is already there, you only need to figure out a nice way to delegate the `.priority()` to `co_with (x) {  }`.
+2. Make interrupts with a generic interrupt parameter. Idea: store the exception object with interrupts. Use this idea to implement preemptive resources.
+3. Implement a container object.
+4. Bring `simpy` examples in C++.
+5. How to implement a real time environment? Do we even need a real time environment?
+6. Write proper documentation.
