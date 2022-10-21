@@ -542,7 +542,7 @@ struct process {
         return pdata_->interrupted();
     }
 
-    priority_type priority(priority_type priority) const noexcept {
+    priority_type priority() const noexcept {
         return pdata_->priority();
     }
 
@@ -560,7 +560,7 @@ struct process {
         return *this;
     }
 
-    priority_type return_priority(priority_type priority) const noexcept {
+    priority_type return_priority() const noexcept {
         return return_.priority;
     }
 
@@ -695,8 +695,11 @@ public:
             // A{} is alive throughout the co_await expression
             // therefore, it is safe to return keep a reference to it
 
-            auto result = awaitable_wrapper<A, interrupted_exception>(
-                a, pdata_.get(), pdata_->env()->current_process());
+            auto result = awaitable_wrapper<A, interrupted_exception>{
+                a,
+                pdata_.get(),
+                pdata_->env()->current_process()
+            };
             pdata_->env()->loc(loc);
             a.await_bind(pdata_->env(), pdata_->priority());
             return result;

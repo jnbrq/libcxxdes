@@ -63,7 +63,7 @@ namespace detail {
 template <typename T>
 struct extract_first_type_tag {
     template <typename ...Rest>
-    constexpr T operator()(const T &t, const Rest & ...rest) const {
+    constexpr T operator()(const T &t, const Rest & ...) const {
         return t;
     }
 
