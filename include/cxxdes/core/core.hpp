@@ -120,7 +120,7 @@ struct basic_process_data: memory::reference_counted_base<basic_process_data> {
         return awaited_;
     }
 
-    void resume() const {
+    void resume() {
         if (coro_)
             return coro_.resume();
     }
