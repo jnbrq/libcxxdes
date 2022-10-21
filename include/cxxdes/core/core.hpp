@@ -17,27 +17,52 @@
 #include <optional>
 #include <queue>
 #include <unordered_set>
+#include <cstddef>
 
-#include <cxxdes/core/defs.hpp>
-#include <cxxdes/core/coroutine.hpp>
+#include <cxxdes/misc/time.hpp>
 #include <cxxdes/misc/utils.hpp>
 #include <cxxdes/misc/reference_counted.hpp>
 #include <cxxdes/misc/time.hpp>
 
+#if (defined(__APPLE__) && defined(__clang__) && ___clang_major__ <= 13) || (defined(__clang__) && __clang_major__ <= 13)
+#include <experimental/coroutine>
+
+namespace std {
+using namespace experimental;
+}
+
+#else
+#include <coroutine>
+#endif
 namespace cxxdes {
 namespace core {
 
 struct environment;
-
 struct basic_process_data;
+
 using process_handle = basic_process_data *;
 using const_process_handle = basic_process_data const *;
+using coro_handle = std::coroutine_handle<>;
 
 template <typename ReturnType, bool Unique>
 struct process;
 
 struct token_handler;
 struct token;
+
+using priority_type = std::intmax_t;
+using time_integral = std::intmax_t;
+using real_type = double;
+
+using time = time_utils::time<time_integral>;
+using time_utils::unitless_time;
+
+using time_expr = time_utils::time_expr<time_integral>;
+using time_units = time_utils::time_unit_type;
+
+namespace time_ops = time_utils::ops;
+
+constexpr auto one_second = time{1, time_units::seconds};
 
 namespace priority_consts {
 
@@ -469,7 +494,7 @@ struct process_data:
 
 template <awaitable A, typename Exception>
 struct awaitable_wrapper {
-    A &a;
+    A a;
     process_handle phandle_this = nullptr;
     process_handle phandle_old = nullptr;
     
@@ -691,17 +716,13 @@ public:
         auto await_transform(
             A &&a,
             util::source_location const loc = util::source_location::current()) {
-            // co_await (A{});
-            // A{} is alive throughout the co_await expression
-            // therefore, it is safe to return keep a reference to it
-
-            auto result = awaitable_wrapper<A, interrupted_exception>{
-                a,
+            auto result = awaitable_wrapper<std::remove_cvref_t<A>, interrupted_exception>{
+                std::forward<A>(a),
                 pdata_.get(),
                 pdata_->env()->current_process()
             };
             pdata_->env()->loc(loc);
-            a.await_bind(pdata_->env(), pdata_->priority());
+            result.a.await_bind(pdata_->env(), pdata_->priority());
             return result;
         }
 
