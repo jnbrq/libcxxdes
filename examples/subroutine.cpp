@@ -2,19 +2,19 @@
 #include <fmt/core.h>
 
 template <typename T = int>
-struct task {
+struct subroutine {
     struct promise_type;
 
-    task() noexcept: h_{nullptr} {  }
+    subroutine() noexcept: h_{nullptr} {  }
 
-    task(task const &) noexcept = delete;
-    task &operator=(task const &other) noexcept = delete;
+    subroutine(subroutine const &) noexcept = delete;
+    subroutine &operator=(subroutine const &other) noexcept = delete;
 
-    task(task &&other) noexcept {
+    subroutine(subroutine &&other) noexcept {
         this = std::move(other);
     }
 
-    task &operator=(task &&other) noexcept {
+    subroutine &operator=(subroutine &&other) noexcept {
         if (this != &other) {
             std::swap(h_, other.h_);
         }
@@ -27,9 +27,9 @@ struct task {
         return true;
     }
 
-    std::coroutine_handle<> await_suspend(std::coroutine_handle<> prev) {
-        h_.promise().prev = prev;
-        return h_;
+    bool await_suspend(std::coroutine_handle<>) {
+        h_.resume();
+        return false;
     }
 
     T await_resume() {
@@ -43,14 +43,13 @@ struct task {
         h_.resume();
     }
 
-    ~task() {
+    ~subroutine() {
         if (h_)
             h_.destroy();
     }
 
     struct promise_type {
         std::coroutine_handle<promise_type> h = nullptr;
-        std::coroutine_handle<> prev = nullptr;
         T ret = T{};
         std::exception_ptr eptr = nullptr;
 
@@ -58,30 +57,12 @@ struct task {
             h = std::coroutine_handle<promise_type>::from_promise(*this);
         }
 
-        task get_return_object() noexcept {
-            return task(h);
+        subroutine get_return_object() noexcept {
+            return subroutine(h);
         }
 
         auto initial_suspend() noexcept -> std::suspend_always { return {}; }
-        auto final_suspend() noexcept {
-            struct final_awaitable {
-                std::coroutine_handle<> h;
-
-                bool await_ready() noexcept {
-                    return false;
-                }
-
-                std::coroutine_handle<> await_suspend(std::coroutine_handle<>) noexcept {
-                    if (not h)
-                        return std::noop_coroutine();
-                    return h;
-                }
-
-                void await_resume() noexcept {  }
-            };
-
-            return final_awaitable{prev};
-        }
+        auto final_suspend() noexcept -> std::suspend_always { return {}; }
 
         auto unhandled_exception() {
             eptr = std::current_exception();
@@ -96,16 +77,16 @@ private:
     std::coroutine_handle<promise_type> h_ = nullptr;
 
     explicit
-    task(std::coroutine_handle<promise_type> h) noexcept: h_{h} {
+    subroutine(std::coroutine_handle<promise_type> h) noexcept: h_{h} {
     }
 };
 
 
-task<int> f1() {
+subroutine<int> f1() {
     co_return 10;
 }
 
-task<int> f2() {
+subroutine<int> f2() {
     int x = co_await f1();
     for (int i = 0; i < 1'000'000'000; ++i)
         co_await f1();
