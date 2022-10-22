@@ -22,6 +22,7 @@
 #include <cxxdes/misc/time.hpp>
 #include <cxxdes/misc/utils.hpp>
 #include <cxxdes/misc/reference_counted.hpp>
+#include <cxxdes/misc/allocators.hpp>
 #include <cxxdes/misc/time.hpp>
 
 #if (defined(__APPLE__) && defined(__clang__) && ___clang_major__ <= 13) || (defined(__clang__) && __clang_major__ <= 13)
@@ -73,12 +74,12 @@ constexpr priority_type zero = static_cast<priority_type>(0);
 
 }
 
-struct token_handler: memory::reference_counted_base<token_handler> {
+struct token_handler: memory::custom_allocatable, memory::reference_counted_base<token_handler> {
     virtual void invoke(token *) {  }
     virtual ~token_handler() {  }
 };
 
-struct token: memory::reference_counted_base<token> {
+struct token final: memory::custom_allocatable, memory::reference_counted_base<token> {
     token(time_integral time, priority_type priority, process_handle phandle):
         time{time},
         priority{priority},
@@ -126,7 +127,7 @@ struct immediately_return {
 template <typename A>
 immediately_return(A &&a) -> immediately_return<std::remove_cvref_t<A>>;
 
-struct basic_process_data: memory::reference_counted_base<basic_process_data> {
+struct basic_process_data: memory::custom_allocatable, memory::reference_counted_base<basic_process_data> {
     basic_process_data(coro_handle coro, util::source_location created):
         coro_{coro}, created_{created} {
     }
@@ -327,6 +328,15 @@ struct environment {
     void loc(util::source_location const &loc) noexcept {
         loc_ = loc;
     }
+    
+    void memres(memory::memory_resource *memres) noexcept {
+        memres_ = memres;
+    }
+
+    [[nodiscard]]
+    memory::memory_resource *memres() const noexcept {
+        return memres_;
+    }
 
     ~environment() {
         for (auto process: processes_) {
@@ -365,6 +375,7 @@ private:
     std::unordered_set<memory::ptr<basic_process_data>> processes_;
     process_handle current_process_ = nullptr;
     util::source_location loc_;
+    memory::memory_resource *memres_ = std::pmr::get_default_resource();
 };
 
 inline
@@ -384,7 +395,7 @@ void basic_process_data::bind_(environment *env, priority_type priority) {
     if (priority_ == priority_consts::inherit)
         priority_ = priority;
     
-    auto start_token = new token{
+    auto start_token = new(env->memres()) token{
         env_->now() + latency_,
         priority_,
         this
@@ -615,7 +626,7 @@ struct process {
         if (completion_token_)
             throw std::runtime_error("process<> is already being awaited");
 
-        completion_token_ = new token{return_.latency, return_.priority, phandle};
+        completion_token_ = new(pdata_->env()->memres()) token{return_.latency, return_.priority, phandle};
         if (completion_token_->priority == priority_consts::inherit)
             completion_token_->priority = pdata_->priority_;
         pdata_->completion_token(completion_token_);
