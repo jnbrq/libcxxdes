@@ -127,14 +127,14 @@ inline void wake_awaitable::await_suspend(process_handle phandle) {
 
     evt_->tokens_.clear();
 
-    tkn_ = new token(env_->now() + latency_, priority_, phandle);
+    tkn_ = CXXDES_NEW(env_->memres()) token(env_->now() + latency_, priority_, phandle);
     env_->schedule_token(tkn_);
 }
 
 inline void wait_awaitable::await_suspend(process_handle phandle) {
     CXXDES_DEBUG_MEMBER_FUNCTION;
     
-    tkn_ = new token(latency_, priority_, phandle);
+    tkn_ = CXXDES_NEW(env_->memres()) token(latency_, priority_, phandle);
     evt_->tokens_.push_back(tkn_);
 }
 

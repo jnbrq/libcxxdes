@@ -15,6 +15,9 @@ void *operator new(size_t s) {
 
 void operator delete(void *) noexcept {
 }
+
+void operator delete(void *, std::size_t) noexcept {
+}
 #endif
 
 #include <cxxdes/cxxdes.hpp>
@@ -29,7 +32,7 @@ using namespace cxxdes::sync;
 CXXDES_SIMULATION(ping_pong) {
     ping_pong() {
         // env.memres(&memres);
-        env.memres(std::pmr::new_delete_resource());
+        // env.memres(std::pmr::new_delete_resource());
     }
 
     event a, b;
@@ -60,6 +63,6 @@ private:
 };
 
 int main() {
-    ping_pong{}.run_until(3000000);
+    ping_pong{}.run_until(300000);
     return 0;
 }

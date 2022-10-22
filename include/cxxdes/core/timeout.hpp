@@ -45,7 +45,7 @@ struct timeout_base {
         CXXDES_DEBUG_MEMBER_FUNCTION;
 
         auto latency = derived().latency();
-        tkn_ = new(env_->memres()) token(env_->now() + latency, priority_, phandle);
+        tkn_ = CXXDES_NEW(env_->memres()) token(env_->now() + latency, priority_, phandle);
         env_->schedule_token(tkn_);
     }
 

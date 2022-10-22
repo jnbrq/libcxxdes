@@ -395,7 +395,7 @@ void basic_process_data::bind_(environment *env, priority_type priority) {
     if (priority_ == priority_consts::inherit)
         priority_ = priority;
     
-    auto start_token = new(env->memres()) token{
+    auto start_token = CXXDES_NEW(env->memres()) token{
         env_->now() + latency_,
         priority_,
         this
@@ -626,7 +626,7 @@ struct process {
         if (completion_token_)
             throw std::runtime_error("process<> is already being awaited");
 
-        completion_token_ = new(pdata_->env()->memres()) token{return_.latency, return_.priority, phandle};
+        completion_token_ = CXXDES_NEW(pdata_->env()->memres()) token{return_.latency, return_.priority, phandle};
         if (completion_token_->priority == priority_consts::inherit)
             completion_token_->priority = pdata_->priority_;
         pdata_->completion_token(completion_token_);

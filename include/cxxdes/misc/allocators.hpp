@@ -1,6 +1,14 @@
 #ifndef CXXDES_MISC_MEMORY_HPP_INCLUDED
 #define CXXDES_MISC_MEMORY_HPP_INCLUDED
 
+// #define CXXDES_USE_CUSTOM_ALLOCATORS
+
+#ifdef CXXDES_USE_CUSTOM_ALLOCATORS
+#   define CXXDES_NEW(ALLOC) new(ALLOC)
+#else
+#   define CXXDES_NEW(ALLOC) new
+#endif
+
 #include <new>
 
 #if __has_include(<memory_resource>)
@@ -40,12 +48,14 @@ private:
     };
 
 public:
+#ifdef CXXDES_USE_CUSTOM_ALLOCATORS
     static void *operator new(
         std::size_t sz,
         std::align_val_t al,
         memory_resource *memres = std::pmr::get_default_resource()) {
         std::size_t const meta_sz = aligned_allocation_size(sizeof(metadata), (std::size_t) al);
-        void *p = memres->allocate(meta_sz + sz, (std::size_t) al);
+        sz += meta_sz;
+        void *p = memres->allocate(sz, (std::size_t) al);
         *((metadata *) p) = metadata{ memres, sz, (std::size_t) al };
         return ((std::byte *) p + meta_sz);
     }
@@ -66,6 +76,7 @@ public:
     static void operator delete(void *p) {
         custom_allocatable::operator delete(p, std::align_val_t{alignof(max_align_t)});
     }
+#endif
 };
 
 } /* namespace memory */

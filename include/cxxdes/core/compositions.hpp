@@ -88,9 +88,9 @@ struct any_all_helper {
         void await_suspend(process_handle phandle) {
             CXXDES_DEBUG_MEMBER_FUNCTION;
 
-            tkn_ = new(env_->memres()) token(latency_, priority_, phandle);
+            tkn_ = CXXDES_NEW(env_->memres()) token(latency_, priority_, phandle);
 
-            auto handler = new(env_->memres()) custom_handler;
+            auto handler = CXXDES_NEW(env_->memres()) custom_handler;
             handler->total = derived().count();
             handler->remaining = remaining_;
             handler->env = env_;
