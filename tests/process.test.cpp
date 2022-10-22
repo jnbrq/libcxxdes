@@ -220,9 +220,9 @@ TEST(ProcessTest, NotDanglingReference1) {
 
 TEST(ProcessTest, ReturnProcess) {
     CXXDES_SIMULATION(test) {
-        static process<void> g() {
+        static process<int> g() {
             co_await delay(5);
-            co_return ;
+            co_return 5;
         }
 
         auto f(int && /* t */) {
@@ -234,6 +234,7 @@ TEST(ProcessTest, ReturnProcess) {
             co_await p;
             EXPECT_EQ(now(), 5);
             EXPECT_TRUE(p.complete());
+            EXPECT_EQ(p.return_value(), 5);
         }
     };
 

@@ -473,6 +473,18 @@ protected:
     memory::ptr<token> completion_token_ = nullptr;
 };
 
+template <typename Derived, typename ReturnValue>
+struct process_return_value_mixin {
+    [[nodiscard]]
+    ReturnValue const &return_value() const noexcept {
+        return static_cast<Derived const *>(this)->pdata()->return_value();
+    }
+};
+
+template <typename Derived>
+struct process_return_value_mixin<Derived, void> {
+};
+
 } /* namespace detail */
 
 
@@ -520,7 +532,8 @@ template <typename T>
 struct await_transform_extender;
 
 template <typename ReturnType = void, bool Unique = false>
-struct process {
+struct process:
+    detail::process_return_value_mixin<process<ReturnType, Unique>, ReturnType> {
     using process_data_type = process_data<ReturnType, Unique>;
 
     explicit
@@ -528,14 +541,34 @@ struct process {
         pdata_{pdata} {
     }
 
-    process(process const &) requires (not Unique) = default;
-    process &operator=(process const &) requires (not Unique) = default;
+    process(process const &other) requires (not Unique) {
+        *this = other;
+    }
+
+    process &operator=(process const &other) requires (not Unique) {
+        if (this != &other) {
+            pdata_ = other.pdata_;
+            completion_token_ = nullptr;
+            return_ = other.return_;
+        }
+        return *this;
+    }
 
     process(process const &) requires (Unique) = delete;
     process &operator=(process const &) requires (Unique) = delete;
 
-    process(process &&) = default;
-    process &operator=(process &&) = default;
+    process(process &&other) {
+        *this = std::move(other);
+    }
+
+    process &operator=(process &&other) {
+        if (this != &other) {
+            pdata_ = std::move(other.pdata_);
+            std::swap(completion_token_, other.completion_token_);
+            std::swap(return_, return_);
+        }
+        return *this;
+    }
 
     ~process() {
         if (pdata_ && pdata_->ref_count() == 2 && !pdata_->started()) {
@@ -553,6 +586,10 @@ struct process {
         return pdata_;
     }
 
+    process_data_type const *pdata() const noexcept {
+        return pdata_.get();
+    }
+
     [[nodiscard]]
     bool complete() const noexcept {
         return pdata_->complete();
@@ -567,6 +604,7 @@ struct process {
         return pdata_->interrupted();
     }
 
+    [[nodiscard]]
     priority_type priority() const noexcept {
         return pdata_->priority();
     }
@@ -576,6 +614,7 @@ struct process {
         return *this;
     }
 
+    [[nodiscard]]
     time_integral latency() const noexcept {
         return pdata_->latency();
     }
@@ -585,6 +624,7 @@ struct process {
         return *this;
     }
 
+    [[nodiscard]]
     priority_type return_priority() const noexcept {
         return return_.priority;
     }
@@ -594,6 +634,7 @@ struct process {
         return *this;
     }
 
+    [[nodiscard]]
     time_integral return_latency() const noexcept {
         return return_.latency;
     }
@@ -613,7 +654,7 @@ struct process {
 
     void await_suspend(process_handle phandle) {
         if (completion_token_)
-            throw std::runtime_error("process<> is already being awaited");
+            throw std::runtime_error("process<> is already being awaited!");
 
         completion_token_ = new token{return_.latency, return_.priority, phandle};
         if (completion_token_->priority == priority_consts::inherit)
