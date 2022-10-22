@@ -18,6 +18,7 @@
 #include <queue>
 #include <unordered_set>
 #include <cstddef>
+#include <memory>
 
 #include <cxxdes/misc/time.hpp>
 #include <cxxdes/misc/utils.hpp>
@@ -126,6 +127,56 @@ struct immediately_return {
 template <typename A>
 immediately_return(A &&a) -> immediately_return<std::remove_cvref_t<A>>;
 
+struct interrupted_exception: std::exception {
+    const char *what() const noexcept override {
+        return "interrupted.";
+    }
+};
+
+struct exception_container {
+    template <typename T>
+    void assign(T &&t) {
+        impl_.reset(new impl<std::remove_cvref_t<T>>(std::forward<T>(t)));
+    }
+
+    [[nodiscard]]
+    bool valid() const noexcept {
+        return impl_.operator bool();
+    }
+
+    [[nodiscard]]
+    operator bool() const noexcept {
+        return valid();
+    }
+
+    void raise() {
+        impl_->raise();
+    }
+
+private:
+    struct underlying_type {
+        virtual void raise() = 0;
+        virtual ~underlying_type() = default;
+    };
+
+    template <typename T>
+    struct impl: underlying_type {
+        T t;
+
+        template <typename U>
+        impl(U &&u): t{std::forward<U>(u)} {
+        }
+
+        void raise() override {
+            throw t;
+        }
+
+        virtual ~impl() = default;
+    };
+
+    std::unique_ptr<underlying_type> impl_ = nullptr;
+};
+
 struct basic_process_data: memory::reference_counted_base<basic_process_data> {
     basic_process_data(coro_handle coro, util::source_location created):
         coro_{coro}, created_{created} {
@@ -203,13 +254,21 @@ struct basic_process_data: memory::reference_counted_base<basic_process_data> {
         return complete_;
     }
 
-    void interrupt() noexcept {
-        interrupt_ = true;
+    template <typename T = interrupted_exception>
+    void interrupt(T &&t = interrupted_exception{}) noexcept {
+        exception_.assign(std::forward<T>(t));
     }
 
     [[nodiscard]]
     bool interrupted() const noexcept {
-        return interrupt_;
+        return exception_.valid();
+    }
+
+    void raise_interrupt() {
+        // clear exception_, the exception might be caught
+        // we may need to interrupt again later
+        auto exception = std::move(exception_);
+        exception.raise();
     }
 
     virtual ~basic_process_data() = default;
@@ -231,7 +290,7 @@ protected:
     time_integral latency_ = 0;
     memory::ptr<basic_process_data> parent_;
     bool complete_ = false;
-    bool interrupt_ = false;
+    exception_container exception_;
 };
 
 struct environment {
@@ -408,6 +467,8 @@ namespace detail {
 
 template <typename ReturnType = void>
 struct process_data_return_value_mixin {
+    using return_type = ReturnType;
+
     template <typename ...Args>
     void emplace_return_value(Args && ...args) {
         return_value_.emplace(std::forward<Args>(args)...);
@@ -433,6 +494,7 @@ protected:
 
 template <>
 struct process_data_return_value_mixin<void> {
+    using return_type = void;
 };
 
 template <bool Unique = false>
@@ -504,7 +566,7 @@ struct process_data:
     virtual ~process_data() = default;
 };
 
-template <awaitable A, typename Exception>
+template <awaitable A>
 struct awaitable_wrapper {
     A a;
     process_handle phandle_this = nullptr;
@@ -520,7 +582,7 @@ struct awaitable_wrapper {
 
     auto await_resume() {
         if (phandle_this->interrupted())
-            throw Exception{};
+            phandle_this->raise_interrupt();
         return a.await_resume();
     }
 };
@@ -583,7 +645,7 @@ struct process:
 
     [[nodiscard]]
     operator bool() const noexcept {
-        return pdata_;
+        return valid();
     }
 
     process_data_type const *pdata() const noexcept {
@@ -595,8 +657,9 @@ struct process:
         return pdata_->complete();
     }
 
-    void interrupt() noexcept {
-        pdata_->interrupt();
+    template <typename T = interrupted_exception>
+    void interrupt(T &&t = interrupted_exception{}) noexcept {
+        pdata_->interrupt(std::forward<T>(t));
     }
 
     [[nodiscard]]
@@ -747,6 +810,7 @@ public:
                 std::rethrow_exception(std::current_exception());
             }
             catch (interrupted_exception & /* ex */) {
+                do_return();
             }
             catch (...) {
                 std::rethrow_exception(std::current_exception());
@@ -757,7 +821,7 @@ public:
         auto await_transform(
             A &&a,
             util::source_location const loc = util::source_location::current()) {
-            auto result = awaitable_wrapper<std::remove_cvref_t<A>, interrupted_exception>{
+            auto result = awaitable_wrapper<std::remove_cvref_t<A>>{
                 std::forward<A>(a),
                 pdata_.get(),
                 pdata_->env()->current_process()
@@ -800,12 +864,6 @@ public:
         }
     private:
         memory::ptr<process_data_type> pdata_;
-
-        struct interrupted_exception: std::exception {
-            const char *what() const noexcept override {
-                return "interrupted.";
-            }
-        };
     };
 };
 
