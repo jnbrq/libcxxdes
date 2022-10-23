@@ -35,6 +35,8 @@ struct subroutine {
             return std::move(*promise.ret);
     }
 
+    coroutine<ReturnType> as_coroutine() &&;
+
     ~subroutine() {
         if (h_) h_.destroy();
     }

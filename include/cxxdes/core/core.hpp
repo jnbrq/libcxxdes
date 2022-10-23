@@ -70,7 +70,7 @@ using const_coroutine_info_ptr = memory::ptr<const coroutine_info>;
 
 struct environment;
 
-template <typename ReturnType, bool Unique>
+template <typename ReturnType = void, bool Unique = false>
 struct coroutine;
 
 template <typename ReturnType>

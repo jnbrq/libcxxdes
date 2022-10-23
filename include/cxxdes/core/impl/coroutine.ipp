@@ -14,7 +14,7 @@ struct coroutine_return_value_mixin<Derived, void> {
 
 } /* namespace detail */
 
-template <typename ReturnType = void, bool Unique = false>
+template <typename ReturnType, bool Unique>
 struct coroutine:
     detail::coroutine_return_value_mixin<coroutine<ReturnType, Unique>, ReturnType> {
     using coroutine_info_type = coroutine_info_<ReturnType, Unique>;
@@ -257,3 +257,12 @@ public:
 
 template <typename ReturnValue = void>
 using unique_coroutine = coroutine<ReturnValue, true>;
+
+template <typename ReturnType>
+coroutine<ReturnType> subroutine<ReturnType>::as_coroutine() && {
+    if constexpr (std::is_same_v<ReturnType, void>)
+        co_await std::move(*this);
+    else {
+        co_return std::move(co_await std::move(*this));
+    }
+}

@@ -113,6 +113,25 @@ CXXDES_SIMULATION(subroutines2) {
     }
 };
 
+CXXDES_SIMULATION(subroutines3) {
+    subroutine<> foo() {
+        co_await delay(50);
+        co_return ;
+    }
+
+    coroutine<> bar() {
+        co_await delay(100);
+        co_return ;
+    }
+
+    coroutine<> co_main() {
+        // note: if subroutine is stored in a variable, use as std::move(s).as_coroutine()
+        co_await (foo().as_coroutine() && bar());
+        fmt::print("now = {}\n", now());
+        co_return ;
+    }
+};
+
 int main() {
     fmt::print("pitfall\n");
     pitfall().run();
@@ -125,5 +144,8 @@ int main() {
 
     fmt::print("subroutines2\n");
     subroutines2().run_for(500);
+
+    fmt::print("subroutines3\n");
+    subroutines3().run_for(500);
     return 0;
 }
