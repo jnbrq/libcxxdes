@@ -253,7 +253,7 @@ inline constexpr any_all_helper<all_of_condition>::functor all_of;
 struct sequential_helper {
     template <typename ...Ts>
     static process<void> seq_proc_tuple(Ts ...ts) {
-        ((co_await ts), ...);
+        ((co_await std::move(ts)), ...);
         co_return ;
     }
 
@@ -267,7 +267,7 @@ struct sequential_helper {
     template <typename ValueType>
     static process<void> seq_proc_vector(std::vector<ValueType> v) {
         for (auto &a: v)
-            co_await a;
+            co_await std::move(a);
         co_return;
     }
     
