@@ -139,7 +139,7 @@ protected:
     priority_type priority_;
 
     auto derived() const noexcept -> const auto & {
-        return static_cast<Derived &>(*this);
+        return static_cast<Derived const &>(*this);
     }
 };
 
