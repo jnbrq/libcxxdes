@@ -726,6 +726,10 @@ private:
 
 template <typename ReturnType = void>
 struct subroutine {
+    static_assert(
+        not std::is_same_v<ReturnType, void>,
+        "void-returning subroutines not implemented yet");
+
     struct promise_type;
 
     subroutine() noexcept: h_{nullptr} {  }
@@ -734,7 +738,7 @@ struct subroutine {
     subroutine &operator=(subroutine const &other) noexcept = delete;
 
     subroutine(subroutine &&other) noexcept {
-        this = std::move(other);
+        *this = std::move(other);
     }
 
     subroutine &operator=(subroutine &&other) noexcept {
@@ -747,17 +751,17 @@ struct subroutine {
         return true;
     }
 
-    bool await_suspend(std::coroutine_handle<>) {
+    void await_suspend(std::coroutine_handle<>) {
         auto &promise = h_.promise();
         promise.pdata_->push_coro_(h_);
-        return true;
     }
 
     ReturnType await_resume() {
         auto &promise = h_.promise();
-        if (promise.eptr_)
-            std::rethrow_exception(promise.eptr_);
-        return std::move(*promise.ret_);
+        if (promise.eptr)
+            std::rethrow_exception(promise.eptr);
+        
+        return std::move(*promise.ret);
     }
 
     ~subroutine() {
@@ -773,37 +777,14 @@ private:
         promise.pdata_ = pdata;
     }
 
-    template <typename Derived>
-    struct return_value_mixin {
-        template <typename T>
-        void return_value(T &&t) {
-            ret_.emplace(std::forward<T>(t));
-        }
-
-    protected:
-        std::optional<ReturnType> ret_;
-    };
-
-    template <typename Derived>
-    struct return_void_mixin {
-        void return_void() {
-        }
-    };
-
 public:
-
-    struct promise_type:
-        std::conditional_t<
-            std::is_same_v<ReturnType, void>,
-            return_void_mixin<promise_type>,
-            return_value_mixin<promise_type>
-        >, detail::basic_promise_type<promise_type> {
+    struct promise_type: detail::basic_promise_type<promise_type> {
         promise_type() {
-            h_ = std::coroutine_handle<promise_type>::from_promise(*this);
+            h = std::coroutine_handle<promise_type>::from_promise(*this);
         }
 
         subroutine get_return_object() noexcept {
-            return subroutine(h_);
+            return subroutine(h);
         }
 
         auto initial_suspend() noexcept -> std::suspend_always { return {}; }
@@ -821,12 +802,7 @@ public:
         }
 
         auto unhandled_exception() {
-            eptr_ = std::current_exception();
-        }
-
-        template <typename T>
-        void return_value(T &&t) {
-            ret_.emplace(std::forward<T>(t));
+            eptr = std::current_exception();
         }
 
         process_handle pdata() noexcept {
@@ -836,11 +812,19 @@ public:
         const_process_handle pdata() const noexcept {
             return pdata_;
         }
-    
-    protected:
-        std::coroutine_handle<promise_type> h_ = nullptr;
-        std::exception_ptr eptr_ = nullptr;
-        std::optional<ReturnType> ret_ = nullptr;
+
+        template <typename T>
+        void return_value(T &&t) {
+            ret.emplace(std::forward<T>(t));
+        }
+
+        template <typename>
+        friend struct subroutine;
+
+        std::coroutine_handle<promise_type> h = nullptr;
+        std::exception_ptr eptr = nullptr;
+        std::optional<ReturnType> ret;
+    private:
         basic_process_data *pdata_ = nullptr;
     };
 

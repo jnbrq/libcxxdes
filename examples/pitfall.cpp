@@ -62,7 +62,36 @@ CXXDES_SIMULATION(interrupts) {
     }
 };
 
+CXXDES_SIMULATION(subroutines) {
+    subroutine<int> bar() {
+        fmt::print("bar\n");
+        co_return 10;
+    }
+    
+    subroutine<int> foo() {
+        fmt::print("fooA\n");
+        fmt::print("i = {}\n", co_await bar());
+        fmt::print("fooB\n");
+        co_await delay(10);
+        co_return 20;
+    }
+
+    process<> co_main() {
+        fmt::print("co_mainA now {}\n", now());
+        fmt::print("j = {}\n", co_await foo());
+        fmt::print("co_mainB now = {}\n", now());
+        co_return ;
+    }
+};
+
 int main() {
-    interrupts{}.run_for(500);
+    fmt::print("pitfall\n");
+    pitfall().run();
+
+    fmt::print("interrupts\n");
+    interrupts().run_for(500);
+
+    fmt::print("subroutines\n");
+    subroutines().run();
     return 0;
 }
