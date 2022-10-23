@@ -73,6 +73,9 @@ struct environment;
 template <typename ReturnType = void, bool Unique = false>
 struct coroutine;
 
+template <typename ReturnValue = void>
+using unique_coroutine = coroutine<ReturnValue, true>;
+
 template <typename ReturnType>
 struct subroutine;
 

@@ -275,14 +275,13 @@ public:
     };
 };
 
-template <typename ReturnValue = void>
-using unique_coroutine = coroutine<ReturnValue, true>;
-
 template <typename ReturnType>
-coroutine<ReturnType> subroutine<ReturnType>::as_coroutine() && {
-    if constexpr (std::is_same_v<ReturnType, void>)
-        co_await std::move(*this);
-    else {
-        co_return std::move(co_await std::move(*this));
-    }
+unique_coroutine<ReturnType> subroutine<ReturnType>::as_coroutine() && {
+    return [](subroutine<ReturnType> s) -> unique_coroutine<ReturnType> {
+        if constexpr (std::is_same_v<ReturnType, void>)
+            co_await std::move(s);
+        else {
+            co_return std::move(co_await std::move(s));
+        }
+    }(std::move(*this));
 }
