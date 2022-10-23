@@ -4,21 +4,21 @@
 using namespace cxxdes::core;
 
 CXXDES_SIMULATION(return_value_example) {
-    process<int> foo() {
+    coroutine<int> foo() {
         co_return 4;
     }
 
-    process<int> bar(process<int> &&other) {
+    coroutine<int> bar(coroutine<int> &&other) {
         auto r = co_await other;
         std::cout << r << "\n";
         co_return r;
     }
-    process<int> test() {
+    coroutine<int> test() {
         co_await timeout(10);
         co_return 5;
     }
 
-    process<> co_main() {
+    coroutine<> co_main() {
         std::cout << co_await bar(foo()) << "!\n";
         auto result = co_await test();
         fmt::print("now = {}, value = {}\n", now(), result);

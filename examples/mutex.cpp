@@ -9,7 +9,7 @@ CXXDES_SIMULATION(mutex_example)
 {
     cxxdes::sync::mutex m;
 
-    process<> p(int idx, time_integral t) {
+    coroutine<> p(int idx, time_integral t) {
         co_with(m) {
             fmt::print("idx = {}, now = {}\n", idx, now());
             co_await delay(t);
@@ -17,7 +17,7 @@ CXXDES_SIMULATION(mutex_example)
         };
     }
 
-    process<> co_main() {
+    coroutine<> co_main() {
         using namespace cxxdes::core::time_ops;
         co_await all_of(
             p(1, 5).priority(5),

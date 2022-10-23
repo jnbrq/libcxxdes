@@ -5,24 +5,24 @@ using namespace cxxdes;
 using namespace cxxdes::core;
 
 CXXDES_SIMULATION(stack) {
-    process<> f1() {
+    coroutine<> f1() {
         co_await f2();
     }
 
-    process<> f2() {
+    coroutine<> f2() {
         co_await f3();
     }
 
-    process<> f3() {
+    coroutine<> f3() {
         co_await f4();
     }
 
-    process<> f4() {
+    coroutine<> f4() {
         co_await stacktrace();
     }
 
-    process<> stacktrace() {
-        process_handle h = co_await this_process();
+    coroutine<> stacktrace() {
+        coroutine_info_ptr h = (co_await this_coroutine()).cast<coroutine_info>();
         unsigned i = 0;
         while (h) {
             auto loc = h->loc_awaited();
@@ -38,7 +38,7 @@ CXXDES_SIMULATION(stack) {
         co_return ;
     }
 
-    process<> co_main() {
+    coroutine<> co_main() {
         co_await f1();
     }
 };

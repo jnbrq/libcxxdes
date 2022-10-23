@@ -4,18 +4,18 @@
 #ifndef CXXDES_INTERRUPTABLE
 #   define CXXDES_INTERRUPTABLE
 #endif
-// #define CXXDES_DEBUG_CORE_PROCESS
+// #define CXXDES_DEBUG_CORE_coroutine
 #include <cxxdes/cxxdes.hpp>
 
 using namespace cxxdes::core;
 
-TEST(ProcessTest, BasicFunctionality) {
+TEST(coroutineTest, BasicFunctionality) {
     CXXDES_SIMULATION(test) {
-        process<int> foo() {
+        coroutine<int> foo() {
             co_return 10;
         }
 
-        process<> co_main() {
+        coroutine<> co_main() {
             auto r = co_await foo();
             EXPECT_EQ(r, 10);
         }
@@ -24,14 +24,14 @@ TEST(ProcessTest, BasicFunctionality) {
     test{}.run();
 }
 
-TEST(ProcessTest, OutOfScope) {
+TEST(coroutineTest, OutOfScope) {
     CXXDES_SIMULATION(test) {
-        process<int> foo() {
+        coroutine<int> foo() {
             co_await delay(10);
             co_return 10;
         }
 
-        process<> co_main() {
+        coroutine<> co_main() {
             {
                 auto p = foo();
                 co_await any_of(p, delay(1));
@@ -48,14 +48,14 @@ TEST(ProcessTest, OutOfScope) {
 }
 
 #if 0
-TEST(ProcessTest, ReturnValueInspection) {
+TEST(coroutineTest, ReturnValueInspection) {
     CXXDES_SIMULATION(test) {
-        process<int> foo() {
+        coroutine<int> foo() {
             co_await delay(10);
             co_return 10;
         }
 
-        process<> co_main() {
+        coroutine<> co_main() {
             auto p = foo();
             co_await any_of(p, delay(1));
             EXPECT_FALSE(p.is_complete());
@@ -76,35 +76,35 @@ TEST(ProcessTest, ReturnValueInspection) {
 }
 #endif
 
-TEST(ProcessTest, Latencies) {
+TEST(coroutineTest, Latencies) {
     CXXDES_SIMULATION(test) {
         const time_integral start_latency = 6;
-        const time_integral process_time = 5;
+        const time_integral coroutine_time = 5;
         const time_integral return_latency = 8;
 
-        process<int> f() {
+        coroutine<int> f() {
             EXPECT_EQ(now(), start_latency);
-            co_await delay(process_time);
-            EXPECT_EQ(now(), start_latency + process_time);
+            co_await delay(coroutine_time);
+            EXPECT_EQ(now(), start_latency + coroutine_time);
             co_return 5;
         }
 
-        process<> co_main() {
+        coroutine<> co_main() {
             co_await f().
                 latency(start_latency).
                 return_latency(return_latency);
-            EXPECT_EQ(now(), start_latency + process_time + return_latency);
+            EXPECT_EQ(now(), start_latency + coroutine_time + return_latency);
         }
     };
 
     test{}.run();
 }
 
-TEST(ProcessTest, Priorities) {
+TEST(coroutineTest, Priorities) {
     CXXDES_SIMULATION(test) {
         int counter = 100;
 
-        process<void> foo(int t, int expected) {
+        coroutine<void> foo(int t, int expected) {
             co_await delay(t);
 
             EXPECT_EQ(now(), t);
@@ -112,20 +112,20 @@ TEST(ProcessTest, Priorities) {
             counter = counter + 1;
         }
 
-        process<void> spawn_foos(int expected) {
+        coroutine<void> spawn_foos(int expected) {
             co_await async(foo(1, expected));
             co_await async(foo(2, expected));
             co_await async(foo(3, expected));
         }
 
-        process<void> reset_counter() {
+        coroutine<void> reset_counter() {
             for (int i = 0; i < 4; ++i) {
                 counter = 100;
                 co_await delay(1);
             }
         }
 
-        process<void> co_main() {
+        coroutine<void> co_main() {
             co_await all_of(
                 spawn_foos(100).priority(100),
                 spawn_foos(101).priority(101),
@@ -138,19 +138,19 @@ TEST(ProcessTest, Priorities) {
     test{}.run();
 }
 
-TEST(ProcessTest, Recursion) {
+TEST(coroutineTest, Recursion) {
     CXXDES_SIMULATION(test) {
-        process<int> factorial(int k) {
+        coroutine<int> factorial(int k) {
             if (k == 0)
                 co_return 1;
             co_return k * (co_await factorial(k - 1));
         }
 
-        process<int> foo() {
+        coroutine<int> foo() {
             co_return co_await factorial(6);
         }
         
-        process<> co_main() {
+        coroutine<> co_main() {
             auto r = co_await foo();
             EXPECT_EQ(r, 720);
         }
@@ -161,13 +161,13 @@ TEST(ProcessTest, Recursion) {
 
 #ifdef CXXDES_SANITIZE_ADDRESS
 
-TEST(ProcessTest, DanglingReference1) {
+TEST(coroutineTest, DanglingReference1) {
     CXXDES_SIMULATION(test) {
-        process<> co_main() {
+        coroutine<> co_main() {
             // this is created in the stack
             auto x = delay(5);
 
-            // when the async process starts to execute, x is already
+            // when the async coroutine starts to execute, x is already
             // destroyed; therefore, we have a dangling reference.
             co_await async.copy_rvalue(x);
             
@@ -180,9 +180,9 @@ TEST(ProcessTest, DanglingReference1) {
 
 #endif
 
-TEST(ProcessTest, DanglingReference1Solution) {
+TEST(coroutineTest, DanglingReference1Solution) {
     CXXDES_SIMULATION(test) {
-        process<> co_main() {
+        coroutine<> co_main() {
             // this is created in the stack
             auto x = delay(5);
 
@@ -196,19 +196,19 @@ TEST(ProcessTest, DanglingReference1Solution) {
     test{}.run();
 }
 
-TEST(ProcessTest, NotDanglingReference1) {
+TEST(coroutineTest, NotDanglingReference1) {
     CXXDES_SIMULATION(test) {
-        process<> foo() {
+        coroutine<> foo() {
             co_await delay(100);
         }
 
-        process<> co_main() {
+        coroutine<> co_main() {
             // this is created in the stack
             auto x = foo();
 
-            // when the async process starts to execute, x is already
+            // when the async coroutine starts to execute, x is already
             // destroyed.
-            // however, for processes, we have copy semantics and 
+            // however, for coroutinees, we have copy semantics and 
             co_await async(x);
             
             co_return ;
@@ -218,9 +218,9 @@ TEST(ProcessTest, NotDanglingReference1) {
     test{}.run();
 }
 
-TEST(ProcessTest, ReturnProcess) {
+TEST(coroutineTest, Returncoroutine) {
     CXXDES_SIMULATION(test) {
-        static process<int> g() {
+        static coroutine<int> g() {
             co_await delay(5);
             co_return 5;
         }
@@ -229,7 +229,7 @@ TEST(ProcessTest, ReturnProcess) {
             return g();
         }
 
-        process<> co_main() {
+        coroutine<> co_main() {
             auto p = f(1);
             co_await p;
             EXPECT_EQ(now(), 5);
@@ -243,17 +243,17 @@ TEST(ProcessTest, ReturnProcess) {
 
 #if 0
 
-TEST(ProcessTest, Interrupt) {
+TEST(coroutineTest, Interrupt) {
     CXXDES_SIMULATION(test) {
         bool flag = false;
 
-        process<> foo() {
+        coroutine<> foo() {
             while (true) {
                 co_await delay(10);
             }
         }
 
-        process<> bar() {
+        coroutine<> bar() {
             try {
                 while (true)
                     co_await delay(1000);
@@ -264,7 +264,7 @@ TEST(ProcessTest, Interrupt) {
             }
         }
 
-        process<> co_main() {
+        coroutine<> co_main() {
             while (true) {
                 co_await delay(10);
             }

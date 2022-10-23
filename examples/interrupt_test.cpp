@@ -1,6 +1,6 @@
 #define CXXDES_INTERRUPTABLE
-#define CXXDES_UNDER_PROCESS
-// #define CXXDES_DEBUG_CORE_PROCESS
+#define CXXDES_UNDER_coroutine
+// #define CXXDES_DEBUG_CORE_coroutine
 
 #include <vector>
 #include <cxxdes/cxxdes.hpp>
@@ -10,21 +10,21 @@ using namespace cxxdes::core;
 CXXDES_SIMULATION(test) {
     std::size_t test_id = 0;
 
-    static process<> foo() {
+    static coroutine<> foo() {
         while (true) {
             co_await delay(10);
         }
     }
 
-    static process<> bar() {
+    static coroutine<> bar() {
         co_await foo();
     }
 
-    process<> co_main() {
-        std::vector<process<>> ps {
-            _Process() { co_await ((foo() && foo()) || foo()); },
-            _Process() { co_await (foo(), foo()); },
-            _Process() { co_await bar(); }
+    coroutine<> co_main() {
+        std::vector<coroutine<>> ps {
+            _coroutine() { co_await ((foo() && foo()) || foo()); },
+            _coroutine() { co_await (foo(), foo()); },
+            _coroutine() { co_await bar(); }
         };
         co_await ps[test_id];
     }

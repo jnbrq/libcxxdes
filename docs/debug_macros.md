@@ -8,7 +8,7 @@ Newly added modules should use the following template to benefit from configurab
 #ifndef NEW_COMPONENT_INCLUDED
 #define NEW_COMPONENT_INCLUDED
 
-#include <cxxdes/core/process.hpp>
+#include <cxxdes/core/coroutine.hpp>
 // ... other cxxdes headers
 
 // AFTER including ALL the cxxdes headers, add the following snippet

@@ -36,8 +36,8 @@ CXXDES_SIMULATION(aloha) {
         return result_;
     }
 
-    process<> co_main() {
-        std::vector<process<void>> ps;
+    coroutine<> co_main() {
+        std::vector<coroutine<void>> ps;
         ps.reserve(cfg_.num_stations);
         for (std::size_t i = 0; i < cfg_.num_stations; ++i)
             ps.emplace_back(station(i));
@@ -48,7 +48,7 @@ CXXDES_SIMULATION(aloha) {
     }
 
 private:
-    process<void> station([[maybe_unused]] int id) {
+    coroutine<void> station([[maybe_unused]] int id) {
         exponential_rv interarrival{rand_seed(), cfg_.lambda / cfg_.num_stations};
 
         for (std::size_t i = 0; i < cfg_.packets_per_station; ++i) {

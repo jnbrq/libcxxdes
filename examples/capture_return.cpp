@@ -6,13 +6,13 @@ using namespace cxxdes::core;
 
 
 CXXDES_SIMULATION(example) {
-    process<int> f(int x) {
-        fmt::print("x = {}, priority = {}\n", x, (co_await this_process())->priority());
+    coroutine<int> f(int x) {
+        fmt::print("x = {}, priority = {}\n", x, (co_await this_coroutine())->priority());
         std::cout.flush();
         co_return x;
     }
 
-    process<> co_main() {
+    coroutine<> co_main() {
         int x;
 
         co_await (f(90) >> x);

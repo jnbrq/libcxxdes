@@ -11,7 +11,7 @@ concept awaitable = requires(
     T t,
     environment *env,
     priority_type inherited_priority,
-    coro_handle current_coro) {
+    coroutine_handle current_coro) {
     { t.await_bind(env, inherited_priority) };
     { t.await_ready() } -> std::same_as<bool>;
     { t.await_suspend(current_coro) };
@@ -23,7 +23,7 @@ concept awaitable = requires(
 } /* namespace cxxdes */
 ```
 
-Functions `bool T::await_ready()`, `void T::await_suspend()` and `void T::await_resume(coro_handle)` are the requirements of awaitables as defined by [the C++ standard](https://en.cppreference.com/w/cpp/language/coroutines), whereas `void T::await_bind(environment *, priority_type)` and `token *await_token()` are required by `libcxxdes`.
+Functions `bool T::await_ready()`, `void T::await_suspend()` and `void T::await_resume(coroutine_handle)` are the requirements of awaitables as defined by [the C++ standard](https://en.cppreference.com/w/cpp/language/coroutines), whereas `void T::await_bind(environment *, priority_type)` and `token *await_token()` are required by `libcxxdes`.
 These functions are called in a sequence throughout the lifetime of an awaitable object.
 
 ## Lifetime
@@ -46,13 +46,13 @@ That is, `f()` is alive even if the control flow passes to another coroutine.
 Furthermore, all the temporary objects created as part of the `co_await` expression are kept alive (even other awaitables):
 
 ```cpp
-// process<T> is awaitable
+// coroutine<T> is awaitable
 
-process<int> foo() {
+coroutine<int> foo() {
     co_return 4;
 }
 
-process<int> bar(process<int> &&other) {
+coroutine<int> bar(coroutine<int> &&other) {
     auto r = co_await other;
     std::cout << r << "\n";
     co_return r;
@@ -76,9 +76,9 @@ Coroutine objects, such as `foo()` in the example above, outlive the [promise](h
 
 ### await_bind
 
-As the first step of awaitable execution, `void T::await_bind(environment *, priority_type)` is called. This function passes the context to the awaitable object, for example, the environment parameter enables scheduling tokens. This function also takes a priority variable, in case the awaitable object needs to inherit priorities from the calling process.
+As the first step of awaitable execution, `void T::await_bind(environment *, priority_type)` is called. This function passes the context to the awaitable object, for example, the environment parameter enables scheduling tokens. This function also takes a priority variable, in case the awaitable object needs to inherit priorities from the calling coroutine.
 
-`await_bind()` is usually called by `<awaitable A> auto &&promise_type::await_transform(A &&a)` (defined in `include/cxxdes/core/process.hpp`). `await_transform` is also used to implement the `this_process` API, please check `include/cxxdes/core/process.hpp` for details.
+`await_bind()` is usually called by `<awaitable A> auto &&promise_type::await_transform(A &&a)` (defined in `include/cxxdes/core/coroutine.hpp`). `await_transform` is also used to implement the `this_coroutine` API, please check `include/cxxdes/core/coroutine.hpp` for details.
 
 In the later versions of the `libcxxdes`, additional information may be passed using the `await_bind` function. For example, it can be used to implement recoding stack traces for debugging.
 
@@ -90,7 +90,7 @@ In the later versions of the `libcxxdes`, additional information may be passed u
 
 ### await_suspend
 
-`void T::await_suspend(coro_handle)` is called in case the current coroutine is to be suspended. It usually creates a `token` object (with `new token{...}`) to resume the current coroutine, and it might also schedule it (as in the case of `cxxdes::core::timeout`). The newly created `token` object should be stored as part of the awaitable object to be returned later by `await_token`.
+`void T::await_suspend(coroutine_handle)` is called in case the current coroutine is to be suspended. It usually creates a `token` object (with `new token{...}`) to resume the current coroutine, and it might also schedule it (as in the case of `cxxdes::core::timeout`). The newly created `token` object should be stored as part of the awaitable object to be returned later by `await_token`.
 
 ### await_token
 

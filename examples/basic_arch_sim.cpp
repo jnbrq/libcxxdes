@@ -15,7 +15,7 @@ struct memory {
         latency_{latency}, capacity_{capacity}, next_{next} {
     }
 
-    process<> load(addr_type addr) {
+    coroutine<> load(addr_type addr) {
         time_integral timestamp = (co_await this_environment())->now();
 
         // co_await timeout(extra_latency_); // additional latency to be added here
@@ -45,8 +45,8 @@ struct memory {
         };
     }
 
-    process<> store(addr_type addr) {
-        // time_integral timestamp = (co_await this_process::get_environment())->now();
+    coroutine<> store(addr_type addr) {
+        // time_integral timestamp = (co_await this_coroutine::get_environment())->now();
 
         // co_await timeout(extra_latency_); // additional latency to be added here
         co_with(mtx_) {
@@ -78,7 +78,7 @@ CXXDES_SIMULATION(memory_test) {
     arch::memory mem1{10 /* latency */, 1024 /* capacity */, nullptr /* next level */};
     arch::memory mem2{1, 16, &mem1};
 
-    process<> co_main() {
+    coroutine<> co_main() {
         for (arch::addr_type i = 0; i < 32; ++i) {
             auto j = i % 16;
             auto t1 = now();

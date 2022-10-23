@@ -41,7 +41,7 @@ struct timeout_base {
         return false;
     }
 
-    void await_suspend(process_handle phandle) {
+    void await_suspend(coroutine_info_ptr phandle) {
         CXXDES_DEBUG_MEMBER_FUNCTION;
 
         auto latency = derived().latency();
@@ -116,7 +116,7 @@ constexpr auto lazy_timeout(T &&t, priority_type priority = priority_consts::inh
             return true;
         }
 
-        void await_suspend(process_handle) const noexcept {  }
+        void await_suspend(coroutine_info_ptr) const noexcept {  }
 
         token *await_token() const noexcept { return nullptr; }
 

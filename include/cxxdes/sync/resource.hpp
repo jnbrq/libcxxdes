@@ -22,7 +22,7 @@
 namespace cxxdes {
 namespace sync {
 
-using core::process;
+using core::coroutine;
 
 struct resource {
     struct handle {
@@ -51,7 +51,7 @@ struct resource {
         }
 
         [[nodiscard("expected usage: co_await resource_handle.release()")]]
-        unique_process<> release() {
+        unique_coroutine<> release() {
             if (!valid())
                 throw std::runtime_error("called release() on invalid resource handle");
             
@@ -74,7 +74,7 @@ struct resource {
     }
 
     [[nodiscard("expected usage: co_await resource.acquire()")]]
-    unique_process<handle> acquire() {
+    unique_coroutine<handle> acquire() {
         co_await s_.down();
         co_return handle(this);
     }

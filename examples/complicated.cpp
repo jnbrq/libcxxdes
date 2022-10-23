@@ -7,20 +7,20 @@ using namespace cxxdes::core;
 CXXDES_SIMULATION(complicated_example) {
     cxxdes::sync::event evt;
 
-    process<> p0() {
+    coroutine<> p0() {
         co_await timeout(5);
 
         co_return;
     }
 
-    process<> p1() {
+    coroutine<> p1() {
         co_await timeout(5);
         co_await evt.wake();
 
         co_return;
     }
 
-    process<> p2() {
+    coroutine<> p2() {
         fmt::print("p2.a now = {}\n", env.now());
         co_await (evt.wait() || timeout(8));
         fmt::print("p2.b now = {}\n", env.now());
@@ -33,7 +33,7 @@ CXXDES_SIMULATION(complicated_example) {
     }
 
     // A very bad example
-    process<> p3() {
+    coroutine<> p3() {
         co_await sequential(timeout(5), timeout(10), p0());
         fmt::print("p3.a now = {}\n", env.now());
 
@@ -41,7 +41,7 @@ CXXDES_SIMULATION(complicated_example) {
     }
 
     // Recursion example
-    process<> p4(unsigned k) {
+    coroutine<> p4(unsigned k) {
         if (k == 0)
             co_return ;
         
@@ -52,7 +52,7 @@ CXXDES_SIMULATION(complicated_example) {
         co_return;
     }
 
-    process<> p5() {
+    coroutine<> p5() {
         time_integral t = 0;
 
         fmt::print("Example 5: dynamic versions. now = {}\n", env.now());
@@ -69,7 +69,7 @@ CXXDES_SIMULATION(complicated_example) {
         co_return;
     }
 
-    process<> co_main() {
+    coroutine<> co_main() {
         fmt::print("Example 1: p1 and p2 working together. now = {}\n", env.now());
         co_await all_of(p1(), p2());
 

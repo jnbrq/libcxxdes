@@ -1,7 +1,7 @@
 /**
  * @file core.hpp
  * @author Canberk Sönmez (canberk.sonmez.409@gmail.com)
- * @brief process and environment.
+ * @brief coroutine and environment.
  * @date 2022-10-20
  * 
  * Copyright (c) Canberk Sönmez 2022
@@ -42,18 +42,18 @@ namespace core {
 
 namespace detail {
     template <typename Derived>
-    struct basic_promise_type;
+    struct await_ops_mixin;
 }
 
 struct environment;
-struct basic_process_data;
+struct coroutine_info;
 
-using process_handle = memory::ptr<basic_process_data>;
-using const_process_handle = memory::ptr<const basic_process_data>;
-using coro_handle = std::coroutine_handle<>;
+using coroutine_info_ptr = memory::ptr<coroutine_info>;
+using const_coroutine_info_ptr = memory::ptr<const coroutine_info>;
+using coroutine_handle = std::coroutine_handle<>;
 
 template <typename ReturnType, bool Unique>
-struct process;
+struct coroutine;
 
 template <typename ReturnType>
 struct subroutine;
@@ -90,7 +90,7 @@ struct token_handler: memory::reference_counted_base<token_handler> {
 };
 
 struct token: memory::reference_counted_base<token> {
-    token(time_integral time, priority_type priority, process_handle phandle):
+    token(time_integral time, priority_type priority, coroutine_info_ptr phandle):
         time{time},
         priority{priority},
         phandle{phandle} {  }
@@ -102,7 +102,7 @@ struct token: memory::reference_counted_base<token> {
     priority_type priority = 0;
 
     // coroutine to continue
-    process_handle phandle = nullptr;
+    coroutine_info_ptr phandle = nullptr;
 
     // token handler can be modified only by all and any compositions
     memory::ptr<token_handler> handler = nullptr;
@@ -115,7 +115,7 @@ concept awaitable = requires(
     T t,
     environment *env,
     priority_type inherited_priority,
-    process_handle phandle) {
+    coroutine_info_ptr phandle) {
     { t.await_bind(env, inherited_priority) };
     { t.await_ready() } -> std::same_as<bool>;
     { t.await_suspend(phandle) };
@@ -129,7 +129,7 @@ struct immediately_return {
     T return_value;
 
     bool await_ready() const noexcept { return true; }
-    void await_suspend(coro_handle) const noexcept {  }
+    void await_suspend(coroutine_handle) const noexcept {  }
     T await_resume() const { return return_value; }
 };
 
@@ -137,7 +137,6 @@ struct immediately_return {
 template <typename A>
 immediately_return(A &&a) -> immediately_return<std::remove_cvref_t<A>>;
 
-#if 0
 struct interrupted_exception: std::exception {
     interrupted_exception(std::string what = "interrupted."):
         what_{std::move(what)} {
@@ -150,13 +149,6 @@ struct interrupted_exception: std::exception {
 private:
     std::string what_;
 };
-#else
-struct interrupted_exception: std::exception {
-    const char *what() const noexcept override {
-        return "interrupted.";
-    }
-};
-#endif
 
 struct stopped_exception: std::exception {
     const char *what() const noexcept override {
@@ -208,16 +200,16 @@ private:
     std::unique_ptr<underlying_type> impl_ = nullptr;
 };
 
-struct basic_process_data: memory::reference_counted_base<basic_process_data> {
-    basic_process_data(util::source_location created):
+struct coroutine_info: memory::reference_counted_base<coroutine_info> {
+    coroutine_info(util::source_location created):
         created_{created} {
     }
 
-    basic_process_data(const basic_process_data &) = delete;
-    basic_process_data &operator=(const basic_process_data &) = delete;
+    coroutine_info(const coroutine_info &) = delete;
+    coroutine_info &operator=(const coroutine_info &) = delete;
 
-    basic_process_data(basic_process_data &&) = delete;
-    basic_process_data &operator=(basic_process_data &&) = delete;
+    coroutine_info(coroutine_info &&) = delete;
+    coroutine_info &operator=(coroutine_info &&) = delete;
 
     util::source_location const &loc_created() const noexcept {
         return created_;
@@ -229,10 +221,10 @@ struct basic_process_data: memory::reference_counted_base<basic_process_data> {
 
     void resume() {
         if (complete_)
-            // a token might try to resume an interrupted process
+            // a token might try to resume an interrupted coroutine
             return ;
 
-        // note that process<> does not pop the first process
+        // note that coroutine<> does not pop the first coroutine
         do {
             should_continue_ = false;
             auto top = call_stack_.top();
@@ -251,12 +243,12 @@ struct basic_process_data: memory::reference_counted_base<basic_process_data> {
     }
 
     [[nodiscard]]
-    process_handle parent() noexcept {
+    coroutine_info_ptr parent() noexcept {
         return parent_.get();
     }
 
     [[nodiscard]]
-    const_process_handle parent() const noexcept {
+    const_coroutine_info_ptr parent() const noexcept {
         return parent_.get();
     }
 
@@ -298,14 +290,14 @@ struct basic_process_data: memory::reference_counted_base<basic_process_data> {
         return exception_.valid();
     }
 
-    virtual ~basic_process_data() = default;
+    virtual ~coroutine_info() = default;
 
 protected:
     template <awaitable A>
     friend struct awaitable_wrapper;
 
     template <typename ReturnType, bool Unique>
-    friend struct process;
+    friend struct coroutine;
 
     template <typename ReturnType>
     friend struct subroutine;
@@ -321,7 +313,7 @@ protected:
         exception.raise();
     }
 
-    void push_coro_(coro_handle coro) {
+    void push_coro_(coroutine_handle coro) {
         // whenever there is a subroutine call, the
         // execution should keep moving further
         call_stack_.push(coro);
@@ -337,8 +329,8 @@ protected:
 
     void destroy_if_not_started_() {
         if (ref_count() == 2 && !started()) {
-            // if called, only two owners: (1) process<T> and (2) promise_type
-            // as the process is not started yet, promise_type will never
+            // if called, only two owners: (1) coroutine<T> and (2) promise_type
+            // as the coroutine is not started yet, promise_type will never
             // get destroyed, resulting in a memory leak
             call_stack_.top().destroy();
         }
@@ -346,13 +338,13 @@ protected:
 
 protected:
     environment *env_ = nullptr;
-    std::stack<coro_handle> call_stack_;
+    std::stack<coroutine_handle> call_stack_;
     bool should_continue_ = false;
     util::source_location created_;
     util::source_location awaited_;
     priority_type priority_ = priority_consts::inherit;
     time_integral latency_ = 0;
-    memory::ptr<basic_process_data> parent_;
+    memory::ptr<coroutine_info> parent_;
     bool complete_ = false;
     exception_container exception_;
 };
@@ -428,9 +420,9 @@ struct environment {
             tkn->handler->invoke(tkn);
         }
         else if (tkn->phandle) {
-            current_process_ = tkn->phandle;
+            current_coroutine_ = tkn->phandle;
             tkn->phandle->resume();
-            current_process_ = nullptr;
+            current_coroutine_ = nullptr;
         }
 
         tkn->unref();
@@ -438,8 +430,8 @@ struct environment {
         return true;
     }
 
-    process_handle current_process() const noexcept {
-        return current_process_;
+    coroutine_info_ptr current_coroutine() const noexcept {
+        return current_coroutine_;
     }
 
     [[nodiscard]]
@@ -448,18 +440,18 @@ struct environment {
     }
 
     ~environment() {
-        // it is not safe to iterate over the processes while
+        // it is not safe to iterate over the coroutinees while
         // individual coroutines might actively modify the
         // unoredered_set. move from it.
         // for a proper way to erase while iterating:
         //   https://en.cppreference.com/w/cpp/container/unordered_set/erase
         // sadly, we cannot apply this solution.
 
-        auto processes = std::move(processes_);
-        for (auto process: processes) {
-            if (!process->complete()) {
-                process->interrupt(stopped_exception{});
-                process->resume();
+        auto coroutinees = std::move(coroutinees_);
+        for (auto coroutine: coroutinees) {
+            if (!coroutine->complete()) {
+                coroutine->interrupt(stopped_exception{});
+                coroutine->resume();
             }
         }
 
@@ -486,27 +478,27 @@ private:
 
     std::priority_queue<token *, std::vector<token *>, token_comp> tokens_;
     
-    friend struct basic_process_data;
+    friend struct coroutine_info;
 
     template <typename ReturnType, bool Unique>
-    friend struct process;
+    friend struct coroutine;
 
     template <typename ReturnType>
     friend struct subroutine;
 
     template <typename Derived>
-    friend struct detail::basic_promise_type;
+    friend struct detail::await_ops_mixin;
 
-    std::unordered_set<memory::ptr<basic_process_data>> processes_;
-    process_handle current_process_ = nullptr;
+    std::unordered_set<memory::ptr<coroutine_info>> coroutinees_;
+    coroutine_info_ptr current_coroutine_ = nullptr;
     util::source_location loc_;
 };
 
 inline
-void basic_process_data::bind_(environment *env, priority_type priority) {
+void coroutine_info::bind_(environment *env, priority_type priority) {
     if (env_) {
         if (env_ != env)
-            throw std::runtime_error("cannot bind an already bound process to another environment.");
+            throw std::runtime_error("cannot bind an already bound coroutine to another environment.");
         
         // already started
         return ;
@@ -514,7 +506,7 @@ void basic_process_data::bind_(environment *env, priority_type priority) {
     
     env_ = env;
     awaited_ = env_->loc();
-    parent_ = env_->current_process();
+    parent_ = env_->current_coroutine();
 
     if (priority_ == priority_consts::inherit)
         priority_ = priority;
@@ -530,19 +522,19 @@ void basic_process_data::bind_(environment *env, priority_type priority) {
 }
 
 inline
-void basic_process_data::manage_() {
-    env_->processes_.insert(this);
+void coroutine_info::manage_() {
+    env_->coroutinees_.insert(this);
 }
 
 inline
-void basic_process_data::unmanage_() {
-    env_->processes_.erase(this);
+void coroutine_info::unmanage_() {
+    env_->coroutinees_.erase(this);
 }
 
 namespace detail {
 
 template <typename ReturnType = void>
-struct process_data_return_value_mixin {
+struct coroutine_info_return_value_mixin {
     using return_type = ReturnType;
 
     template <typename ...Args>
@@ -569,13 +561,13 @@ protected:
 };
 
 template <>
-struct process_data_return_value_mixin<void> {
+struct coroutine_info_return_value_mixin<void> {
     using return_type = void;
 };
 
 template <bool Unique = false>
-struct process_data_completion_tokens_mixin {
-    explicit process_data_completion_tokens_mixin() {
+struct coroutine_info_completion_tokens_mixin {
+    explicit coroutine_info_completion_tokens_mixin() {
         completion_tokens_.reserve(2);
     }
 
@@ -596,7 +588,7 @@ protected:
 };
 
 template <>
-struct process_data_completion_tokens_mixin<true> {
+struct coroutine_info_completion_tokens_mixin<true> {
     void completion_token(token *completion_token) {
         completion_token_ = completion_token;
     }
@@ -612,26 +604,26 @@ protected:
 };
 
 template <typename Derived, typename ReturnValue>
-struct process_return_value_mixin {
+struct coroutine_return_value_mixin {
     [[nodiscard]]
     ReturnValue const &return_value() const noexcept {
-        return static_cast<Derived const *>(this)->pdata()->return_value();
+        return static_cast<Derived const *>(this)->cinfo()->return_value();
     }
 };
 
 template <typename Derived>
-struct process_return_value_mixin<Derived, void> {
+struct coroutine_return_value_mixin<Derived, void> {
 };
 
 } /* namespace detail */
 
 
 template <typename ReturnType = void, bool Unique = false>
-struct process_data:
-    basic_process_data,
-    detail::process_data_completion_tokens_mixin<Unique>,
-    detail::process_data_return_value_mixin<ReturnType> {
-    using basic_process_data::basic_process_data;
+struct coroutine_info_:
+    coroutine_info,
+    detail::coroutine_info_completion_tokens_mixin<Unique>,
+    detail::coroutine_info_return_value_mixin<ReturnType> {
+    using coroutine_info::coroutine_info;
 
     void do_return() {
         this->schedule_completion_(env_); // this-> is a must here
@@ -639,20 +631,20 @@ struct process_data:
         this->unmanage_();
     }
 
-    virtual ~process_data() = default;
+    virtual ~coroutine_info_() = default;
 };
 
 template <awaitable A>
 struct awaitable_wrapper {
     A a;
-    process_handle phandle_this = nullptr;
-    process_handle phandle_old = nullptr;
+    coroutine_info_ptr phandle_this = nullptr;
+    coroutine_info_ptr phandle_old = nullptr;
     
     bool await_ready() {
         return a.await_ready();
     }
     
-    void await_suspend(coro_handle) {
+    void await_suspend(coroutine_handle) {
         a.await_suspend(phandle_old);
     }
 
@@ -663,7 +655,7 @@ struct awaitable_wrapper {
     }
 };
 
-struct this_process {  };
+struct this_coroutine {  };
 struct this_environment {  };
 
 template <typename T>
@@ -672,20 +664,20 @@ struct await_transform_extender;
 namespace detail {
 
 template <typename Derived>
-struct basic_promise_type {
+struct await_ops_mixin {
     template <awaitable A>
     auto await_transform(
         A &&a,
         util::source_location const loc = util::source_location::current()) {
         auto result = awaitable_wrapper<std::remove_cvref_t<A>>{
             std::forward<A>(a),
-            derived().pdata(),
-            derived().pdata()->env()->current_process()
+            derived().cinfo.get(),
+            derived().cinfo->env()->current_coroutine()
         };
-        derived().pdata()->env()->loc_ = loc;
+        derived().cinfo->env()->loc_ = loc;
         result.a.await_bind(
-            derived().pdata()->env(),
-            derived().pdata()->priority());
+            derived().cinfo->env(),
+            derived().cinfo->priority());
         return result;
     }
 
@@ -696,15 +688,15 @@ struct basic_promise_type {
     auto await_transform(
         await_transform_extender<T> const &a,
         util::source_location const loc = util::source_location::current()) {
-        return a.await_transform(derived().pdata(), loc);
+        return a.await_transform(derived().cinfo, loc);
     }
 
-    auto await_transform(this_process) noexcept {
-        return immediately_return{derived().pdata()};
+    auto await_transform(this_coroutine) noexcept {
+        return immediately_return{derived().cinfo};
     }
 
     auto await_transform(this_environment) noexcept {
-        return immediately_return{derived().pdata()->env()};
+        return immediately_return{derived().cinfo->env()};
     }
     
     template <awaitable A>
@@ -753,7 +745,7 @@ struct subroutine {
 
     void await_suspend(std::coroutine_handle<>) {
         auto &promise = h_.promise();
-        promise.pdata_->push_coro_(h_);
+        promise.cinfo->push_coro_(h_);
     }
 
     ReturnType await_resume() {
@@ -770,15 +762,20 @@ struct subroutine {
 
 private:
     template <typename>
-    friend struct detail::basic_promise_type;
+    friend struct detail::await_ops_mixin;
 
-    void bind_process_(basic_process_data *pdata) {
+    void bind_coroutine_(coroutine_info_ptr cinfo) {
         auto &promise = h_.promise();
-        promise.pdata_ = pdata;
+        promise.cinfo = std::move(cinfo);
     }
 
 public:
-    struct promise_type: detail::basic_promise_type<promise_type> {
+    struct promise_type: detail::await_ops_mixin<promise_type> {
+        std::coroutine_handle<promise_type> h = nullptr;
+        std::exception_ptr eptr = nullptr;
+        std::optional<ReturnType> ret;
+        coroutine_info_ptr cinfo = nullptr;
+
         promise_type() {
             h = std::coroutine_handle<promise_type>::from_promise(*this);
         }
@@ -790,27 +787,19 @@ public:
         auto initial_suspend() noexcept -> std::suspend_always { return {}; }
         auto final_suspend() noexcept {
             struct final_awaitable {
-                basic_process_data *pdata;
+                coroutine_info_ptr cinfo;
 
-                bool await_ready() const noexcept { return false; }
-                void await_suspend(std::coroutine_handle<>) const noexcept {
-                    pdata->pop_coro_();
+                bool await_ready() noexcept { return false; }
+                void await_suspend(std::coroutine_handle<>) noexcept {
+                    cinfo->pop_coro_();
                 }
-                void await_resume() const noexcept {  }
+                void await_resume() noexcept {  }
             };
-            return final_awaitable{pdata_};
+            return final_awaitable{cinfo};
         }
 
         auto unhandled_exception() {
             eptr = std::current_exception();
-        }
-
-        process_handle pdata() noexcept {
-            return pdata_;
-        }
-
-        const_process_handle pdata() const noexcept {
-            return pdata_;
         }
 
         template <typename T>
@@ -820,12 +809,6 @@ public:
 
         template <typename>
         friend struct subroutine;
-
-        std::coroutine_handle<promise_type> h = nullptr;
-        std::exception_ptr eptr = nullptr;
-        std::optional<ReturnType> ret;
-    private:
-        basic_process_data *pdata_ = nullptr;
     };
 
 private:
@@ -840,59 +823,59 @@ namespace detail {
 
 template <typename Derived>
 template <typename ReturnType>
-auto &&basic_promise_type<Derived>::await_transform(subroutine<ReturnType> &&a) {
-    a.bind_process_(derived().pdata());
+auto &&await_ops_mixin<Derived>::await_transform(subroutine<ReturnType> &&a) {
+    a.bind_coroutine_(derived().cinfo.get());
     return std::move(a);
 }
 
-}
+} /* namespace detail */
 
 template <typename ReturnType = void, bool Unique = false>
-struct process:
-    detail::process_return_value_mixin<process<ReturnType, Unique>, ReturnType> {
-    using process_data_type = process_data<ReturnType, Unique>;
+struct coroutine:
+    detail::coroutine_return_value_mixin<coroutine<ReturnType, Unique>, ReturnType> {
+    using coroutine_info_type = coroutine_info_<ReturnType, Unique>;
 
     explicit
-    process(process_data_type *pdata = nullptr):
-        pdata_{pdata} {
+    coroutine(memory::ptr<coroutine_info_type> cinfo = nullptr):
+        cinfo_{std::move(cinfo)} {
     }
 
-    process(process const &other) requires (not Unique) {
+    coroutine(coroutine const &other) requires (not Unique) {
         *this = other;
     }
 
-    process &operator=(process const &other) requires (not Unique) {
+    coroutine &operator=(coroutine const &other) requires (not Unique) {
         if (this != &other) {
-            pdata_ = other.pdata_;
+            cinfo_ = other.cinfo_;
             completion_token_ = nullptr;
             return_ = other.return_;
         }
         return *this;
     }
 
-    process(process const &) requires (Unique) = delete;
-    process &operator=(process const &) requires (Unique) = delete;
+    coroutine(coroutine const &) requires (Unique) = delete;
+    coroutine &operator=(coroutine const &) requires (Unique) = delete;
 
-    process(process &&other) {
+    coroutine(coroutine &&other) {
         *this = std::move(other);
     }
 
-    process &operator=(process &&other) {
+    coroutine &operator=(coroutine &&other) {
         if (this != &other) {
-            pdata_ = std::move(other.pdata_);
+            cinfo_ = std::move(other.cinfo_);
             std::swap(completion_token_, other.completion_token_);
             std::swap(return_, return_);
         }
         return *this;
     }
 
-    ~process() {
-        if (pdata_) pdata_->destroy_if_not_started_();
+    ~coroutine() {
+        if (cinfo_) cinfo_->destroy_if_not_started_();
     }
 
     [[nodiscard]]
     bool valid() const noexcept {
-        return pdata_;
+        return cinfo_;
     }
 
     [[nodiscard]]
@@ -900,42 +883,42 @@ struct process:
         return valid();
     }
 
-    process_data_type const *pdata() const noexcept {
-        return pdata_.get();
+    coroutine_info_type const *cinfo() const noexcept {
+        return cinfo_.get();
     }
 
     [[nodiscard]]
     bool complete() const noexcept {
-        return pdata_->complete();
+        return cinfo_->complete();
     }
 
     template <typename T = interrupted_exception>
     void interrupt(T &&t = interrupted_exception{}) noexcept {
-        pdata_->interrupt(std::forward<T>(t));
+        cinfo_->interrupt(std::forward<T>(t));
     }
 
     [[nodiscard]]
     bool interrupted() const noexcept {
-        return pdata_->interrupted();
+        return cinfo_->interrupted();
     }
 
     [[nodiscard]]
     priority_type priority() const noexcept {
-        return pdata_->priority();
+        return cinfo_->priority();
     }
 
     auto &priority(priority_type priority) noexcept {
-        pdata_->priority(priority);
+        cinfo_->priority(priority);
         return *this;
     }
 
     [[nodiscard]]
     time_integral latency() const noexcept {
-        return pdata_->latency();
+        return cinfo_->latency();
     }
 
     auto &latency(time_integral latency) noexcept {
-        pdata_->latency(latency);
+        cinfo_->latency(latency);
         return *this;
     }
 
@@ -960,21 +943,21 @@ struct process:
     }
 
     void await_bind(environment *env, priority_type priority = 0) {
-        pdata_->bind_(env, priority);
+        cinfo_->bind_(env, priority);
     }
 
     bool await_ready() const noexcept {
-        return pdata_->complete();
+        return cinfo_->complete();
     }
 
-    void await_suspend(process_handle phandle) {
+    void await_suspend(coroutine_info_ptr phandle) {
         if (completion_token_)
-            throw std::runtime_error("process<> is already being awaited!");
+            throw std::runtime_error("coroutine<> is already being awaited!");
 
         completion_token_ = new token{return_.latency, return_.priority, phandle};
         if (completion_token_->priority == priority_consts::inherit)
-            completion_token_->priority = pdata_->priority_;
-        pdata_->completion_token(completion_token_);
+            completion_token_->priority = cinfo_->priority_;
+        cinfo_->completion_token(completion_token_);
     }
 
     token *await_token() const noexcept {
@@ -987,10 +970,10 @@ struct process:
         if constexpr (std::is_same_v<ReturnType, void>)
             return ;
         else {
-            if (!pdata_->has_return_value())
-                throw std::runtime_error("no return value from the process<T> [T != void]!");
+            if (!cinfo_->has_return_value())
+                throw std::runtime_error("no return value from the coroutine<T> [T != void]!");
 
-            return pdata_->return_value();
+            return cinfo_->return_value();
         }
     }
 
@@ -1000,10 +983,10 @@ struct process:
         if constexpr (std::is_same_v<ReturnType, void>)
             return ;
         else {
-            if (!pdata_->has_return_value())
-                throw std::runtime_error("no return value from the process<T> [T != void]!");
+            if (!cinfo_->has_return_value())
+                throw std::runtime_error("no return value from the coroutine<T> [T != void]!");
 
-            return std::move(pdata_->return_value());
+            return std::move(cinfo_->return_value());
         }
     }
 
@@ -1012,7 +995,7 @@ struct process:
     }
 
 private:
-    memory::ptr<process_data_type> pdata_ = nullptr;
+    memory::ptr<coroutine_info_type> cinfo_ = nullptr;
     token *completion_token_ = nullptr; // must be non-owning, in case of copies
 
     struct {
@@ -1044,18 +1027,19 @@ public:
             std::is_same_v<ReturnType, void>,
             return_void_mixin<promise_type>,
             return_value_mixin<promise_type>
-        >, detail::basic_promise_type<promise_type> {
+        >, detail::await_ops_mixin<promise_type> {
+        memory::ptr<coroutine_info_type> cinfo;
     
         template <typename ...Args>
         promise_type(Args && ...args) {
             auto loc = util::extract_first_type<util::source_location>(args...);
             auto coro = std::coroutine_handle<promise_type>::from_promise(*this);
-            pdata_ = new process_data_type(loc);
-            pdata_->push_coro_(coro);
+            cinfo = new coroutine_info_type(loc);
+            cinfo->push_coro_(coro);
         }
 
-        process get_return_object() {
-            return process(static_cast<process_data_type *>(pdata_));
+        coroutine get_return_object() {
+            return coroutine(cinfo);
         }
 
         auto initial_suspend() noexcept -> std::suspend_always { return {}; }
@@ -1075,31 +1059,20 @@ public:
 
         template <typename T>
         void emplace_return_value(T &&t) {
-            pdata_->emplace_return_value(std::forward<T>(t));
+            cinfo->emplace_return_value(std::forward<T>(t));
         }
 
         void do_return() {
-            pdata_->do_return();
-        }
-
-        process_handle pdata() noexcept {
-            return pdata_.get();
-        }
-
-        const_process_handle pdata() const noexcept {
-            return pdata_.get();
+            cinfo->do_return();
         }
 
         ~promise_type() {
         }
-
-    protected:
-        memory::ptr<process_data_type> pdata_;
     };
 };
 
 template <typename ReturnValue = void>
-using unique_process = process<ReturnValue, true>;
+using unique_coroutine = coroutine<ReturnValue, true>;
 
 template <typename T>
 concept releasable = requires(T t) {
@@ -1122,19 +1095,19 @@ struct under_helper {  };
 } /* namespace cxxdes */
 
 template <cxxdes::core::acquirable A, typename F>
-cxxdes::core::process<void> operator+(A &a, F &&f) {
+cxxdes::core::coroutine<void> operator+(A &a, F &&f) {
     auto handle = co_await a.acquire();
     co_await std::forward<F>(f)();
     co_await handle.release();
 }
 
-#define co_with(x) co_yield (x) + [&]() mutable -> cxxdes::core::process<void>
+#define co_with(x) co_yield (x) + [&]() mutable -> cxxdes::core::coroutine<void>
 
 template <typename F>
 auto operator+(cxxdes::core::detail::under_helper, F f) {
     return f();
 }
 
-#define _Process(...) cxxdes::core::detail::under_helper{} + [&](__VA_ARGS__) -> process<void>
+#define _coroutine(...) cxxdes::core::detail::under_helper{} + [&](__VA_ARGS__) -> coroutine<void>
 
 #endif /* CXXDES_CORE_CORE_HPP_INCLUDED */

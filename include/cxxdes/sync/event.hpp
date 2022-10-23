@@ -48,7 +48,7 @@ struct wake_awaitable {
     }
 
     bool await_ready() const noexcept { return false; }
-    void await_suspend(process_handle);
+    void await_suspend(coroutine_info_ptr);
     token *await_token() const noexcept { return tkn_; }
     void await_resume(no_return_value_tag = {}) const noexcept {  }
 
@@ -80,7 +80,7 @@ struct wait_awaitable {
     }
 
     bool await_ready() const noexcept { return false; }
-    void await_suspend(process_handle phandle);
+    void await_suspend(coroutine_info_ptr phandle);
     token *await_token() const noexcept { return tkn_; }
     void await_resume(no_return_value_tag = {}) const noexcept {  }
 
@@ -117,7 +117,7 @@ private:
     std::vector<token *> tokens_;
 };
 
-inline void wake_awaitable::await_suspend(process_handle phandle) {
+inline void wake_awaitable::await_suspend(coroutine_info_ptr phandle) {
     CXXDES_DEBUG_MEMBER_FUNCTION;
 
     for (auto tkn: evt_->tokens_) {
@@ -131,7 +131,7 @@ inline void wake_awaitable::await_suspend(process_handle phandle) {
     env_->schedule_token(tkn_);
 }
 
-inline void wait_awaitable::await_suspend(process_handle phandle) {
+inline void wait_awaitable::await_suspend(coroutine_info_ptr phandle) {
     CXXDES_DEBUG_MEMBER_FUNCTION;
     
     tkn_ = new token(latency_, priority_, phandle);

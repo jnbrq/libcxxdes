@@ -6,7 +6,7 @@ using namespace cxxdes::core;
 CXXDES_SIMULATION(raii_trick) {
     cxxdes::sync::resource res{1};
     
-    process<> p(int id, time_integral wait_time) {
+    coroutine<> p(int id, time_integral wait_time) {
         /*
         auto handle = co_await res.acquire();
         co_await timeout(wait_time);
@@ -14,7 +14,7 @@ CXXDES_SIMULATION(raii_trick) {
         co_await handle.release();
         */
 
-        fmt::print("p id = {}, priority = {}\n", id, (co_await this_process())->priority());
+        fmt::print("p id = {}, priority = {}\n", id, (co_await this_coroutine())->priority());
 
         co_with(res) {
             co_await timeout(wait_time);
@@ -22,7 +22,7 @@ CXXDES_SIMULATION(raii_trick) {
         };
     }
 
-    process<> co_main() {
+    coroutine<> co_main() {
         co_await all_of(p(0, 10).priority(0), p(1, 5).priority(-1), p(2, 8).priority(-2), p(3, 8).priority(-3));
     }
 };

@@ -85,7 +85,7 @@ struct any_all_helper {
             return Condition::operator()(total, remaining_);
         }
 
-        void await_suspend(process_handle phandle) {
+        void await_suspend(coroutine_info_ptr phandle) {
             CXXDES_DEBUG_MEMBER_FUNCTION;
 
             tkn_ = new token(latency_, priority_, phandle);
@@ -252,20 +252,20 @@ inline constexpr any_all_helper<all_of_condition>::functor all_of;
 
 struct sequential_helper {
     template <typename ...Ts>
-    static process<void> seq_proc_tuple(Ts ...ts) {
+    static coroutine<void> seq_proc_tuple(Ts ...ts) {
         ((co_await std::move(ts)), ...);
         co_return ;
     }
 
     template <typename Iterator>
-    static process<void> seq_proc_range(Iterator begin, Iterator end) {
+    static coroutine<void> seq_proc_range(Iterator begin, Iterator end) {
         for (Iterator it = begin; it != end; ++it)
             co_await (*it);
         co_return;
     }
 
     template <typename ValueType>
-    static process<void> seq_proc_vector(std::vector<ValueType> v) {
+    static coroutine<void> seq_proc_vector(std::vector<ValueType> v) {
         for (auto &a: v)
             co_await std::move(a);
         co_return;
@@ -321,14 +321,14 @@ inline constexpr sequential_helper::functor sequential;
 
 struct async_functor {
     template <typename T>
-    [[nodiscard("expected usage: co_await async(process<T>)")]]
-    constexpr auto operator()(process<T> p) const {
-        // since process<T> is a reference-counted object with a flexible
-        // lifetime, we can safely use process<R> with async.
+    [[nodiscard("expected usage: co_await async(coroutine<T>)")]]
+    constexpr auto operator()(coroutine<T> p) const {
+        // since coroutine<T> is a reference-counted object with a flexible
+        // lifetime, we can safely use coroutine<R> with async.
         // for other types of awaitables, they should be wrapped in
-        // a process to be used with async.
+        // a coroutine to be used with async.
         struct async_awaitable {
-            process<T> p;
+            coroutine<T> p;
 
             void await_bind(environment *env, priority_type priority) {
                 p.await_bind(env, priority);
@@ -338,7 +338,7 @@ struct async_functor {
                 return true;
             }
 
-            void await_suspend(process_handle) const noexcept {
+            void await_suspend(coroutine_info_ptr) const noexcept {
             }
 
             token *await_token() const noexcept {
@@ -358,7 +358,7 @@ struct async_functor {
     template <awaitable A>
     [[nodiscard("expected usage: co_await async(awaitable)")]]
     constexpr auto operator()(A &&a) const {
-        // We need to wrap the awaitable in a process to support async.
+        // We need to wrap the awaitable in a coroutine to support async.
         // There probably is not a good use case for this.
         return by_value(std::forward<A>(a));
     }
@@ -407,11 +407,11 @@ auto operator,(A1 &&a1, A2 &&a2) {
 }
 
 template <awaitable A, typename Output>
-auto operator>>(A &&a, Output &output) -> process<void> {
+auto operator>>(A &&a, Output &output) -> coroutine<void> {
     output = co_await a;
 }
 
-auto flag_done(bool &flag) -> process<void> {
+auto flag_done(bool &flag) -> coroutine<void> {
     flag = true;
     co_return ;
 }

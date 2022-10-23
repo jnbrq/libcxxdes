@@ -6,24 +6,24 @@ using namespace cxxdes::core;
 CXXDES_SIMULATION(resource_example) {
     cxxdes::sync::resource resource{3};
 
-    process<> p(int id, time_integral duration) {
-        fmt::print("process #{}: try acquire the resource. @{}\n", id, now());
+    coroutine<> p(int id, time_integral duration) {
+        fmt::print("coroutine #{}: try acquire the resource. @{}\n", id, now());
         auto handle = co_await resource.acquire();
-        fmt::print("process #{}: acquired, start using the resource. @{}\n", id, now());
+        fmt::print("coroutine #{}: acquired, start using the resource. @{}\n", id, now());
         co_await timeout(duration);
-        fmt::print("process #{}: release. @{}\n", id, now());
+        fmt::print("coroutine #{}: release. @{}\n", id, now());
         co_await handle.release();
-        fmt::print("process #{}: done. @{}\n", id, now());
+        fmt::print("coroutine #{}: done. @{}\n", id, now());
     }
 
-    process<> co_main() {
+    coroutine<> co_main() {
         co_await all_of(
             p(0, 4),
             p(1, 10),
             p(2, 2),
             p(3, 10).priority(10000 /* make it last to acquire the resource */)
         );
-        // in the end, process #3 finishes at 12.
+        // in the end, coroutine #3 finishes at 12.
         co_return ;
     }
 };

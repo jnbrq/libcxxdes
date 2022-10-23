@@ -24,7 +24,7 @@
 namespace cxxdes {
 namespace sync {
 
-using core::process;
+using core::coroutine;
 
 template <std::unsigned_integral U = std::size_t>
 struct semaphore {
@@ -42,7 +42,7 @@ struct semaphore {
     }
 
     [[nodiscard("expected usage: co_await semaphore.up()")]]
-    process<> up() {
+    coroutine<> up() {
         while (true) {
             if (value_ < max_)
                 break ;
@@ -53,7 +53,7 @@ struct semaphore {
     }
 
     [[nodiscard("expected usage: co_await semaphore.down()")]]
-    process<> down() {
+    coroutine<> down() {
         while (true) {
             if (value_ > 0)
                 break ;

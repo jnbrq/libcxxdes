@@ -24,14 +24,14 @@ CXXDES_SIMULATION(producer_consumer_example) {
 
     double avg_latency = 0.0;
     
-    process<> producer() {
+    coroutine<> producer() {
         for (std::size_t i = 0; i < n_packets; ++i) {
             co_await q.put(now_seconds());
             co_await timeout(lambda());
         }
     }
 
-    process<> consumer() {
+    coroutine<> consumer() {
         std::size_t n = 0;
 
         while (true) {
@@ -49,7 +49,7 @@ CXXDES_SIMULATION(producer_consumer_example) {
         }
     }
 
-    process<> co_main() {
+    coroutine<> co_main() {
         co_await (producer() && consumer());
     }
 };

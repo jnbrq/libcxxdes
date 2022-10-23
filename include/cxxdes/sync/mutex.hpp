@@ -53,7 +53,7 @@ struct mutex {
         }
 
         [[nodiscard("expected usage: co_await handle.release()")]]
-        unique_process<> release() {
+        unique_coroutine<> release() {
             if (!valid())
                 throw std::runtime_error("called release() on invalid mutex handle");
             
@@ -73,7 +73,7 @@ struct mutex {
     };
 
     [[nodiscard("expected usage: co_await mtx.acquire()")]]
-    unique_process<handle> acquire() {
+    unique_coroutine<handle> acquire() {
         while (true) {
             if (!owned_)
                 break ;

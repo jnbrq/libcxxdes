@@ -1,5 +1,5 @@
 #if 0 // uncomment to print debug messages
-#   define CXXDES_DEBUG_CORE_PROCESS
+#   define CXXDES_DEBUG_CORE_coroutine
 #   define CXXDES_DEBUG_CORE_ENVIRONMENT
 #   define CXXDES_DEBUG_CORE_TOKEN
 #endif
@@ -10,7 +10,7 @@
 
 using namespace cxxdes::core;
 
-process<> p1() {
+coroutine<> p1() {
     fmt::print("p1.a\n");
     auto env = co_await this_environment(); // it should not yield control here
     fmt::print("p1.b\n");
@@ -20,7 +20,7 @@ process<> p1() {
     fmt::print("p1.d {}\n", env->now());
 }
 
-process<> p2() {
+coroutine<> p2() {
     fmt::print("p2\n");
     co_await yield();
 

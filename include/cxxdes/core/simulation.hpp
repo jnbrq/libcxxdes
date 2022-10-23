@@ -40,24 +40,24 @@ struct simulation {
     }
     
     void run() {
-        if (main_process_.valid() && main_process_.complete())
+        if (main_coroutine_.valid() && main_coroutine_.complete())
             return ;
 
-        if (not main_process_.valid()) {
-            main_process_ = derived().co_main();
-            start_awaitable(main_process_);
+        if (not main_coroutine_.valid()) {
+            main_coroutine_ = derived().co_main();
+            start_awaitable(main_coroutine_);
         }
         
         while (env.step());
     }
 
     auto &run_until(time_integral t) {
-        if (not main_process_.valid()) {
-            main_process_ = derived().co_main();
-            start_awaitable(main_process_);
+        if (not main_coroutine_.valid()) {
+            main_coroutine_ = derived().co_main();
+            start_awaitable(main_coroutine_);
         }
 
-        if (not main_process_.complete())
+        if (not main_coroutine_.complete())
             while (now() <= t && env.step());
         return *this;
     }
@@ -95,7 +95,7 @@ private:
         return static_cast<Derived &>(*this);
     }
 
-    process<void> main_process_;
+    coroutine<void> main_coroutine_;
 };
 
 #define CXXDES_SIMULATION(name) struct name : cxxdes::core::simulation < name >

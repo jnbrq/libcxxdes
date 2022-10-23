@@ -20,7 +20,7 @@ struct example {
         return false;
     }
 
-    void await_suspend(process_handle phandle) {
+    void await_suspend(coroutine_info_ptr phandle) {
         tkn_ = new token(env_->now() + latency_, priority_, phandle);
 
         // create a token and do something with it

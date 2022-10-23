@@ -5,11 +5,11 @@
 using namespace cxxdes;
 using namespace cxxdes::core;
 
-unique_process<> f() {
+unique_coroutine<> f() {
     co_return ;
 }
 
-unique_process<int> test() {
+unique_coroutine<int> test() {
     co_await f();
     co_return 10;
 }

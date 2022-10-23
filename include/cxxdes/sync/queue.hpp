@@ -28,7 +28,7 @@ namespace sync {
 namespace detail {
 
 using core::timeout;
-using core::process;
+using core::coroutine;
 using core::operator&&;
 
 template <typename T>
@@ -38,7 +38,7 @@ struct queue {
 
     template <typename ...Args>
     [[nodiscard("expected usage: co_await queue.put(args...)")]]
-    process<> put(Args && ...args) {
+    coroutine<> put(Args && ...args) {
         while (true) {
             if (max_size_ == 0 || q_.size() < max_size_)
                 break ;
@@ -50,7 +50,7 @@ struct queue {
 
 
     [[nodiscard("expected usage: co_await queue.pop()")]]
-    process<T> pop() {
+    coroutine<T> pop() {
         while (true) {
             if (q_.size() > 0)
                 break ;

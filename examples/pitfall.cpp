@@ -4,17 +4,17 @@
 using namespace cxxdes::core;
 
 CXXDES_SIMULATION(pitfall) {
-    process<> p;
+    coroutine<> p;
 
-    process<> foo() {
+    coroutine<> foo() {
         co_await delay(100);
     }
 
-    process<> bar() {
+    coroutine<> bar() {
         co_await p;
     }
 
-    process<> co_main() {
+    coroutine<> co_main() {
         p = foo();
         co_await any_of.by_reference(p, bar());
         co_return ;
@@ -24,7 +24,7 @@ CXXDES_SIMULATION(pitfall) {
 #define _TrackLocation cxxdes::util::source_location const = cxxdes::util::source_location::current()
 
 CXXDES_SIMULATION(interrupts) {
-    process<> foo(_TrackLocation) {
+    coroutine<> foo(_TrackLocation) {
         try {
             while (true) {
                 fmt::print("now: {}\n", now());
@@ -37,7 +37,7 @@ CXXDES_SIMULATION(interrupts) {
         }
     }
 
-    process<> bar(_TrackLocation) {
+    coroutine<> bar(_TrackLocation) {
         try {
             co_await delay(100);
         }
@@ -47,17 +47,18 @@ CXXDES_SIMULATION(interrupts) {
         }
     }
 
-    process<> co_main(_TrackLocation) {
+    coroutine<> co_main(_TrackLocation) {
         {
-            process<> h = co_await async(foo());
+            coroutine<> h = co_await async(foo());
             co_await delay(5);
             h.interrupt();
         }
 
         {
-            process<> h = co_await async(bar());
+            coroutine<> h = co_await async(bar());
             co_await delay(5);
-            h.interrupt();
+            h.interrupt(interrupted_exception("interrupted!"));
+            // h.interrupt(std::runtime_error("what?"));
         }
     }
 };
@@ -76,7 +77,7 @@ CXXDES_SIMULATION(subroutines) {
         co_return 20;
     }
 
-    process<> co_main() {
+    coroutine<> co_main() {
         fmt::print("co_mainA now {}\n", now());
         fmt::print("j = {}\n", co_await foo());
         fmt::print("co_mainB now = {}\n", now());
