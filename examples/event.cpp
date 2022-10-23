@@ -29,7 +29,11 @@ coroutine<> p3() {
     co_await evt.wait(8);
     std::cout << "p3.a now " << env.now() << std::endl;
 
-    co_await 
+    co_await until(500);
+    co_await evt.wake();
+
+    co_await until(600);
+    co_await evt.wake();
     
     co_return ;
 }
