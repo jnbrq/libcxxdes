@@ -1,5 +1,8 @@
 #include <coroutine>
 #include <fmt/core.h>
+#include <stack>
+
+std::stack<std::coroutine_handle<>> call_stack;
 
 template <typename T = int>
 struct subroutine {
@@ -28,8 +31,8 @@ struct subroutine {
     }
 
     bool await_suspend(std::coroutine_handle<>) {
-        h_.resume();
-        return false;
+        call_stack.push(h_);
+        return true;
     }
 
     T await_resume() {
@@ -40,7 +43,11 @@ struct subroutine {
     }
 
     void resume() {
-        h_.resume();
+        call_stack.push(h_);
+        while (!call_stack.empty()) {
+            call_stack.top().resume();
+            fmt::print("stopped\n");
+        }
     }
 
     ~subroutine() {
@@ -62,7 +69,16 @@ struct subroutine {
         }
 
         auto initial_suspend() noexcept -> std::suspend_always { return {}; }
-        auto final_suspend() noexcept -> std::suspend_always { return {}; }
+        auto final_suspend() noexcept {
+            struct awaitable {
+                bool await_ready() const noexcept { return false; }
+                void await_suspend(std::coroutine_handle<>) const noexcept {
+                    call_stack.pop();
+                }
+                void await_resume() const noexcept {  }
+            };
+            return awaitable{};
+        }
 
         auto unhandled_exception() {
             eptr = std::current_exception();
@@ -81,21 +97,62 @@ private:
     }
 };
 
+/*
+
+subroutine<int> f0() {
+    fmt::print("f0A!\n");
+    co_await std::suspend_always{};
+    fmt::print("f0B!\n");
+    co_return 10;
+}
 
 subroutine<int> f1() {
+    fmt::print("f1A!\n");
+    co_await f0();
+    fmt::print("f1B!\n");
     co_return 10;
 }
 
 subroutine<int> f2() {
     int x = co_await f1();
-    for (int i = 0; i < 1'000'000'000; ++i)
+    for (int i = 0; i < 2; ++i)
         co_await f1();
     fmt::print("i = {}\n", x);
     co_return 5;
 }
 
+*/
+
+subroutine<int> raise() {
+    fmt::print("raiseA!\n");
+    throw std::runtime_error("test");
+    fmt::print("raiseB!\n");
+    co_return 0;
+}
+
+subroutine<int> f0() {
+    fmt::print("f0A!\n");
+    co_await std::suspend_always{};
+    fmt::print("f0B!\n");
+    try {
+        co_await raise();
+    }
+    catch (std::runtime_error &e) {
+        fmt::print("error: {}\n", e.what());
+    }
+    fmt::print("f0C!\n");
+    co_return 10;
+}
+
+subroutine<int> f1() {
+    fmt::print("f1A!\n");
+    co_await f0();
+    fmt::print("f1B!\n");
+    co_return 10;
+}
+
 int main() {
-    auto f = f2();
+    auto f = f1();
     f.resume();
     return 0;
 }
