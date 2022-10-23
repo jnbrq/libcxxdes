@@ -23,4 +23,4 @@ cxxdes::core::coroutine<void> operator+(A &a, F &&f) {
     co_await handle.release();
 }
 
-#define _Co_with(x) co_yield (x) + [&]() mutable -> cxxdes::core::coroutine<void>
+#define _Co_with(x) co_yield (x) + [&]() mutable -> cxxdes::core::subroutine<void>
