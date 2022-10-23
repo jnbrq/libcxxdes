@@ -9,7 +9,7 @@
 
 using namespace cxxdes::core;
 
-TEST(coroutineTest, BasicFunctionality) {
+TEST(ProcessTest, BasicFunctionality) {
     CXXDES_SIMULATION(test) {
         coroutine<int> foo() {
             co_return 10;
@@ -24,7 +24,7 @@ TEST(coroutineTest, BasicFunctionality) {
     test{}.run();
 }
 
-TEST(coroutineTest, OutOfScope) {
+TEST(ProcessTest, OutOfScope) {
     CXXDES_SIMULATION(test) {
         coroutine<int> foo() {
             co_await delay(10);
@@ -48,7 +48,7 @@ TEST(coroutineTest, OutOfScope) {
 }
 
 #if 0
-TEST(coroutineTest, ReturnValueInspection) {
+TEST(ProcessTest, ReturnValueInspection) {
     CXXDES_SIMULATION(test) {
         coroutine<int> foo() {
             co_await delay(10);
@@ -76,13 +76,13 @@ TEST(coroutineTest, ReturnValueInspection) {
 }
 #endif
 
-TEST(coroutineTest, Latencies) {
+TEST(ProcessTest, Latencies) {
     CXXDES_SIMULATION(test) {
         const time_integral start_latency = 6;
         const time_integral coroutine_time = 5;
         const time_integral return_latency = 8;
 
-        coroutine<int> f() {
+        unique_coroutine<int> f() {
             EXPECT_EQ(now(), start_latency);
             co_await delay(coroutine_time);
             EXPECT_EQ(now(), start_latency + coroutine_time);
@@ -100,7 +100,7 @@ TEST(coroutineTest, Latencies) {
     test{}.run();
 }
 
-TEST(coroutineTest, Priorities) {
+TEST(ProcessTest, Priorities) {
     CXXDES_SIMULATION(test) {
         int counter = 100;
 
@@ -138,7 +138,7 @@ TEST(coroutineTest, Priorities) {
     test{}.run();
 }
 
-TEST(coroutineTest, Recursion) {
+TEST(ProcessTest, Recursion) {
     CXXDES_SIMULATION(test) {
         coroutine<int> factorial(int k) {
             if (k == 0)
@@ -161,7 +161,7 @@ TEST(coroutineTest, Recursion) {
 
 #ifdef CXXDES_SANITIZE_ADDRESS
 
-TEST(coroutineTest, DanglingReference1) {
+TEST(ProcessTest, DanglingReference1) {
     CXXDES_SIMULATION(test) {
         coroutine<> co_main() {
             // this is created in the stack
@@ -180,7 +180,7 @@ TEST(coroutineTest, DanglingReference1) {
 
 #endif
 
-TEST(coroutineTest, DanglingReference1Solution) {
+TEST(ProcessTest, DanglingReference1Solution) {
     CXXDES_SIMULATION(test) {
         coroutine<> co_main() {
             // this is created in the stack
@@ -196,7 +196,7 @@ TEST(coroutineTest, DanglingReference1Solution) {
     test{}.run();
 }
 
-TEST(coroutineTest, NotDanglingReference1) {
+TEST(ProcessTest, NotDanglingReference1) {
     CXXDES_SIMULATION(test) {
         coroutine<> foo() {
             co_await delay(100);
@@ -218,7 +218,7 @@ TEST(coroutineTest, NotDanglingReference1) {
     test{}.run();
 }
 
-TEST(coroutineTest, Returncoroutine) {
+TEST(ProcessTest, Returncoroutine) {
     CXXDES_SIMULATION(test) {
         static coroutine<int> g() {
             co_await delay(5);
@@ -243,7 +243,7 @@ TEST(coroutineTest, Returncoroutine) {
 
 #if 0
 
-TEST(coroutineTest, Interrupt) {
+TEST(ProcessTest, Interrupt) {
     CXXDES_SIMULATION(test) {
         bool flag = false;
 

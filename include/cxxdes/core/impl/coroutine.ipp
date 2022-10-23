@@ -48,7 +48,7 @@ struct coroutine:
         if (this != &other) {
             cinfo_ = std::move(other.cinfo_);
             std::swap(completion_token_, other.completion_token_);
-            std::swap(return_, return_);
+            std::swap(return_, other.return_);
         }
         return *this;
     }
@@ -91,9 +91,14 @@ struct coroutine:
         return cinfo_->priority();
     }
 
-    auto &priority(priority_type priority) noexcept {
+    auto &priority(priority_type priority) & noexcept {
         cinfo_->priority(priority);
         return *this;
+    }
+
+    auto &&priority(priority_type priority) && noexcept {
+        cinfo_->priority(priority);
+        return std::move(*this);
     }
 
     [[nodiscard]]
@@ -101,9 +106,14 @@ struct coroutine:
         return cinfo_->latency();
     }
 
-    auto &latency(time_integral latency) noexcept {
+    auto &latency(time_integral latency) & noexcept {
         cinfo_->latency(latency);
         return *this;
+    }
+
+    auto &&latency(time_integral latency) && noexcept {
+        cinfo_->latency(latency);
+        return std::move(*this);
     }
 
     [[nodiscard]]
@@ -111,9 +121,14 @@ struct coroutine:
         return return_.priority;
     }
 
-    auto &return_priority(priority_type priority) noexcept {
+    auto &return_priority(priority_type priority) & noexcept {
         return_.priority = priority;
         return *this;
+    }
+
+    auto &&return_priority(priority_type priority) && noexcept {
+        return_.priority = priority;
+        return std::move(*this);
     }
 
     [[nodiscard]]
@@ -121,9 +136,14 @@ struct coroutine:
         return return_.latency;
     }
 
-    auto &return_latency(time_integral latency) noexcept {
+    auto &return_latency(time_integral latency) & noexcept {
         return_.latency = latency;
         return *this;
+    }
+
+    auto &&return_latency(time_integral latency) && noexcept {
+        return_.latency = latency;
+        return std::move(*this);
     }
 
     void await_bind(environment *env, priority_type priority = 0) {
