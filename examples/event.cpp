@@ -19,7 +19,7 @@ coroutine<> p2() {
     std::cout << "p2.a now " << env.now() << std::endl;
     co_await timeout(5u);
     std::cout << "p2.b now " << env.now() << std::endl;
-    co_await evt.wake(2);
+    co_await evt.wake();
     std::cout << "p2.c now " << env.now() << std::endl;
 
     co_return ;
@@ -28,6 +28,8 @@ coroutine<> p2() {
 coroutine<> p3() {
     co_await evt.wait(8);
     std::cout << "p3.a now " << env.now() << std::endl;
+
+    co_await 
     
     co_return ;
 }
@@ -36,7 +38,7 @@ coroutine<> p4() {
     std::cout << "p4.a now " << env.now() << std::endl;
     co_await timeout(20u);
     std::cout << "p4.b now " << env.now() << std::endl;
-    co_await evt.wait(); // wakes up immediately
+    co_await evt.wait();
     std::cout << "p4.c now " << env.now() << std::endl;
     co_await evt.wait(2);
     std::cout << "p4.d now " << env.now() << std::endl;
