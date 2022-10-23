@@ -3,12 +3,12 @@ namespace core {
 
 template <typename T>
 concept releasable = requires(T t) {
-    { t.release() } -> awaitable;
+    { t.release().await_ready() } -> std::same_as<bool>;
 };
 
 template <typename T>
 concept acquirable = requires(T t) {
-    { t.acquire() } -> awaitable;
+    { t.acquire().await_ready() } -> std::same_as<bool>;
     { t.acquire().await_resume() } -> releasable;
 };
 
