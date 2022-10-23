@@ -1,9 +1,5 @@
 template <typename ReturnType = void>
 struct subroutine {
-    static_assert(
-        not std::is_same_v<ReturnType, void>,
-        "void-returning subroutines not implemented yet");
-
     struct promise_type;
 
     subroutine() noexcept: h_{nullptr} {  }
@@ -35,7 +31,8 @@ struct subroutine {
         if (promise.eptr)
             std::rethrow_exception(promise.eptr);
         
-        return std::move(*promise.ret);
+        if constexpr (not std::is_same_v<ReturnType, void>)
+            return std::move(*promise.ret);
     }
 
     ~subroutine() {
@@ -51,11 +48,34 @@ private:
         promise.cinfo = std::move(cinfo);
     }
 
+    template <typename Derived>
+    struct return_value_mixin {
+        std::optional<ReturnType> ret;
+
+        template <typename T>
+        void return_value(T &&t) {
+            ret.emplace(std::forward<T>(t));
+        }
+    };
+
+    template <typename Derived>
+    struct return_void_mixin {
+        void return_void() {
+        }
+    };
+
 public:
-    struct promise_type: detail::await_ops_mixin<promise_type> {
+    struct promise_type:
+        std::conditional_t<
+            std::is_same_v<ReturnType, void>,
+            return_void_mixin<promise_type>,
+            return_value_mixin<promise_type>
+        >, detail::await_ops_mixin<promise_type> {
+        template <typename>
+        friend struct subroutine;
+
         std::coroutine_handle<promise_type> h = nullptr;
         std::exception_ptr eptr = nullptr;
-        std::optional<ReturnType> ret;
         coroutine_info_ptr cinfo = nullptr;
 
         promise_type() {
@@ -83,14 +103,6 @@ public:
         auto unhandled_exception() {
             eptr = std::current_exception();
         }
-
-        template <typename T>
-        void return_value(T &&t) {
-            ret.emplace(std::forward<T>(t));
-        }
-
-        template <typename>
-        friend struct subroutine;
     };
 
 private:

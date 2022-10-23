@@ -64,8 +64,15 @@ CXXDES_SIMULATION(interrupts) {
 };
 
 CXXDES_SIMULATION(subroutines) {
+    subroutine<> f() {
+        fmt::print("f\n");
+        co_return ;
+    }
+
     subroutine<int> bar() {
-        fmt::print("bar\n");
+        fmt::print("barA\n");
+        co_await f();
+        fmt::print("barB\n");
         co_return 10;
     }
     
