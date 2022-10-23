@@ -14,7 +14,7 @@ struct subroutine {
     subroutine &operator=(subroutine const &other) noexcept = delete;
 
     subroutine(subroutine &&other) noexcept {
-        this = std::move(other);
+        *this = std::move(other);
     }
 
     subroutine &operator=(subroutine &&other) noexcept {

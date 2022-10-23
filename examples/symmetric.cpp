@@ -11,7 +11,7 @@ struct task {
     task &operator=(task const &other) noexcept = delete;
 
     task(task &&other) noexcept {
-        this = std::move(other);
+        *this = std::move(other);
     }
 
     task &operator=(task &&other) noexcept {
