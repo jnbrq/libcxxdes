@@ -10,7 +10,7 @@ struct clock_class {
     time_integral period;
     std::string name;
 
-    process<> operator()() {
+    coroutine<> operator()() {
         while (true) {
             fmt::print("{}: now = {}\n", name, env.now());
             co_await timeout(period);
@@ -18,7 +18,7 @@ struct clock_class {
     }
 };
 
-process<> clock(time_integral period, std::string name) {
+coroutine<> clock(time_integral period, std::string name) {
     while (true) {
         fmt::print("{}: now = {}\n", name, env.now());
         co_await timeout(period);

@@ -4,7 +4,7 @@
 using namespace cxxdes::core;
 
 CXXDES_SIMULATION(any_of_example) {
-    process<> co_main() {
+    coroutine<> co_main() {
         fmt::print("p1.a now = {}\n", env.now());
         co_await ((timeout(1000) && timeout(5)) || (timeout(100) && timeout(1)));
         fmt::print("p1.b now = {}\n", env.now());

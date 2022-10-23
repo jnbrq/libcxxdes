@@ -37,10 +37,10 @@ public:
         ++count_;
     }
 
-    void unref() {
+    void unref() const {
         assert(count_ > 0 && "object is already destroyed.");
         if (--count_ == 0) {
-            delete static_cast<Derived *>(this);
+            delete static_cast<Derived const *>(this);
         }
     }
 
@@ -58,15 +58,12 @@ private:
     mutable std::size_t count_ = 0;
 };
 
-template <typename T>
-concept reference_counted = std::is_base_of_v<reference_counted_base<T>, T>;
-
 /**
  * @brief Pointer type to be used with reference counted objects.
  * 
  * @tparam T 
  */
-template <reference_counted T>
+template <typename T>
 struct ptr {
     ptr() noexcept = default;
 
@@ -75,10 +72,11 @@ struct ptr {
     }
 
     ptr(const ptr& other) noexcept {
+        // noexcept, initially nullptr
         *this = other;
     }
 
-    ptr &operator=(const ptr &other) noexcept {
+    ptr &operator=(const ptr &other) {
         if (ptr_ != other.ptr_) {
             if (ptr_) ptr_->unref();
             ptr_ = other.ptr_;
@@ -104,8 +102,26 @@ struct ptr {
         return ptr_;
     }
 
-    operator bool() const noexcept {
+#define REFERENCE_COUNTED_PTR_IMPLEMENT_REL_OP(OPNAME) \
+    bool operator OPNAME (ptr const &other) const noexcept { \
+        return ptr_ OPNAME other.ptr_; \
+    }
+
+    REFERENCE_COUNTED_PTR_IMPLEMENT_REL_OP(==)
+    REFERENCE_COUNTED_PTR_IMPLEMENT_REL_OP(!=)
+    REFERENCE_COUNTED_PTR_IMPLEMENT_REL_OP(>)
+    REFERENCE_COUNTED_PTR_IMPLEMENT_REL_OP(>=)
+    REFERENCE_COUNTED_PTR_IMPLEMENT_REL_OP(<)
+    REFERENCE_COUNTED_PTR_IMPLEMENT_REL_OP(<=)
+
+#undef REFERENCE_COUNTED_PTR_IMPLEMENT_REL_OP
+
+    bool valid() const noexcept {
         return ptr_ != nullptr;
+    }
+
+    operator bool() const noexcept {
+        return valid();
     }
 
     T *get() noexcept {
@@ -114,6 +130,38 @@ struct ptr {
 
     T const *get() const noexcept {
         return ptr_;
+    }
+
+    operator T*() noexcept {
+        return get();
+    }
+
+    operator T const*() const noexcept {
+        return get();
+    }
+
+    template <typename U>
+    memory::ptr<U> cast() noexcept {
+        return { static_cast<U *>(ptr_) };
+    }
+
+    template <typename U>
+    memory::ptr<const U> cast() const noexcept {
+        return { static_cast<U const *>(ptr_) };
+    }
+
+    template <typename U>
+    memory::ptr<U> dyncast() noexcept {
+        return { dynamic_cast<U *>(ptr_) };
+    }
+
+    template <typename U>
+    memory::ptr<const U> dyncast() const noexcept {
+        return { dynamic_cast<U const *>(ptr_) };
+    }
+
+    memory::ptr<const T> constcast() const noexcept {
+        return { (const T *) ptr_ };
     }
 
     ~ptr() {
@@ -126,5 +174,16 @@ private:
 
 } /* namespace memory */
 } /* namespace cxxdes */
+
+#include <functional>
+
+namespace std {
+    template <typename T>
+    struct hash<cxxdes::memory::ptr<T>>: std::hash<const T *> {
+        auto operator()(const cxxdes::memory::ptr<T> &x) const {
+            return std::hash<const T *>::operator()(x.get());
+        }
+    };
+} /* namespace std */
 
 #endif /* CXXDES_MISC_REFERENCE_COUNTED_HPP_INCLUDED */

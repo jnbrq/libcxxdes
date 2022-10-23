@@ -8,21 +8,21 @@ CXXDES_SIMULATION(debug_example) {
         fmt::print("from {}, time = {}\n", id, env.now());
     }
 
-    process<> p1() {
+    coroutine<> p1() {
         co_await timeout(5);
         print_time(1);
         co_await timeout(5);
         print_time(1);
     }
 
-    process<> p2() {
+    coroutine<> p2() {
         co_await timeout(2);
         print_time(2);
         co_await timeout(3, -1);
         print_time(2);
     }
 
-    process<> co_main() {
+    coroutine<> co_main() {
         co_await all_of(
             p1(),
             p2()

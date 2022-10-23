@@ -13,9 +13,7 @@
 
 #include <limits>
 #include <concepts>
-#include <cxxdes/core/compositions.hpp>
-#include <cxxdes/core/process.hpp>
-#include <cxxdes/sync/mutex.hpp>
+#include <cxxdes/core/core.hpp>
 #include <cxxdes/sync/event.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
@@ -26,11 +24,7 @@
 namespace cxxdes {
 namespace sync {
 
-namespace detail {
-
-using core::timeout;
-using core::process;
-using core::operator&&;
+using core::coroutine;
 
 template <std::unsigned_integral U = std::size_t>
 struct semaphore {
@@ -48,27 +42,25 @@ struct semaphore {
     }
 
     [[nodiscard("expected usage: co_await semaphore.up()")]]
-    process<> up() {
+    subroutine<> up() {
         while (true) {
-            co_await mutex_.acquire();
             if (value_ < max_)
                 break ;
-            co_await (mutex_.release() && event_.wait());
+            co_await event_.wait();
         }
         ++value_;
-        co_await (mutex_.release() && event_.wake());
+        co_await event_.wake();
     }
 
     [[nodiscard("expected usage: co_await semaphore.down()")]]
-    process<> down() {
+    subroutine<> down() {
         while (true) {
-            co_await mutex_.acquire();
             if (value_ > 0)
                 break ;
-            co_await (mutex_.release() && event_.wait());
+            co_await event_.wait();
         }
         --value_;
-        co_await (mutex_.release() && event_.wake());
+        co_await event_.wake();
     }
 
 protected:
@@ -76,12 +68,7 @@ protected:
     U max_;
 
     sync::event event_;
-    sync::mutex mutex_;
 };
-
-} /* namespace detail */
-
-using detail::semaphore;
 
 } /* namespace sync */
 } /* namespace cxxdes */

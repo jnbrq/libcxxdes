@@ -15,50 +15,46 @@ struct memory {
         latency_{latency}, capacity_{capacity}, next_{next} {
     }
 
-    process<> load(addr_type addr) {
-        time_integral timestamp = (co_await this_process::get_environment())->now();
+    coroutine<> load(addr_type addr) {
+        time_integral timestamp = (co_await this_environment())->now();
 
         // co_await timeout(extra_latency_); // additional latency to be added here
-        co_await mtx_.acquire();
+        _Co_with(mtx_) {
+            if (next_ && !blocks_.count(addr)) {
+                if (blocks_.size() == capacity_) {
+                    // evict the oldest block (a better way to keep track of the oldest accessed element?)
+                    auto it = std::min_element(
+                        blocks_.begin(),
+                        blocks_.end(),
+                        [](auto const &a, auto const &b) {
+                            return a.second.last_access < b.second.last_access;
+                        });
 
-        if (next_ && !blocks_.count(addr)) {
-            if (blocks_.size() == capacity_) {
-                // evict the oldest block (a better way to keep track of the oldest accessed element?)
-                auto it = std::min_element(
-                    blocks_.begin(),
-                    blocks_.end(),
-                    [](auto const &a, auto const &b) {
-                        return a.second.last_access < b.second.last_access;
-                    });
+                    if (it->second.dirty) {
+                        co_await next_->store(it->second.addr);
+                    }
 
-                if (it->second.dirty) {
-                    co_await next_->store(it->second.addr);
+                    blocks_.erase(it);
                 }
 
-                blocks_.erase(it);
+                // wait until loaded
+                co_await next_->load(addr);
             }
-
-            // wait until loaded
-            co_await next_->load(addr);
-        }
-        co_await timeout(latency_);
-        blocks_[addr].last_access = timestamp;
-
-        co_await mtx_.release();
+            co_await timeout(latency_);
+            blocks_[addr].last_access = timestamp;
+        };
     }
 
-    process<> store(addr_type addr) {
-        // time_integral timestamp = (co_await this_process::get_environment())->now();
+    coroutine<> store(addr_type addr) {
+        // time_integral timestamp = (co_await this_coroutine::get_environment())->now();
 
         // co_await timeout(extra_latency_); // additional latency to be added here
-        co_await mtx_.acquire();
-
-        // given the fact that this is an inclusive memory hierarchy,
-        // we are guaranteed to have this block in this memory
-        co_await timeout(latency_);
-        blocks_[addr].dirty = true;
-
-        co_await mtx_.release();
+        _Co_with(mtx_) {
+            // given the fact that this is an inclusive memory hierarchy,
+            // we are guaranteed to have this block in this memory
+            co_await timeout(latency_);
+            blocks_[addr].dirty = true;
+        };
     }
 
 private:
@@ -82,7 +78,7 @@ CXXDES_SIMULATION(memory_test) {
     arch::memory mem1{10 /* latency */, 1024 /* capacity */, nullptr /* next level */};
     arch::memory mem2{1, 16, &mem1};
 
-    process<> co_main() {
+    coroutine<> co_main() {
         for (arch::addr_type i = 0; i < 32; ++i) {
             auto j = i % 16;
             auto t1 = now();

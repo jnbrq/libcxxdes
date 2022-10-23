@@ -13,8 +13,7 @@
 
 #include <type_traits>
 #include <cxxdes/sync/event.hpp>
-#include <cxxdes/core/environment.hpp>
-#include <cxxdes/core/awaitable.hpp>
+#include <cxxdes/core/core.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
 #ifdef CXXDES_DEBUG_CORE_SIMULATION
@@ -41,24 +40,24 @@ struct simulation {
     }
     
     void run() {
-        if (main_process_.is_valid() && main_process_.is_complete())
+        if (main_coroutine_.valid() && main_coroutine_.complete())
             return ;
 
-        if (not main_process_.is_valid()) {
-            main_process_ = derived().co_main();
-            start_awaitable(main_process_);
+        if (not main_coroutine_.valid()) {
+            main_coroutine_ = derived().co_main();
+            start_awaitable(main_coroutine_);
         }
         
         while (env.step());
     }
 
     auto &run_until(time_integral t) {
-        if (not main_process_.is_valid()) {
-            main_process_ = derived().co_main();
-            start_awaitable(main_process_);
+        if (not main_coroutine_.valid()) {
+            main_coroutine_ = derived().co_main();
+            start_awaitable(main_coroutine_);
         }
 
-        if (not main_process_.is_complete())
+        if (not main_coroutine_.complete())
             while (now() <= t && env.step());
         return *this;
     }
@@ -77,15 +76,10 @@ struct simulation {
         run_until(now() + env.real_to_sim(t));
         return *this;
     }
-
-#ifdef CXXDES_INTERRUPTABLE
-    void stop() {
-        env.stop();
-    }
-#endif
+    
 private:
     template <awaitable A>
-    void start_awaitable(A a) {
+    void start_awaitable(A &a) {
         CXXDES_DEBUG_MEMBER_FUNCTION;
 
         a.await_bind(&env, 0);
@@ -101,7 +95,7 @@ private:
         return static_cast<Derived &>(*this);
     }
 
-    process<void> main_process_;
+    coroutine<void> main_coroutine_;
 };
 
 #define CXXDES_SIMULATION(name) struct name : cxxdes::core::simulation < name >

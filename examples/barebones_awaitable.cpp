@@ -20,8 +20,8 @@ struct example {
         return false;
     }
 
-    void await_suspend(coro_handle current_coro) {
-        tkn_ = new token(env_->now() + latency_, priority_, current_coro);
+    void await_suspend(coroutine_info_ptr phandle) {
+        tkn_ = new token(env_->now() + latency_, priority_, phandle);
 
         // create a token and do something with it
         env_->schedule_token(tkn_); // like, scheduling it
@@ -35,6 +35,8 @@ struct example {
         // return something here
         return 4;
     }
+
+    void await_resume(no_return_value_tag) const noexcept {  }
 private:
     environment *env_ = nullptr;
     token *tkn_ = nullptr;

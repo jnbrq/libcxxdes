@@ -4,11 +4,11 @@
 using namespace cxxdes::core;
 
 CXXDES_SIMULATION(bug) {
-    process<int> test() {
+    coroutine<int> test() {
         co_return 10;
     }
 
-    process<> co_main() {
+    coroutine<> co_main() {
         fmt::print("return value = {}\n", co_await test());
         co_await (test() && timeout(10));
     }

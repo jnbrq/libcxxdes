@@ -11,7 +11,7 @@
 #ifndef CXXDES_SYNC_RESOURCE_HPP_INCLUDED
 #define CXXDES_SYNC_RESOURCE_HPP_INCLUDED
 
-#include <cxxdes/core/process.hpp>
+#include <cxxdes/core/core.hpp>
 #include <cxxdes/sync/semaphore.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
@@ -22,39 +22,65 @@
 namespace cxxdes {
 namespace sync {
 
-namespace detail {
-
-using core::process;
-
-struct resource_handle {
-    resource_handle(semaphore<> *s): s_{s} {
-    }
-
-    [[nodiscard("expected usage: co_await resource_handle.release()")]]
-    process<> release() {
-        co_await s_->up();
-    }
-private:
-    semaphore<> *s_;
-};
+using core::coroutine;
 
 struct resource {
+    struct handle {
+        handle() = default;
+
+        handle(handle const &) = delete;
+        handle &operator=(handle const &) = delete;
+
+        handle(handle &&other) {
+            *this = std::move(other);
+        }
+
+        handle &operator=(handle &&other) {
+            std::swap(x_, other.x_);
+            return *this;
+        }
+
+        [[nodiscard]]
+        bool valid() const noexcept {
+            return x_ != nullptr;
+        }
+        
+        [[nodiscard]]
+        operator bool() const noexcept {
+            return valid();
+        }
+
+        [[nodiscard("expected usage: co_await resource_handle.release()")]]
+        subroutine<> release() {
+            if (!valid())
+                throw std::runtime_error("called release() on invalid resource handle");
+            
+            auto x = x_;
+            x_ = nullptr;
+
+            co_await x->s_.up();
+        }
+
+    private:
+        friend struct resource;
+
+        handle(resource *x): x_{x} {
+        }
+
+        resource *x_ = nullptr;
+    };
+
     resource(std::size_t count): s_{count, count} {
     }
 
     [[nodiscard("expected usage: co_await resource.acquire()")]]
-    process<resource_handle> acquire() {
+    subroutine<handle> acquire() {
         co_await s_.down();
-        co_return resource_handle{&s_};
+        co_return handle(this);
     }
 private:
     semaphore<> s_;
 };
-
-} /* namespace detail */
-
-using detail::resource_handle;
-using detail::resource;
 
 } /* namespace sync */
 } /* namespace cxxdes */

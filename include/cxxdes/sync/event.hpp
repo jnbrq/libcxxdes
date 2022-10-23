@@ -13,7 +13,7 @@
 
 #include <vector>
 #include <stdexcept>
-#include <cxxdes/core/token.hpp>
+#include <cxxdes/core/core.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
 #ifdef CXXDES_DEBUG_SYNC_EVENT
@@ -30,38 +30,22 @@ using namespace cxxdes::core;
 struct event;
 
 struct wake_awaitable {
-    constexpr wake_awaitable(
-        event *evt,
-        time_integral latency,
-        priority_type priority = priority_consts::inherit):
-        evt_{evt}, latency_{latency}, priority_{priority} {
+    constexpr wake_awaitable(event *evt):
+        evt_{evt} {
     }
 
-    void await_bind(environment *env, priority_type priority) noexcept {
-        CXXDES_DEBUG_MEMBER_FUNCTION;
-
+    void await_bind(environment *env, priority_type) noexcept {
         env_ = env;
-
-        if (priority_ == priority_consts::inherit) {
-            priority_ = priority;
-        }
     }
 
-    bool await_ready() const noexcept { return false; }
-    void await_suspend(coro_handle current_coro);
-    token *await_token() const noexcept { return tkn_; }
-
-    void await_resume() const noexcept {
-        CXXDES_DEBUG_MEMBER_FUNCTION;
-    }
+    bool await_ready();
+    void await_suspend(coroutine_info_ptr) const noexcept {  }
+    token *await_token() const noexcept { return nullptr; }
+    void await_resume(no_return_value_tag = {}) const noexcept {  }
 
 private:
     event *evt_ = nullptr;
-
     environment *env_ = nullptr;
-    token *tkn_ = nullptr;
-    time_integral latency_;
-    priority_type priority_;
 };
 
 struct wait_awaitable {
@@ -83,12 +67,9 @@ struct wait_awaitable {
     }
 
     bool await_ready() const noexcept { return false; }
-    void await_suspend(coro_handle current_coro);
+    void await_suspend(coroutine_info_ptr phandle);
     token *await_token() const noexcept { return tkn_; }
-
-    void await_resume() const noexcept {
-        CXXDES_DEBUG_MEMBER_FUNCTION;
-    }
+    void await_resume(no_return_value_tag = {}) const noexcept {  }
 
 private:
     event *evt_ = nullptr;
@@ -101,8 +82,8 @@ private:
 
 struct event {
     [[nodiscard("expected usage: co_await event.wake()")]]
-    auto wake(time_integral latency = 0, priority_type priority = priority_consts::inherit) {
-        return wake_awaitable(this, latency, priority);
+    auto wake() {
+        return wake_awaitable(this);
     }
 
     [[nodiscard("expected usage: co_await event.wait()")]]
@@ -123,9 +104,9 @@ private:
     std::vector<token *> tokens_;
 };
 
-inline void wake_awaitable::await_suspend(coro_handle current_coro) {
+inline bool wake_awaitable::await_ready() {
     CXXDES_DEBUG_MEMBER_FUNCTION;
-
+    
     for (auto tkn: evt_->tokens_) {
         tkn->time += env_->now();
         env_->schedule_token(tkn);
@@ -133,14 +114,13 @@ inline void wake_awaitable::await_suspend(coro_handle current_coro) {
 
     evt_->tokens_.clear();
 
-    tkn_ = new token(env_->now() + latency_, priority_, current_coro);
-    env_->schedule_token(tkn_);
+    return true;
 }
 
-inline void wait_awaitable::await_suspend(coro_handle current_coro) {
+inline void wait_awaitable::await_suspend(coroutine_info_ptr phandle) {
     CXXDES_DEBUG_MEMBER_FUNCTION;
     
-    tkn_ = new token(latency_, priority_, current_coro);
+    tkn_ = new token(latency_, priority_, phandle);
     evt_->tokens_.push_back(tkn_);
 }
 

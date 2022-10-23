@@ -11,8 +11,8 @@
 #ifndef CXXDES_CORE_TIMEOUT_HPP_INCLUDED
 #define CXXDES_CORE_TIMEOUT_HPP_INCLUDED
 
+#include <cxxdes/core/core.hpp>
 #include <cxxdes/misc/time.hpp>
-#include <cxxdes/core/environment.hpp>
 
 #include <cxxdes/debug/helpers.hpp>
 #ifdef CXXDES_DEBUG_CORE_TIMEOUT
@@ -22,14 +22,12 @@
 namespace cxxdes {
 namespace core {
 
-template <typename Derived>
+template <typename Derived, bool Timeout = true>
 struct timeout_base {
     constexpr timeout_base(priority_type priority = priority_consts::inherit): priority_{priority} {
     }
 
     void await_bind(environment *env, priority_type priority) noexcept {
-        CXXDES_DEBUG_MEMBER_FUNCTION;
-
         env_ = env;
 
         if (priority_ == priority_consts::inherit) {
@@ -38,23 +36,30 @@ struct timeout_base {
     }
 
     bool await_ready() const noexcept {
-        return false;
+        if constexpr (Timeout)
+            return false;
+        else
+            return env().now() >= derived().time();
     }
 
-    void await_suspend(coro_handle current_coro) {
-        CXXDES_DEBUG_MEMBER_FUNCTION;
+    void await_suspend(coroutine_info_ptr phandle) {
+        time_integral pt = 0;
 
-        auto latency = derived().latency();
-        tkn_ = new token(env_->now() + latency, priority_, current_coro);
-        env_->schedule_token(tkn_);
+        if constexpr (Timeout) {
+            pt = env().now() + derived().time();
+        }
+        else {
+            pt = derived().time();
+        }
+
+        env_->schedule_token(tkn_ = new token(pt, priority_, phandle));
     }
 
     token *await_token() const noexcept {
         return tkn_;
     }
 
-    void await_resume() const noexcept {
-        CXXDES_DEBUG_MEMBER_FUNCTION;
+    void await_resume(no_return_value_tag = {}) const noexcept {
     }
 
     auto &env() const noexcept {
@@ -67,83 +72,124 @@ protected:
 
     priority_type priority_;
 
-    auto derived() noexcept -> auto & {
-        return static_cast<Derived &>(*this);
+    auto derived() const noexcept -> auto const & {
+        return static_cast<Derived const &>(*this);
     }
 };
 
-template <typename T>
-[[nodiscard("expected usage: co_await timeout(t)")]]
-constexpr auto timeout(T &&t, priority_type priority = priority_consts::inherit) noexcept {
-    struct result: timeout_base<result> {
-        using base = timeout_base<result>;
+template <bool Timeout, bool Convert = true>
+struct timeout_functor {
+    template <typename T>
+    constexpr auto operator()(T &&t, priority_type priority = priority_consts::inherit) const noexcept {
+        struct [[nodiscard]] result: timeout_base<result, Timeout> {
+            using base = timeout_base<result, Timeout>;
 
-        T t;
+            std::remove_cvref_t<T> t;
 
-        auto latency() const noexcept {
-            return base::env().real_to_sim(t);
-        }
-    };
+            time_integral time() const noexcept {
+                return base::env().real_to_sim(t);
+            }
+        };
 
-    return result{ { priority }, std::forward<T>(t) };
-}
-
-struct instant_type: timeout_base<instant_type> {
-    const time_integral t = 0;
-
-    bool await_ready() {
-        return env().now() >= t;
-    }
-
-    auto latency() const noexcept {
-        return t - env().now();
+        return result{ { priority }, std::forward<T>(t) };
     }
 };
 
-template <typename T>
-constexpr auto lazy_timeout(T &&t, priority_type priority = priority_consts::inherit) {
-    struct result_type {
-        // TODO for both timeout() and instant(), should they copy always?
-        T t; // should we use std::remove_cvref_t?
-        priority_type priority;
-        time_integral tsim = 0;
+template <bool Timeout>
+struct timeout_functor<Timeout, false> {
+    constexpr auto operator()(time_integral t, priority_type priority = priority_consts::inherit) const noexcept {
+        struct [[nodiscard]] result: timeout_base<result, Timeout> {
+            time_integral t;
 
-        void await_bind(environment *env, priority_type) noexcept {
-            tsim = env->now() + env->real_to_sim(t);
-        }
+            time_integral time() const noexcept {
+                return t;
+            }
+        };
 
-        bool await_ready() const noexcept {
-            return true;
-        }
-
-        void await_suspend(coro_handle) const noexcept {  }
-
-        token *await_token() const noexcept { return nullptr; }
-
-        auto await_resume() {
-            return instant_type{ { priority }, tsim };
-        }
-    };
-
-    return result_type{std::forward<T>(t), priority};
-}
-
-struct delay_type: timeout_base<delay_type> {
-    using base = timeout_base<delay_type>;
-
-    time_integral integer;
-
-    auto latency() const noexcept {
-        return integer;
+        return result{ { priority }, t };
     }
 };
 
-template <std::integral Integer>
-constexpr auto delay(Integer delay, priority_type priority = priority_consts::inherit) noexcept {
-    return delay_type{ { priority }, static_cast<time_integral>(delay) };
-}
+inline constexpr timeout_functor<true, true> timeout;
+inline constexpr timeout_functor<true, false> delay;
 
-constexpr auto yield() noexcept {
+inline constexpr timeout_functor<false, true> instant;
+inline constexpr timeout_functor<false, false> until;
+
+template <typename Derived>
+struct lazy_timeout_base {
+    constexpr lazy_timeout_base(priority_type priority = priority_consts::inherit): priority_{priority} {
+    }
+
+    bool await_ready() const noexcept {
+        return true;
+    }
+
+    void await_suspend(coroutine_info_ptr) const noexcept {  }
+
+    token *await_token() const noexcept { return nullptr; }
+
+    auto await_resume() const noexcept {
+        return instant(derived().time(), priority_);
+    }
+
+    void await_resume(no_return_value_tag) {  }
+
+protected:
+    priority_type priority_;
+
+    auto derived() const noexcept -> const auto & {
+        return static_cast<Derived const &>(*this);
+    }
+};
+
+template <bool Convert = true>
+struct lazy_timeout_functor {
+    template <typename T>
+    [[nodiscard]]
+    constexpr auto operator()(T &&t, priority_type priority = priority_consts::inherit) const noexcept {
+        struct [[nodiscard]] result: lazy_timeout_base<result> {
+            std::remove_cvref_t<T> t;
+            time_integral tsim = 0;
+
+            void await_bind(environment *env, priority_type) noexcept {
+                tsim = env->now() + env->real_to_sim(t);
+            }
+
+            time_integral time() const noexcept {
+                return tsim;
+            }
+        };
+
+        return result{ { priority }, std::forward<T>(t)};
+    }
+};
+
+template <>
+struct lazy_timeout_functor<false> {
+    [[nodiscard]]
+    constexpr auto operator()(time_integral t, priority_type priority = priority_consts::inherit) const noexcept {
+        struct [[nodiscard]] result: lazy_timeout_base<result> {
+            time_integral t;
+            time_integral tsim = 0;
+
+            void await_bind(environment *env, priority_type) noexcept {
+                tsim = env->now() + t;
+            }
+
+            time_integral time() const noexcept {
+                return tsim;
+            }
+        };
+
+        return result{ { priority }, t };
+    }
+};
+
+inline constexpr lazy_timeout_functor<true> lazy_timeout;
+inline constexpr lazy_timeout_functor<false> lazy_delay;
+
+inline constexpr auto yield() noexcept {
     return delay(0);
 }
 
