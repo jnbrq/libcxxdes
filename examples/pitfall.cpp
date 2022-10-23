@@ -92,6 +92,27 @@ CXXDES_SIMULATION(subroutines) {
     }
 };
 
+CXXDES_SIMULATION(subroutines2) {
+    subroutine<int> foo() {
+        try {
+            co_await delay(600);
+            co_await delay(600);
+        }
+        catch (cxxdes::core::stopped_exception &ex) {
+            fmt::print("exception: {}, now {}\n", ex.what(), now());
+            throw ex;
+        }
+        co_return 20;
+    }
+
+    coroutine<> co_main() {
+        fmt::print("co_mainA now {}\n", now());
+        fmt::print("j = {}\n", co_await foo());
+        fmt::print("co_mainB now = {}\n", now());
+        co_return ;
+    }
+};
+
 int main() {
     fmt::print("pitfall\n");
     pitfall().run();
@@ -101,5 +122,8 @@ int main() {
 
     fmt::print("subroutines\n");
     subroutines().run();
+
+    fmt::print("subroutines2\n");
+    subroutines2().run_for(500);
     return 0;
 }
