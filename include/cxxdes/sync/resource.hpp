@@ -51,7 +51,7 @@ struct resource {
         }
 
         [[nodiscard("expected usage: co_await resource_handle.release()")]]
-        unique_coroutine<> release() {
+        subroutine<> release() {
             if (!valid())
                 throw std::runtime_error("called release() on invalid resource handle");
             
@@ -74,7 +74,7 @@ struct resource {
     }
 
     [[nodiscard("expected usage: co_await resource.acquire()")]]
-    unique_coroutine<handle> acquire() {
+    subroutine<handle> acquire() {
         co_await s_.down();
         co_return handle(this);
     }

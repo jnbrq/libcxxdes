@@ -42,7 +42,7 @@ struct semaphore {
     }
 
     [[nodiscard("expected usage: co_await semaphore.up()")]]
-    coroutine<> up() {
+    subroutine<> up() {
         while (true) {
             if (value_ < max_)
                 break ;
@@ -53,7 +53,7 @@ struct semaphore {
     }
 
     [[nodiscard("expected usage: co_await semaphore.down()")]]
-    coroutine<> down() {
+    subroutine<> down() {
         while (true) {
             if (value_ > 0)
                 break ;

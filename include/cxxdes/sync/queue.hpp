@@ -38,7 +38,7 @@ struct queue {
 
     template <typename ...Args>
     [[nodiscard("expected usage: co_await queue.put(args...)")]]
-    coroutine<> put(Args && ...args) {
+    subroutine<> put(Args && ...args) {
         while (true) {
             if (max_size_ == 0 || q_.size() < max_size_)
                 break ;
@@ -50,7 +50,7 @@ struct queue {
 
 
     [[nodiscard("expected usage: co_await queue.pop()")]]
-    coroutine<T> pop() {
+    subroutine<T> pop() {
         while (true) {
             if (q_.size() > 0)
                 break ;
