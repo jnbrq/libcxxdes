@@ -19,6 +19,8 @@
 #include <unordered_set>
 #include <cstddef>
 #include <memory>
+#include <stack>
+#include <string>
 
 #include <cxxdes/misc/time.hpp>
 #include <cxxdes/misc/utils.hpp>
@@ -38,15 +40,23 @@ using namespace experimental;
 namespace cxxdes {
 namespace core {
 
+namespace detail {
+    template <typename Derived>
+    struct basic_promise_type;
+}
+
 struct environment;
 struct basic_process_data;
 
-using process_handle = basic_process_data *;
-using const_process_handle = basic_process_data const *;
+using process_handle = memory::ptr<basic_process_data>;
+using const_process_handle = memory::ptr<const basic_process_data>;
 using coro_handle = std::coroutine_handle<>;
 
 template <typename ReturnType, bool Unique>
 struct process;
+
+template <typename ReturnType>
+struct subroutine;
 
 struct token_handler;
 struct token;
@@ -127,9 +137,30 @@ struct immediately_return {
 template <typename A>
 immediately_return(A &&a) -> immediately_return<std::remove_cvref_t<A>>;
 
+#if 0
+struct interrupted_exception: std::exception {
+    interrupted_exception(std::string what = "interrupted."):
+        what_{std::move(what)} {
+    }
+
+    const char *what() const noexcept override {
+        return what_.c_str();
+    }
+
+private:
+    std::string what_;
+};
+#else
 struct interrupted_exception: std::exception {
     const char *what() const noexcept override {
         return "interrupted.";
+    }
+};
+#endif
+
+struct stopped_exception: std::exception {
+    const char *what() const noexcept override {
+        return "stopped.";
     }
 };
 
@@ -178,8 +209,8 @@ private:
 };
 
 struct basic_process_data: memory::reference_counted_base<basic_process_data> {
-    basic_process_data(coro_handle coro, util::source_location created):
-        coro_{coro}, created_{created} {
+    basic_process_data(util::source_location created):
+        created_{created} {
     }
 
     basic_process_data(const basic_process_data &) = delete;
@@ -197,13 +228,16 @@ struct basic_process_data: memory::reference_counted_base<basic_process_data> {
     }
 
     void resume() {
-        if (coro_)
-            return coro_.resume();
-    }
+        if (complete_)
+            // a token might try to resume an interrupted process
+            return ;
 
-    [[nodiscard]]
-    coro_handle coro() const noexcept {
-        return coro_;
+        // note that process<> does not pop the first process
+        do {
+            should_continue_ = false;
+            auto top = call_stack_.top();
+            top.resume();
+        } while (should_continue_);
     }
 
     [[nodiscard]]
@@ -264,26 +298,56 @@ struct basic_process_data: memory::reference_counted_base<basic_process_data> {
         return exception_.valid();
     }
 
-    void raise_interrupt() {
+    virtual ~basic_process_data() = default;
+
+protected:
+    template <awaitable A>
+    friend struct awaitable_wrapper;
+
+    template <typename ReturnType, bool Unique>
+    friend struct process;
+
+    template <typename ReturnType>
+    friend struct subroutine;
+
+    void bind_(environment *env, priority_type priority);
+    void manage_();
+    void unmanage_();
+
+    void raise_interrupt_() {
         // clear exception_, the exception might be caught
         // we may need to interrupt again later
         auto exception = std::move(exception_);
         exception.raise();
     }
 
-    virtual ~basic_process_data() = default;
+    void push_coro_(coro_handle coro) {
+        // whenever there is a subroutine call, the
+        // execution should keep moving further
+        call_stack_.push(coro);
+        should_continue_ = true;
+    }
 
-protected:
-    template <typename ReturnType, bool Unique>
-    friend struct process;
+    void pop_coro_() {
+        // whenever a subroutine call returns, the
+        // execution should keep moving further
+        call_stack_.pop();
+        should_continue_ = true;
+    }
 
-    void bind_(environment *env, priority_type priority);
-    void manage_();
-    void unmanage_();
+    void destroy_if_not_started_() {
+        if (ref_count() == 2 && !started()) {
+            // if called, only two owners: (1) process<T> and (2) promise_type
+            // as the process is not started yet, promise_type will never
+            // get destroyed, resulting in a memory leak
+            call_stack_.top().destroy();
+        }
+    }
 
 protected:
     environment *env_ = nullptr;
-    coro_handle coro_ = nullptr;
+    std::stack<coro_handle> call_stack_;
+    bool should_continue_ = false;
     util::source_location created_;
     util::source_location awaited_;
     priority_type priority_ = priority_consts::inherit;
@@ -383,18 +447,21 @@ struct environment {
         return loc_;
     }
 
-    void loc(util::source_location const &loc) noexcept {
-        loc_ = loc;
-    }
-
     ~environment() {
-        for (auto process: processes_) {
+        // it is not safe to iterate over the processes while
+        // individual coroutines might actively modify the
+        // unoredered_set. move from it.
+        // for a proper way to erase while iterating:
+        //   https://en.cppreference.com/w/cpp/container/unordered_set/erase
+        // sadly, we cannot apply this solution.
+
+        auto processes = std::move(processes_);
+        for (auto process: processes) {
             if (!process->complete()) {
-                process->interrupt();
+                process->interrupt(stopped_exception{});
                 process->resume();
             }
         }
-        processes_.clear();
 
         while (!tokens_.empty()) {
             auto tkn = tokens_.top();
@@ -420,6 +487,15 @@ private:
     std::priority_queue<token *, std::vector<token *>, token_comp> tokens_;
     
     friend struct basic_process_data;
+
+    template <typename ReturnType, bool Unique>
+    friend struct process;
+
+    template <typename ReturnType>
+    friend struct subroutine;
+
+    template <typename Derived>
+    friend struct detail::basic_promise_type;
 
     std::unordered_set<memory::ptr<basic_process_data>> processes_;
     process_handle current_process_ = nullptr;
@@ -582,7 +658,7 @@ struct awaitable_wrapper {
 
     auto await_resume() {
         if (phandle_this->interrupted())
-            phandle_this->raise_interrupt();
+            phandle_this->raise_interrupt_();
         return a.await_resume();
     }
 };
@@ -593,13 +669,207 @@ struct this_environment {  };
 template <typename T>
 struct await_transform_extender;
 
+namespace detail {
+
+template <typename Derived>
+struct basic_promise_type {
+    template <awaitable A>
+    auto await_transform(
+        A &&a,
+        util::source_location const loc = util::source_location::current()) {
+        auto result = awaitable_wrapper<std::remove_cvref_t<A>>{
+            std::forward<A>(a),
+            derived().pdata(),
+            derived().pdata()->env()->current_process()
+        };
+        derived().pdata()->env()->loc_ = loc;
+        result.a.await_bind(
+            derived().pdata()->env(),
+            derived().pdata()->priority());
+        return result;
+    }
+
+    template <typename ReturnType>
+    auto &&await_transform(subroutine<ReturnType> &&a);
+
+    template <typename T>
+    auto await_transform(
+        await_transform_extender<T> const &a,
+        util::source_location const loc = util::source_location::current()) {
+        return a.await_transform(derived().pdata(), loc);
+    }
+
+    auto await_transform(this_process) noexcept {
+        return immediately_return{derived().pdata()};
+    }
+
+    auto await_transform(this_environment) noexcept {
+        return immediately_return{derived().pdata()->env()};
+    }
+    
+    template <awaitable A>
+    auto yield_value(A &&a) {
+        return await_transform(std::forward<A>(a));
+    }
+
+private:
+    Derived &derived() noexcept {
+        return *static_cast<Derived *>(this);
+    }
+
+    Derived const &derived() const noexcept {
+        return *static_cast<Derived const *>(this);
+    }
+};
+
+} /* namespace detail */
+
+template <typename ReturnType = void>
+struct subroutine {
+    struct promise_type;
+
+    subroutine() noexcept: h_{nullptr} {  }
+
+    subroutine(subroutine const &) noexcept = delete;
+    subroutine &operator=(subroutine const &other) noexcept = delete;
+
+    subroutine(subroutine &&other) noexcept {
+        this = std::move(other);
+    }
+
+    subroutine &operator=(subroutine &&other) noexcept {
+        if (this != &other) std::swap(h_, other.h_);
+        return *this;
+    }
+
+    bool await_ready() {
+        if (h_) return h_.done();
+        return true;
+    }
+
+    bool await_suspend(std::coroutine_handle<>) {
+        auto &promise = h_.promise();
+        promise.pdata_->push_coro_(h_);
+        return true;
+    }
+
+    ReturnType await_resume() {
+        auto &promise = h_.promise();
+        if (promise.eptr_)
+            std::rethrow_exception(promise.eptr_);
+        return std::move(*promise.ret_);
+    }
+
+    ~subroutine() {
+        if (h_) h_.destroy();
+    }
+
+private:
+    template <typename>
+    friend struct detail::basic_promise_type;
+
+    void bind_process_(basic_process_data *pdata) {
+        auto &promise = h_.promise();
+        promise.pdata_ = pdata;
+    }
+
+    template <typename Derived>
+    struct return_value_mixin {
+        template <typename T>
+        void return_value(T &&t) {
+            ret_.emplace(std::forward<T>(t));
+        }
+
+    protected:
+        std::optional<ReturnType> ret_;
+    };
+
+    template <typename Derived>
+    struct return_void_mixin {
+        void return_void() {
+        }
+    };
+
+public:
+
+    struct promise_type:
+        std::conditional_t<
+            std::is_same_v<ReturnType, void>,
+            return_void_mixin<promise_type>,
+            return_value_mixin<promise_type>
+        >, detail::basic_promise_type<promise_type> {
+        promise_type() {
+            h_ = std::coroutine_handle<promise_type>::from_promise(*this);
+        }
+
+        subroutine get_return_object() noexcept {
+            return subroutine(h_);
+        }
+
+        auto initial_suspend() noexcept -> std::suspend_always { return {}; }
+        auto final_suspend() noexcept {
+            struct final_awaitable {
+                basic_process_data *pdata;
+
+                bool await_ready() const noexcept { return false; }
+                void await_suspend(std::coroutine_handle<>) const noexcept {
+                    pdata->pop_coro_();
+                }
+                void await_resume() const noexcept {  }
+            };
+            return final_awaitable{pdata_};
+        }
+
+        auto unhandled_exception() {
+            eptr_ = std::current_exception();
+        }
+
+        template <typename T>
+        void return_value(T &&t) {
+            ret_.emplace(std::forward<T>(t));
+        }
+
+        process_handle pdata() noexcept {
+            return pdata_;
+        }
+
+        const_process_handle pdata() const noexcept {
+            return pdata_;
+        }
+    
+    protected:
+        std::coroutine_handle<promise_type> h_ = nullptr;
+        std::exception_ptr eptr_ = nullptr;
+        std::optional<ReturnType> ret_ = nullptr;
+        basic_process_data *pdata_ = nullptr;
+    };
+
+private:
+    std::coroutine_handle<promise_type> h_ = nullptr;
+
+    explicit
+    subroutine(std::coroutine_handle<promise_type> h) noexcept: h_{h} {
+    }
+};
+
+namespace detail {
+
+template <typename Derived>
+template <typename ReturnType>
+auto &&basic_promise_type<Derived>::await_transform(subroutine<ReturnType> &&a) {
+    a.bind_process_(derived().pdata());
+    return std::move(a);
+}
+
+}
+
 template <typename ReturnType = void, bool Unique = false>
 struct process:
     detail::process_return_value_mixin<process<ReturnType, Unique>, ReturnType> {
     using process_data_type = process_data<ReturnType, Unique>;
 
     explicit
-    process(memory::ptr<process_data_type> const &pdata = nullptr):
+    process(process_data_type *pdata = nullptr):
         pdata_{pdata} {
     }
 
@@ -633,9 +903,7 @@ struct process:
     }
 
     ~process() {
-        if (pdata_ && pdata_->ref_count() == 2 && !pdata_->started()) {
-            pdata_->coro().destroy();
-        }
+        if (pdata_) pdata_->destroy_if_not_started_();
     }
 
     [[nodiscard]]
@@ -772,15 +1040,17 @@ private:
     struct return_value_mixin {
         template <typename T>
         void return_value(T &&t) {
-            static_cast<Derived *>(this)->emplace_return_value(std::forward<T>(t));
-            static_cast<Derived *>(this)->do_return();
+            auto &derived = *static_cast<Derived *>(this);
+            derived.emplace_return_value(std::forward<T>(t));
+            derived.do_return();
         }
     };
 
     template <typename Derived>
     struct return_void_mixin {
         void return_void() {
-            static_cast<Derived *>(this)->do_return();
+            auto &derived = *static_cast<Derived *>(this);
+            derived.do_return();
         }
     };
 
@@ -790,65 +1060,33 @@ public:
             std::is_same_v<ReturnType, void>,
             return_void_mixin<promise_type>,
             return_value_mixin<promise_type>
-        > {
+        >, detail::basic_promise_type<promise_type> {
     
         template <typename ...Args>
         promise_type(Args && ...args) {
             auto loc = util::extract_first_type<util::source_location>(args...);
             auto coro = std::coroutine_handle<promise_type>::from_promise(*this);
-            pdata_ = new process_data_type(coro, loc);
+            pdata_ = new process_data_type(loc);
+            pdata_->push_coro_(coro);
         }
 
         process get_return_object() {
-            return process(pdata_);
+            return process(static_cast<process_data_type *>(pdata_));
         }
 
         auto initial_suspend() noexcept -> std::suspend_always { return {}; }
         auto final_suspend() noexcept -> std::suspend_never { return {}; }
+
         auto unhandled_exception() -> void {
             try {
                 std::rethrow_exception(std::current_exception());
             }
-            catch (interrupted_exception & /* ex */) {
+            catch (stopped_exception & /* ex */) {
                 do_return();
             }
             catch (...) {
                 std::rethrow_exception(std::current_exception());
             }
-        }
-
-        template <awaitable A>
-        auto await_transform(
-            A &&a,
-            util::source_location const loc = util::source_location::current()) {
-            auto result = awaitable_wrapper<std::remove_cvref_t<A>>{
-                std::forward<A>(a),
-                pdata_.get(),
-                pdata_->env()->current_process()
-            };
-            pdata_->env()->loc(loc);
-            result.a.await_bind(pdata_->env(), pdata_->priority());
-            return result;
-        }
-
-        template <typename T>
-        auto await_transform(
-            await_transform_extender<T> const &a,
-            util::source_location const loc = util::source_location::current()) {
-            return a.await_transform(pdata_.get(), loc);
-        }
-
-        auto await_transform(this_process) noexcept {
-            return immediately_return{pdata_.get()};
-        }
-
-        auto await_transform(this_environment) noexcept {
-            return immediately_return{pdata_->env()};
-        }
-        
-        template <awaitable A>
-        auto yield_value(A &&a) {
-            return await_transform(std::forward<A>(a));
         }
 
         template <typename T>
@@ -860,9 +1098,18 @@ public:
             pdata_->do_return();
         }
 
+        process_handle pdata() noexcept {
+            return pdata_.get();
+        }
+
+        const_process_handle pdata() const noexcept {
+            return pdata_.get();
+        }
+
         ~promise_type() {
         }
-    private:
+
+    protected:
         memory::ptr<process_data_type> pdata_;
     };
 };

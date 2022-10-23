@@ -132,6 +132,14 @@ struct ptr {
         return ptr_;
     }
 
+    operator T*() noexcept {
+        return get();
+    }
+
+    operator T const*() const noexcept {
+        return get();
+    }
+
     template <typename U>
     memory::ptr<U> cast() noexcept {
         return { static_cast<U *>(ptr_) };
