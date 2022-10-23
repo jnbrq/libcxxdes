@@ -10,7 +10,7 @@ CXXDES_SIMULATION(mutex_example)
     cxxdes::sync::mutex m;
 
     coroutine<> p(int idx, time_integral t) {
-        co_with(m) {
+        _Co_with(m) {
             fmt::print("idx = {}, now = {}\n", idx, now());
             co_await delay(t);
             fmt::print("idx = {}, now = {}\n", idx, now());

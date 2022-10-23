@@ -19,7 +19,7 @@ struct memory {
         time_integral timestamp = (co_await this_environment())->now();
 
         // co_await timeout(extra_latency_); // additional latency to be added here
-        co_with(mtx_) {
+        _Co_with(mtx_) {
             if (next_ && !blocks_.count(addr)) {
                 if (blocks_.size() == capacity_) {
                     // evict the oldest block (a better way to keep track of the oldest accessed element?)
@@ -49,7 +49,7 @@ struct memory {
         // time_integral timestamp = (co_await this_coroutine::get_environment())->now();
 
         // co_await timeout(extra_latency_); // additional latency to be added here
-        co_with(mtx_) {
+        _Co_with(mtx_) {
             // given the fact that this is an inclusive memory hierarchy,
             // we are guaranteed to have this block in this memory
             co_await timeout(latency_);

@@ -22,9 +22,9 @@ CXXDES_SIMULATION(test) {
 
     coroutine<> co_main() {
         std::vector<coroutine<>> ps {
-            _coroutine() { co_await ((foo() && foo()) || foo()); },
-            _coroutine() { co_await (foo(), foo()); },
-            _coroutine() { co_await bar(); }
+            _Coroutine() { co_await ((foo() && foo()) || foo()); },
+            _Coroutine() { co_await (foo(), foo()); },
+            _Coroutine() { co_await bar(); }
         };
         co_await ps[test_id];
     }

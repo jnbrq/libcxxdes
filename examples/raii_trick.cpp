@@ -16,7 +16,7 @@ CXXDES_SIMULATION(raii_trick) {
 
         fmt::print("p id = {}, priority = {}\n", id, (co_await this_coroutine())->priority());
 
-        co_with(res) {
+        _Co_with(res) {
             co_await timeout(wait_time);
             fmt::print("p id = {}, now = {}\n", id, now());
         };
