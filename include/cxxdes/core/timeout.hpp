@@ -77,9 +77,9 @@ protected:
     }
 };
 
-template <bool Timeout, bool Convert = true>
+template <bool Timeout>
 struct timeout_functor {
-    template <typename T>
+    template <cxxdes::time_utils::node T>
     constexpr auto operator()(T &&t, priority_type priority = priority_consts::inherit) const noexcept {
         struct [[nodiscard]] result: timeout_base<result, Timeout> {
             using base = timeout_base<result, Timeout>;
@@ -93,10 +93,7 @@ struct timeout_functor {
 
         return result{ { priority }, std::forward<T>(t) };
     }
-};
 
-template <bool Timeout>
-struct timeout_functor<Timeout, false> {
     constexpr auto operator()(time_integral t, priority_type priority = priority_consts::inherit) const noexcept {
         struct [[nodiscard]] result: timeout_base<result, Timeout> {
             time_integral t;
@@ -110,11 +107,8 @@ struct timeout_functor<Timeout, false> {
     }
 };
 
-inline constexpr timeout_functor<true, true> timeout;
-inline constexpr timeout_functor<true, false> delay;
-
-inline constexpr timeout_functor<false, true> instant;
-inline constexpr timeout_functor<false, false> until;
+inline constexpr timeout_functor<true> timeout, delay;
+inline constexpr timeout_functor<false> instant, until;
 
 template <typename Derived>
 struct lazy_timeout_base {
@@ -143,10 +137,8 @@ protected:
     }
 };
 
-template <bool Convert = true>
 struct lazy_timeout_functor {
     template <typename T>
-    [[nodiscard]]
     constexpr auto operator()(T &&t, priority_type priority = priority_consts::inherit) const noexcept {
         struct [[nodiscard]] result: lazy_timeout_base<result> {
             std::remove_cvref_t<T> t;
@@ -163,11 +155,7 @@ struct lazy_timeout_functor {
 
         return result{ { priority }, std::forward<T>(t)};
     }
-};
 
-template <>
-struct lazy_timeout_functor<false> {
-    [[nodiscard]]
     constexpr auto operator()(time_integral t, priority_type priority = priority_consts::inherit) const noexcept {
         struct [[nodiscard]] result: lazy_timeout_base<result> {
             time_integral t;
@@ -186,8 +174,7 @@ struct lazy_timeout_functor<false> {
     }
 };
 
-inline constexpr lazy_timeout_functor<true> lazy_timeout;
-inline constexpr lazy_timeout_functor<false> lazy_delay;
+inline constexpr lazy_timeout_functor lazy_timeout, lazy_delay;
 
 inline constexpr auto yield() noexcept {
     return delay(0);
