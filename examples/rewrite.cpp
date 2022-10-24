@@ -16,7 +16,7 @@ unique_coroutine<int> test() {
 
 #include <assert.h>
 
-int main(int argc, char **argv) {
+int main(int, char **) {
     auto p = test();
     auto p2 = std::move(p);
     assert(not (bool) p);

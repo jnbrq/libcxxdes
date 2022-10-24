@@ -52,7 +52,7 @@ struct simulation {
     template <typename ...Args>
     static void run(Args && ...args) {
         environment env;
-        Derived s{env, std::forward<Args>(args)...};
+        Derived s(env, std::forward<Args>(args)...);
         (void) s;
         env.run();
     }
@@ -60,7 +60,7 @@ struct simulation {
     template <typename T, typename ...Args>
     static void run_for(T &&t, Args && ...args) {
         environment env;
-        Derived s{env, std::forward<Args>(args)...};
+        Derived s(env, std::forward<Args>(args)...);
         (void) s;
         env.run_for(std::forward<T>(t));
     }
