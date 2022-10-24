@@ -52,7 +52,7 @@ struct any_all_helper {
             return Condition::operator()(total, remaining_);
         }
 
-        void await_suspend(coroutine_info_ptr phandle) {
+        void await_suspend(coroutine_data_ptr phandle) {
             CXXDES_DEBUG_MEMBER_FUNCTION;
 
             tkn_ = new token(latency_, priority_, phandle);

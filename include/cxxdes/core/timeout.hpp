@@ -42,7 +42,7 @@ struct timeout_base {
             return env().now() >= derived().time();
     }
 
-    void await_suspend(coroutine_info_ptr phandle) {
+    void await_suspend(coroutine_data_ptr phandle) {
         time_integral pt = 0;
 
         if constexpr (Timeout) {
@@ -125,7 +125,7 @@ struct lazy_timeout_base {
         return true;
     }
 
-    void await_suspend(coroutine_info_ptr) const noexcept {  }
+    void await_suspend(coroutine_data_ptr) const noexcept {  }
 
     token *await_token() const noexcept { return nullptr; }
 

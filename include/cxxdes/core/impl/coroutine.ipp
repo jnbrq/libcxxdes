@@ -17,10 +17,10 @@ struct coroutine_return_value_mixin<Derived, void> {
 template <typename ReturnType, bool Unique>
 struct coroutine:
     detail::coroutine_return_value_mixin<coroutine<ReturnType, Unique>, ReturnType> {
-    using coroutine_info_type = coroutine_info_<ReturnType, Unique>;
+    using coroutine_data_type = coroutine_data_<ReturnType, Unique>;
 
     explicit
-    coroutine(memory::ptr<coroutine_info_type> cinfo = nullptr):
+    coroutine(memory::ptr<coroutine_data_type> cinfo = nullptr):
         cinfo_{std::move(cinfo)} {
     }
 
@@ -67,7 +67,7 @@ struct coroutine:
         return valid();
     }
 
-    coroutine_info_type const *cinfo() const noexcept {
+    coroutine_data_type const *cinfo() const noexcept {
         return cinfo_.get();
     }
 
@@ -154,7 +154,7 @@ struct coroutine:
         return cinfo_->complete();
     }
 
-    void await_suspend(coroutine_info_ptr phandle) {
+    void await_suspend(coroutine_data_ptr phandle) {
         if (completion_token_)
             throw std::runtime_error("coroutine<> is already being awaited!");
 
@@ -199,7 +199,7 @@ struct coroutine:
     }
 
 private:
-    memory::ptr<coroutine_info_type> cinfo_ = nullptr;
+    memory::ptr<coroutine_data_type> cinfo_ = nullptr;
     token *completion_token_ = nullptr; // must be non-owning, in case of copies
 
     struct {
@@ -232,13 +232,13 @@ public:
             return_void_mixin<promise_type>,
             return_value_mixin<promise_type>
         >, detail::await_ops_mixin<promise_type> {
-        memory::ptr<coroutine_info_type> cinfo;
+        memory::ptr<coroutine_data_type> cinfo;
     
         template <typename ...Args>
         promise_type(Args && ...args) {
             auto loc = util::extract_first_type<util::source_location>(args...);
             auto coro = std::coroutine_handle<promise_type>::from_promise(*this);
-            cinfo = new coroutine_info_type(loc);
+            cinfo = new coroutine_data_type(loc);
             cinfo->push_coro_(coro);
         }
 

@@ -64,9 +64,9 @@ struct stopped_exception;
 
 struct exception_container;
 
-struct coroutine_info;
-using coroutine_info_ptr = memory::ptr<coroutine_info>;
-using const_coroutine_info_ptr = memory::ptr<const coroutine_info>;
+struct coroutine_data;
+using coroutine_data_ptr = memory::ptr<coroutine_data>;
+using const_coroutine_data_ptr = memory::ptr<const coroutine_data>;
 
 struct environment;
 
@@ -86,7 +86,7 @@ struct subroutine;
 #include "impl/immediately_return.ipp"
 #include "impl/exception_types.ipp"
 #include "impl/exception_container.ipp"
-#include "impl/coroutine_info.ipp"
+#include "impl/coroutine_data.ipp"
 #include "impl/environment.ipp"
 #include "impl/await_transform.ipp"
 #include "impl/subroutine.ipp"

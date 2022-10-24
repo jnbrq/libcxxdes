@@ -2,8 +2,8 @@
 template <awaitable A>
 struct awaitable_wrapper {
     A a;
-    coroutine_info_ptr phandle_this = nullptr;
-    coroutine_info_ptr phandle_old = nullptr;
+    coroutine_data_ptr phandle_this = nullptr;
+    coroutine_data_ptr phandle_old = nullptr;
     
     bool await_ready() {
         return a.await_ready();

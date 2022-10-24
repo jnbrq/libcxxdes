@@ -39,7 +39,7 @@ struct wake_awaitable {
     }
 
     bool await_ready();
-    void await_suspend(coroutine_info_ptr) const noexcept {  }
+    void await_suspend(coroutine_data_ptr) const noexcept {  }
     token *await_token() const noexcept { return nullptr; }
     void await_resume(no_return_value_tag = {}) const noexcept {  }
 
@@ -67,7 +67,7 @@ struct wait_awaitable {
     }
 
     bool await_ready() const noexcept { return false; }
-    void await_suspend(coroutine_info_ptr phandle);
+    void await_suspend(coroutine_data_ptr phandle);
     token *await_token() const noexcept { return tkn_; }
     void await_resume(no_return_value_tag = {}) const noexcept {  }
 
@@ -117,7 +117,7 @@ inline bool wake_awaitable::await_ready() {
     return true;
 }
 
-inline void wait_awaitable::await_suspend(coroutine_info_ptr phandle) {
+inline void wait_awaitable::await_suspend(coroutine_data_ptr phandle) {
     CXXDES_DEBUG_MEMBER_FUNCTION;
     
     tkn_ = new token(latency_, priority_, phandle);

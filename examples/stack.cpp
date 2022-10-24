@@ -22,7 +22,7 @@ CXXDES_SIMULATION(stack) {
     }
 
     coroutine<> stacktrace() {
-        coroutine_info_ptr h = (co_await this_coroutine()).cast<coroutine_info>();
+        coroutine_data_ptr h = (co_await this_coroutine()).cast<coroutine_data>();
         unsigned i = 0;
         while (h) {
             auto loc = h->loc_awaited();

@@ -79,7 +79,7 @@ struct environment {
         return true;
     }
 
-    coroutine_info_ptr current_coroutine() const noexcept {
+    coroutine_data_ptr current_coroutine() const noexcept {
         return current_coroutine_;
     }
 
@@ -127,7 +127,7 @@ private:
 
     std::priority_queue<token *, std::vector<token *>, token_comp> tokens_;
     
-    friend struct coroutine_info;
+    friend struct coroutine_data;
 
     template <typename ReturnType, bool Unique>
     friend struct coroutine;
@@ -138,13 +138,13 @@ private:
     template <typename Derived>
     friend struct detail::await_ops_mixin;
 
-    std::unordered_set<memory::ptr<coroutine_info>> coroutinees_;
-    coroutine_info_ptr current_coroutine_ = nullptr;
+    std::unordered_set<memory::ptr<coroutine_data>> coroutinees_;
+    coroutine_data_ptr current_coroutine_ = nullptr;
     util::source_location loc_;
 };
 
 inline
-void coroutine_info::bind_(environment *env, priority_type priority) {
+void coroutine_data::bind_(environment *env, priority_type priority) {
     if (env_) {
         if (env_ != env)
             throw std::runtime_error("cannot bind an already bound coroutine to another environment.");
@@ -171,12 +171,12 @@ void coroutine_info::bind_(environment *env, priority_type priority) {
 }
 
 inline
-void coroutine_info::manage_() {
+void coroutine_data::manage_() {
     env_->coroutinees_.insert(this);
 }
 
 inline
-void coroutine_info::unmanage_() {
+void coroutine_data::unmanage_() {
     env_->coroutinees_.erase(this);
 }
 
@@ -184,7 +184,7 @@ namespace detail {
 
 template <bool Unique>
 inline
-void coroutine_info_completion_tokens_mixin<Unique>::schedule_completion_(environment *env) {
+void coroutine_data_completion_tokens_mixin<Unique>::schedule_completion_(environment *env) {
     for (auto completion_token: completion_tokens_) {
         completion_token->time += env->now();
         env->schedule_token(completion_token.get());
@@ -195,7 +195,7 @@ void coroutine_info_completion_tokens_mixin<Unique>::schedule_completion_(enviro
 // note: template<> is forbidden here
 // error: template-id ‘schedule_completion_<>’ does not match any template declaration? why?
 inline
-void coroutine_info_completion_tokens_mixin<true>::schedule_completion_(environment *env) {
+void coroutine_data_completion_tokens_mixin<true>::schedule_completion_(environment *env) {
     completion_token_->time += env->now();
     env->schedule_token(completion_token_.get());
     completion_token_ = nullptr;
@@ -205,7 +205,7 @@ void coroutine_info_completion_tokens_mixin<true>::schedule_completion_(environm
 
 template <typename ReturnType, bool Unique>
 inline
-void coroutine_info_<ReturnType, Unique>::do_return() {
+void coroutine_data_<ReturnType, Unique>::do_return() {
     this->schedule_completion_(env_); // this-> is a must here
     this->complete_ = true;
     this->unmanage_();

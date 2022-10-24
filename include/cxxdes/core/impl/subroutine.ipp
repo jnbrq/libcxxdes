@@ -45,7 +45,7 @@ private:
     template <typename>
     friend struct detail::await_ops_mixin;
 
-    void bind_coroutine_(coroutine_info_ptr cinfo) {
+    void bind_coroutine_(coroutine_data_ptr cinfo) {
         auto &promise = h_.promise();
         promise.cinfo = std::move(cinfo);
     }
@@ -78,7 +78,7 @@ public:
 
         std::coroutine_handle<promise_type> h = nullptr;
         std::exception_ptr eptr = nullptr;
-        coroutine_info_ptr cinfo = nullptr;
+        coroutine_data_ptr cinfo = nullptr;
 
         promise_type() {
             h = std::coroutine_handle<promise_type>::from_promise(*this);
@@ -91,7 +91,7 @@ public:
         auto initial_suspend() noexcept -> std::suspend_always { return {}; }
         auto final_suspend() noexcept {
             struct final_awaitable {
-                coroutine_info_ptr cinfo;
+                coroutine_data_ptr cinfo;
 
                 bool await_ready() noexcept { return false; }
                 void await_suspend(std::coroutine_handle<>) noexcept {

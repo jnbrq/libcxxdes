@@ -5,7 +5,7 @@ concept awaitable = requires(
     T t,
     environment *env,
     priority_type inherited_priority,
-    coroutine_info_ptr phandle) {
+    coroutine_data_ptr phandle) {
     { t.await_bind(env, inherited_priority) };
     { t.await_ready() } -> std::same_as<bool>;
     { t.await_suspend(phandle) };

@@ -18,7 +18,7 @@ struct async_functor {
                 return true;
             }
 
-            void await_suspend(coroutine_info_ptr) const noexcept {
+            void await_suspend(coroutine_data_ptr) const noexcept {
             }
 
             token *await_token() const noexcept {

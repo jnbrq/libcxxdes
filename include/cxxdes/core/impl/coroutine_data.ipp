@@ -1,13 +1,13 @@
-struct coroutine_info: memory::reference_counted_base<coroutine_info> {
-    coroutine_info(util::source_location created):
+struct coroutine_data: memory::reference_counted_base<coroutine_data> {
+    coroutine_data(util::source_location created):
         created_{created} {
     }
 
-    coroutine_info(const coroutine_info &) = delete;
-    coroutine_info &operator=(const coroutine_info &) = delete;
+    coroutine_data(const coroutine_data &) = delete;
+    coroutine_data &operator=(const coroutine_data &) = delete;
 
-    coroutine_info(coroutine_info &&) = delete;
-    coroutine_info &operator=(coroutine_info &&) = delete;
+    coroutine_data(coroutine_data &&) = delete;
+    coroutine_data &operator=(coroutine_data &&) = delete;
 
     util::source_location const &loc_created() const noexcept {
         return created_;
@@ -41,12 +41,12 @@ struct coroutine_info: memory::reference_counted_base<coroutine_info> {
     }
 
     [[nodiscard]]
-    coroutine_info_ptr parent() noexcept {
+    coroutine_data_ptr parent() noexcept {
         return parent_.get();
     }
 
     [[nodiscard]]
-    const_coroutine_info_ptr parent() const noexcept {
+    const_coroutine_data_ptr parent() const noexcept {
         return parent_.get();
     }
 
@@ -88,7 +88,7 @@ struct coroutine_info: memory::reference_counted_base<coroutine_info> {
         return exception_.valid();
     }
 
-    virtual ~coroutine_info() = default;
+    virtual ~coroutine_data() = default;
 
 protected:
     template <awaitable A>
@@ -142,7 +142,7 @@ protected:
     util::source_location awaited_;
     priority_type priority_ = priority_consts::inherit;
     time_integral latency_ = 0;
-    memory::ptr<coroutine_info> parent_;
+    memory::ptr<coroutine_data> parent_;
     bool complete_ = false;
     exception_container exception_;
 };
@@ -151,7 +151,7 @@ protected:
 namespace detail {
 
 template <typename ReturnType = void>
-struct coroutine_info_return_value_mixin {
+struct coroutine_data_return_value_mixin {
     using return_type = ReturnType;
 
     template <typename ...Args>
@@ -178,13 +178,13 @@ protected:
 };
 
 template <>
-struct coroutine_info_return_value_mixin<void> {
+struct coroutine_data_return_value_mixin<void> {
     using return_type = void;
 };
 
 template <bool Unique = false>
-struct coroutine_info_completion_tokens_mixin {
-    explicit coroutine_info_completion_tokens_mixin() {
+struct coroutine_data_completion_tokens_mixin {
+    explicit coroutine_data_completion_tokens_mixin() {
         completion_tokens_.reserve(2);
     }
 
@@ -199,7 +199,7 @@ protected:
 };
 
 template <>
-struct coroutine_info_completion_tokens_mixin<true> {
+struct coroutine_data_completion_tokens_mixin<true> {
     void completion_token(token *completion_token) {
         completion_token_ = completion_token;
     }
@@ -214,13 +214,13 @@ protected:
 
 
 template <typename ReturnType = void, bool Unique = false>
-struct coroutine_info_:
-    coroutine_info,
-    detail::coroutine_info_completion_tokens_mixin<Unique>,
-    detail::coroutine_info_return_value_mixin<ReturnType> {
-    using coroutine_info::coroutine_info;
+struct coroutine_data_:
+    coroutine_data,
+    detail::coroutine_data_completion_tokens_mixin<Unique>,
+    detail::coroutine_data_return_value_mixin<ReturnType> {
+    using coroutine_data::coroutine_data;
 
     void do_return();
 
-    virtual ~coroutine_info_() = default;
+    virtual ~coroutine_data_() = default;
 };
