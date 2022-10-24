@@ -1,7 +1,3 @@
-#define CXXDES_INTERRUPTABLE
-#define CXXDES_UNDER_coroutine
-// #define CXXDES_DEBUG_CORE_coroutine
-
 #include <vector>
 #include <cxxdes/cxxdes.hpp>
 
