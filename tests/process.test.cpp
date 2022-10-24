@@ -21,7 +21,7 @@ TEST(ProcessTest, BasicFunctionality) {
         }
     };
 
-    test{}.run();
+    test::run();
 }
 
 TEST(ProcessTest, OutOfScope) {
@@ -44,7 +44,7 @@ TEST(ProcessTest, OutOfScope) {
         }
     };
 
-    test{}.run();
+    test::run();
 }
 
 #if 0
@@ -72,7 +72,7 @@ TEST(ProcessTest, ReturnValueInspection) {
         }
     };
 
-    test{}.run();
+    test::run();
 }
 #endif
 
@@ -97,7 +97,7 @@ TEST(ProcessTest, Latencies) {
         }
     };
 
-    test{}.run();
+    test::run();
 }
 
 TEST(ProcessTest, Priorities) {
@@ -135,7 +135,7 @@ TEST(ProcessTest, Priorities) {
         }
     };
 
-    test{}.run();
+    test::run();
 }
 
 TEST(ProcessTest, Recursion) {
@@ -156,7 +156,7 @@ TEST(ProcessTest, Recursion) {
         }
     };
 
-    test{}.run();
+    test::run();
 }
 
 #ifdef CXXDES_SANITIZE_ADDRESS
@@ -175,7 +175,7 @@ TEST(ProcessTest, DanglingReference1) {
         }
     };
 
-    EXPECT_DEATH(test{}.run(), "");
+    EXPECT_DEATH(test::run(), "");
 }
 
 #endif
@@ -193,7 +193,7 @@ TEST(ProcessTest, DanglingReference1Solution) {
         }
     };
 
-    test{}.run();
+    test::run();
 }
 
 TEST(ProcessTest, NotDanglingReference1) {
@@ -215,7 +215,7 @@ TEST(ProcessTest, NotDanglingReference1) {
         }
     };
 
-    test{}.run();
+    test::run();
 }
 
 TEST(ProcessTest, Returncoroutine) {
@@ -238,11 +238,14 @@ TEST(ProcessTest, Returncoroutine) {
         }
     };
 
-    test{}.run();
+    test::run();
 }
 
 TEST(ProcessTest, Interrupt) {
     CXXDES_SIMULATION(test) {
+        test(environment &env): simulation(env) {
+        }
+
         bool flag = false;
 
         coroutine<> foo() {
@@ -270,7 +273,8 @@ TEST(ProcessTest, Interrupt) {
         }
     };
 
-    auto obj = test{};
-    obj.run_for(100);
-    EXPECT_TRUE(obj.flag);
+    environment env;
+    test t{env};
+    env.run_for(100);
+    EXPECT_TRUE(t.flag);
 }

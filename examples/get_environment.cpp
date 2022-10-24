@@ -39,9 +39,9 @@ coroutine<> p2() {
 int main() {
     environment env;
 
-    p1().await_bind(&env);
-    p2().priority(-10000).await_bind(&env);
+    env.bind(p1());
+    env.bind(p2().priority(-10000));
 
-    while (env.step()) ;
+    env.run();
     return 0;
 }

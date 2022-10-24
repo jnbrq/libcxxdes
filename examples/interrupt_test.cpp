@@ -8,6 +8,10 @@
 using namespace cxxdes::core;
 
 CXXDES_SIMULATION(test) {
+    test(environment &env, std::size_t id):
+        simulation(env), test_id{id} {
+    }
+
     std::size_t test_id = 0;
 
     static coroutine<> foo() {
@@ -31,19 +35,8 @@ CXXDES_SIMULATION(test) {
 };
 
 int main() {
-    {
-        auto t = test{ .test_id = 0 };
-        t.run_for(100);
-    }
-
-    {
-        auto t = test{ .test_id = 1 };
-        t.run_for(100);
-    }
-
-    {
-        auto t = test{ .test_id = 2 };
-        t.run_for(100);
-    }
+    test::run_for(100, 0);
+    test::run_for(100, 1);
+    test::run_for(100, 2);
     return 0;
 }

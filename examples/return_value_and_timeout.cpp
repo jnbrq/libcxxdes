@@ -15,6 +15,6 @@ CXXDES_SIMULATION(bug) {
 };
 
 int main() {
-    bug{}.run();
+    bug::run();
     return 0;
 }

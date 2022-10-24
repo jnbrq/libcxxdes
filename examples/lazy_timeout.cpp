@@ -24,6 +24,6 @@ CXXDES_SIMULATION(instant_test) {
 };
 
 int main() {
-    instant_test{}.run();
+    instant_test::run();
     return 0;
 }

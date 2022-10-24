@@ -37,6 +37,6 @@ CXXDES_SIMULATION(example) {
 };
 
 int main() {
-    example{}.run();
+    example::run();
     return 0;
 }

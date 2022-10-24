@@ -28,6 +28,6 @@ CXXDES_SIMULATION(raii_trick) {
 };
 
 int main() {
-    raii_trick{}.run();
+    raii_trick::run();
     return 0;
 }

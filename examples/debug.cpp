@@ -5,7 +5,7 @@ using namespace cxxdes::core;
 
 CXXDES_SIMULATION(debug_example) {
     void print_time(int id) {
-        fmt::print("from {}, time = {}\n", id, env.now());
+        fmt::print("from {}, time = {}\n", id, now());
     }
 
     coroutine<> p1() {
@@ -31,6 +31,6 @@ CXXDES_SIMULATION(debug_example) {
 };
 
 int main() {
-    debug_example{}.run();
+    debug_example::run();
     return 0;
 }

@@ -25,68 +25,46 @@ namespace core {
 
 template <typename Derived>
 struct simulation {
-    environment env;
+    simulation(environment &env): env_{env} {
+        env_.bind(derived().co_main());
+    }
 
     auto now() const noexcept {
-        return env.now();
+        return env_.now();
     }
 
     auto t() const noexcept {
-        return env.t();
+        return env_.t();
     }
 
     auto now_seconds() const noexcept {
-        return env.now_seconds();
-    }
-    
-    void run() {
-        if (main_coroutine_.valid() && main_coroutine_.complete())
-            return ;
-
-        if (not main_coroutine_.valid()) {
-            main_coroutine_ = derived().co_main();
-            start_awaitable(main_coroutine_);
-        }
-        
-        while (env.step());
+        return env_.now_seconds();
     }
 
-    auto &run_until(time_integral t) {
-        if (not main_coroutine_.valid()) {
-            main_coroutine_ = derived().co_main();
-            start_awaitable(main_coroutine_);
-        }
-
-        if (not main_coroutine_.complete())
-            while (now() <= t && env.step());
-        return *this;
+    auto &env() noexcept {
+        return env_;
     }
 
-    auto &run_until(time_expr t) {
-        run_until(env.real_to_sim(t));
-        return *this;
+    auto const& env() const noexcept {
+        return env_;
     }
 
-    auto &run_for(time_integral t) {
-        run_until(now() + t);
-        return *this;
+    template <typename ...Args>
+    static void run(Args && ...args) {
+        environment env;
+        Derived s{env, std::forward<Args>(args)...};
+        (void) s;
+        env.run();
     }
 
-    auto &run_for(time_expr t) {
-        run_until(now() + env.real_to_sim(t));
-        return *this;
+    template <typename T, typename ...Args>
+    static void run_for(T &&t, Args && ...args) {
+        environment env;
+        Derived s{env, std::forward<Args>(args)...};
+        env.run_for(std::forward<T>(t));
     }
     
 private:
-    template <awaitable A>
-    void start_awaitable(A &a) {
-        CXXDES_DEBUG_MEMBER_FUNCTION;
-
-        a.await_bind(&env, 0);
-        a.await_ready();
-        a.await_suspend(nullptr);
-    }
-
     auto derived() noexcept -> auto& {
         return static_cast<Derived &>(*this);
     }
@@ -95,7 +73,8 @@ private:
         return static_cast<Derived &>(*this);
     }
 
-    coroutine<void> main_coroutine_;
+protected:
+    environment &env_;
 };
 
 #define CXXDES_SIMULATION(name) struct name : cxxdes::core::simulation < name >

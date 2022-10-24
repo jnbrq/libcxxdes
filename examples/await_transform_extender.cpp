@@ -30,7 +30,7 @@ CXXDES_SIMULATION(await_transform_extender_example) {
 };
 
 int main() {
-    await_transform_extender_example{}.run();
+    await_transform_extender_example::run();
     return 0;
 }
 

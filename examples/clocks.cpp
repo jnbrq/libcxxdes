@@ -26,11 +26,11 @@ coroutine<> clock(time_integral period, std::string name) {
 }
 
 int main() {
-    clock(2, "clock 1").await_bind(&env);
-    clock(3, "clock 2").await_bind(&env);
+    env.bind(clock(2, "clock 1"));
+    env.bind(clock(3, "clock 2"));
 
     auto clock_instance = clock_class{7, "clock 3"};
-    clock_instance().await_bind(&env);
+    env.bind(clock_instance());
 
-    while (env.step() && env.now() < 10) ;
+    env.run_for(20);
 }

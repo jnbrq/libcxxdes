@@ -7,7 +7,12 @@ using namespace cxxdes::core;
 using namespace cxxdes::core::time_ops;
 
 CXXDES_SIMULATION(producer_consumer_example) {
-    producer_consumer_example(double lambda, double mu, std::size_t n_packets = 100000):
+    producer_consumer_example(
+        environment &env,
+        double lambda,
+        double mu,
+        std::size_t n_packets = 100000):
+        simulation{env},
         n_packets{n_packets},
         lambda{ rand_seed() /* seed */, lambda /* lambda */},
         mu{ rand_seed() /* seed */, mu /* mu */ } {
@@ -63,8 +68,9 @@ int main() {
     fmt::print("{}, {}, {}, {}\n", "lambda", "mu", "rho", "avg_latency");
     for (std::size_t i = 0; i < n_steps; ++i) {
         double lambda = lambda_start + (lambda_end - lambda_start) * i / (n_steps - 1);
-        auto sim = producer_consumer_example{lambda, mu};
-        sim.run();
+        environment env;
+        auto sim = producer_consumer_example{env, lambda, mu};
+        env.run();
         fmt::print("{:.3f}, {:.3f}, {:.3f}, {:.3f}\n", lambda, mu, lambda / lambda_end, sim.avg_latency);
     }
     return 0;

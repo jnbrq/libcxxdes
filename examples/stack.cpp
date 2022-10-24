@@ -44,5 +44,5 @@ CXXDES_SIMULATION(stack) {
 };
 
 int main() {
-    stack{}.run();
+    stack::run();
 }

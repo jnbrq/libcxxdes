@@ -30,6 +30,6 @@ CXXDES_SIMULATION(mutex_example)
 };
 
 int main() {
-    mutex_example{}.run();
+    mutex_example::run();
     return 0;
 }

@@ -56,6 +56,13 @@ struct environment {
         tokens_.push(tkn);
     }
 
+    [[nodiscard]]
+    token *next_event() const noexcept {
+        if (tokens_.size() > 0)
+            return tokens_.top();
+        return nullptr;
+    }
+
     bool step() {
         if (tokens_.empty())
             return false;
@@ -78,6 +85,34 @@ struct environment {
 
         return true;
     }
+
+    auto &run() {
+        while (step());
+        return *this;
+    }
+    
+    auto &run_until(time_integral t) {
+        while (now() <= t && step()) ;
+        return *this;
+    }
+
+    auto &run_until(time_expr t) {
+        run_until(real_to_sim(t));
+        return *this;
+    }
+
+    auto &run_for(time_integral t) {
+        run_until(now() + t);
+        return *this;
+    }
+
+    auto &run_for(time_expr t) {
+        run_until(now() + real_to_sim(t));
+        return *this;
+    }
+
+    template <typename ReturnType, bool Unique>
+    void bind(coroutine<ReturnType, Unique> p);
 
     coroutine_data_ptr current_coroutine() const noexcept {
         return current_coroutine_;

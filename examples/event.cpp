@@ -51,10 +51,9 @@ coroutine<> p4() {
 }
 
 int main() {
-    []() -> coroutine<> {
+    env.bind(_Coroutine() {
         co_await all_of(p1(), p2(), p3(), p4());
-    }().await_bind(&env);
-    while (env.step()) ;
-
+    });
+    env.run();
     return 0;
 }

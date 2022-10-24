@@ -285,3 +285,10 @@ unique_coroutine<ReturnType> subroutine<ReturnType>::as_coroutine() && {
         }
     }(std::move(*this));
 }
+
+template <typename ReturnType, bool Unique>
+void environment::bind(coroutine<ReturnType, Unique> p) {
+    p.await_bind(this, 0);
+    if (!p.await_ready())
+        p.await_suspend(nullptr);
+}

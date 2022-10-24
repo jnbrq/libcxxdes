@@ -26,11 +26,7 @@ coroutine<void> test() {
 
 int main() {
     environment env;
-
-    auto p = test().priority(200);
-    p.await_bind(&env);
-
-    while (env.step()) ;
-
+    env.bind(test().priority(200));
+    env.run();
     return 0;
 }

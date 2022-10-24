@@ -17,7 +17,7 @@ TEST(ControlFlowTest, Async1) {
         }
     };
 
-    test{}.run();
+    test::run();
 }
 
 TEST(ControlFlowTest, Async2) {
@@ -50,7 +50,7 @@ TEST(ControlFlowTest, Async2) {
         }
     };
 
-    test{}.run();
+    test::run();
 }
 
 TEST(ControlFlowTest, Compositions1) {
@@ -90,7 +90,7 @@ TEST(ControlFlowTest, Compositions1) {
         }
     };
 
-    test{}.run();
+    test::run();
 }
 
 TEST(ControlFlowTest, Compositions2) {
@@ -112,5 +112,5 @@ TEST(ControlFlowTest, Compositions2) {
         }
     };
 
-    test{}.run();
+    test::run();
 }
