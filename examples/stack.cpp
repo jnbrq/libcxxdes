@@ -5,6 +5,8 @@ using namespace cxxdes;
 using namespace cxxdes::core;
 
 CXXDES_SIMULATION(stack) {
+    using simulation::simulation;
+    
     coroutine<> f1() {
         co_await f2();
     }

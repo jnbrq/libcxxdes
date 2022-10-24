@@ -4,6 +4,8 @@
 using namespace cxxdes::core;
 
 CXXDES_SIMULATION(debug_example) {
+    using simulation::simulation;
+    
     void print_time(int id) {
         fmt::print("from {}, time = {}\n", id, now());
     }

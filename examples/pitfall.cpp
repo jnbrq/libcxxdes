@@ -4,6 +4,8 @@
 using namespace cxxdes::core;
 
 CXXDES_SIMULATION(pitfall) {
+    using simulation::simulation;
+
     coroutine<> p;
 
     coroutine<> foo() {
@@ -24,6 +26,8 @@ CXXDES_SIMULATION(pitfall) {
 #define _TrackLocation cxxdes::util::source_location const = cxxdes::util::source_location::current()
 
 CXXDES_SIMULATION(interrupts) {
+    using simulation::simulation;
+
     coroutine<> foo(_TrackLocation) {
         try {
             while (true) {
@@ -64,6 +68,8 @@ CXXDES_SIMULATION(interrupts) {
 };
 
 CXXDES_SIMULATION(subroutines) {
+    using simulation::simulation;
+
     subroutine<> f() {
         fmt::print("f\n");
         co_return ;
@@ -93,6 +99,8 @@ CXXDES_SIMULATION(subroutines) {
 };
 
 CXXDES_SIMULATION(subroutines2) {
+    using simulation::simulation;
+
     subroutine<int> foo() {
         try {
             co_await delay(600);
@@ -114,6 +122,8 @@ CXXDES_SIMULATION(subroutines2) {
 };
 
 CXXDES_SIMULATION(subroutines3) {
+    using simulation::simulation;
+
     subroutine<> foo() {
         co_await delay(50);
         co_return ;
@@ -127,6 +137,25 @@ CXXDES_SIMULATION(subroutines3) {
     coroutine<> co_main() {
         // note: if subroutine is stored in a variable, use as std::move(s).as_coroutine()
         co_await (foo().as_coroutine() && bar());
+        fmt::print("now = {}\n", now());
+        co_return ;
+    }
+};
+
+CXXDES_SIMULATION(subroutines4) {
+    using simulation::simulation;
+
+    subroutine<> bar(int i = 100) {
+        if (i == 0)
+            co_return ;
+        co_await delay(100);
+        co_await bar(i - 1);
+        co_return ;
+    }
+
+    coroutine<> co_main() {
+        // note: if subroutine is stored in a variable, use as std::move(s).as_coroutine()
+        co_await bar(10'000'000);
         fmt::print("now = {}\n", now());
         co_return ;
     }
@@ -147,5 +176,9 @@ int main() {
 
     fmt::print("subroutines3\n");
     subroutines3::run_for(500);
+
+    fmt::print("subroutines4\n");
+    subroutines4::run();
+
     return 0;
 }

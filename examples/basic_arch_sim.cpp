@@ -75,6 +75,8 @@ private:
 }
 
 CXXDES_SIMULATION(memory_test) {
+    using simulation::simulation;
+    
     arch::memory mem1{10 /* latency */, 1024 /* capacity */, nullptr /* next level */};
     arch::memory mem2{1, 16, &mem1};
 

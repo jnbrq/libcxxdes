@@ -5,8 +5,9 @@
 
 using namespace cxxdes::core;
 
-CXXDES_SIMULATION(mutex_example)
-{
+CXXDES_SIMULATION(mutex_example) {
+    using simulation::simulation;
+
     cxxdes::sync::mutex m;
 
     coroutine<> p(int idx, time_integral t) {

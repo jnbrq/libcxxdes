@@ -4,6 +4,8 @@
 using namespace cxxdes::core;
 
 CXXDES_SIMULATION(resource_example) {
+    using simulation::simulation;
+    
     cxxdes::sync::resource resource{3};
 
     coroutine<> p(int id, time_integral duration) {

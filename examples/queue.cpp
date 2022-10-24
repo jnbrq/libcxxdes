@@ -4,6 +4,8 @@
 using namespace cxxdes::core;
 
 CXXDES_SIMULATION(queue_example) {
+    using simulation::simulation;
+    
     cxxdes::sync::queue<int> q{1};
     
     coroutine<> p1() {

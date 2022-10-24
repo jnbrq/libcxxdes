@@ -5,6 +5,8 @@
 using namespace cxxdes::core;
 
 CXXDES_SIMULATION(complicated_example) {
+    using simulation::simulation;
+    
     cxxdes::sync::event evt;
 
     coroutine<> p0() {

@@ -4,6 +4,7 @@
 using namespace cxxdes::core;
 
 CXXDES_SIMULATION(async_example) {
+    using simulation::simulation;
 
     coroutine<int> p1() {
         co_await delay(10);

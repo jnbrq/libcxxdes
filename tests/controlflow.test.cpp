@@ -5,6 +5,8 @@ using namespace cxxdes::core;
 
 TEST(ControlFlowTest, Async1) {
     CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+
         coroutine<> co_main() {
             auto x = co_await async(delay(100));
             EXPECT_EQ(now(), 0);
@@ -22,6 +24,8 @@ TEST(ControlFlowTest, Async1) {
 
 TEST(ControlFlowTest, Async2) {
     CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+
         cxxdes::sync::event evt;
 
         coroutine<> bar() {
@@ -55,6 +59,8 @@ TEST(ControlFlowTest, Async2) {
 
 TEST(ControlFlowTest, Compositions1) {
     CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+
         coroutine<> co_main() {
             time_integral expected_now = 0;
 
@@ -95,6 +101,8 @@ TEST(ControlFlowTest, Compositions1) {
 
 TEST(ControlFlowTest, Compositions2) {
     CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+        
         coroutine<> co_main() {
             time_integral expected_now = 0;
 

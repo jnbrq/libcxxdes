@@ -15,6 +15,8 @@ private:
 };
 
 CXXDES_SIMULATION(this_out_scope) {
+    using simulation::simulation;
+    
     coroutine<> co_main() {
         {
             test t;

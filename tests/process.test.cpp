@@ -11,6 +11,8 @@ using namespace cxxdes::core;
 
 TEST(ProcessTest, BasicFunctionality) {
     CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+
         coroutine<int> foo() {
             co_return 10;
         }
@@ -26,6 +28,8 @@ TEST(ProcessTest, BasicFunctionality) {
 
 TEST(ProcessTest, OutOfScope) {
     CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+
         coroutine<int> foo() {
             co_await delay(10);
             co_return 10;
@@ -50,6 +54,8 @@ TEST(ProcessTest, OutOfScope) {
 #if 0
 TEST(ProcessTest, ReturnValueInspection) {
     CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+
         coroutine<int> foo() {
             co_await delay(10);
             co_return 10;
@@ -78,6 +84,8 @@ TEST(ProcessTest, ReturnValueInspection) {
 
 TEST(ProcessTest, Latencies) {
     CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+
         const time_integral start_latency = 6;
         const time_integral coroutine_time = 5;
         const time_integral return_latency = 8;
@@ -102,6 +110,8 @@ TEST(ProcessTest, Latencies) {
 
 TEST(ProcessTest, Priorities) {
     CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+
         int counter = 100;
 
         coroutine<void> foo(int t, int expected) {
@@ -140,6 +150,8 @@ TEST(ProcessTest, Priorities) {
 
 TEST(ProcessTest, Recursion) {
     CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+
         coroutine<int> factorial(int k) {
             if (k == 0)
                 co_return 1;
@@ -163,6 +175,8 @@ TEST(ProcessTest, Recursion) {
 
 TEST(ProcessTest, DanglingReference1) {
     CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+
         coroutine<> co_main() {
             // this is created in the stack
             auto x = delay(5);
@@ -182,6 +196,8 @@ TEST(ProcessTest, DanglingReference1) {
 
 TEST(ProcessTest, DanglingReference1Solution) {
     CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+
         coroutine<> co_main() {
             // this is created in the stack
             auto x = delay(5);
@@ -198,6 +214,8 @@ TEST(ProcessTest, DanglingReference1Solution) {
 
 TEST(ProcessTest, NotDanglingReference1) {
     CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+
         coroutine<> foo() {
             co_await delay(100);
         }
@@ -220,6 +238,8 @@ TEST(ProcessTest, NotDanglingReference1) {
 
 TEST(ProcessTest, Returncoroutine) {
     CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+
         static coroutine<int> g() {
             co_await delay(5);
             co_return 5;
@@ -243,6 +263,8 @@ TEST(ProcessTest, Returncoroutine) {
 
 TEST(ProcessTest, Interrupt) {
     CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+        
         test(environment &env): simulation(env) {
         }
 

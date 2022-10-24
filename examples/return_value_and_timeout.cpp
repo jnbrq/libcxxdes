@@ -4,6 +4,8 @@
 using namespace cxxdes::core;
 
 CXXDES_SIMULATION(bug) {
+    using simulation::simulation;
+    
     coroutine<int> test() {
         co_return 10;
     }

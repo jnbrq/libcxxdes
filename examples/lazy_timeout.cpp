@@ -4,6 +4,8 @@
 using namespace cxxdes::core;
 
 CXXDES_SIMULATION(instant_test) {
+    using simulation::simulation;
+    
     coroutine<void> co_main() {
         using namespace cxxdes::core::time_ops;
 

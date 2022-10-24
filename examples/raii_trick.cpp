@@ -4,6 +4,8 @@
 using namespace cxxdes::core;
 
 CXXDES_SIMULATION(raii_trick) {
+    using simulation::simulation;
+    
     cxxdes::sync::resource res{1};
     
     coroutine<> p(int id, time_integral wait_time) {
