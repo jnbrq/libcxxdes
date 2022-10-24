@@ -86,6 +86,31 @@ struct environment {
         return true;
     }
 
+    void reset() {
+        // it is not safe to iterate over the coroutinees while
+        // individual coroutines might actively modify the
+        // unoredered_set. move from it.
+        // for a proper way to erase while iterating:
+        //   https://en.cppreference.com/w/cpp/container/unordered_set/erase
+        // sadly, we cannot apply this solution.
+
+        auto coroutinees = std::move(coroutinees_);
+        for (auto coroutine: coroutinees) {
+            if (!coroutine->complete()) {
+                coroutine->interrupt(stopped_exception{});
+                coroutine->resume();
+            }
+        }
+
+        while (!tokens_.empty()) {
+            auto tkn = tokens_.top();
+            tokens_.pop();
+            tkn->unref();
+        }
+
+        now_ = 0;
+    }
+
     auto &run() {
         while (step());
         return *this;
@@ -124,26 +149,7 @@ struct environment {
     }
 
     ~environment() {
-        // it is not safe to iterate over the coroutinees while
-        // individual coroutines might actively modify the
-        // unoredered_set. move from it.
-        // for a proper way to erase while iterating:
-        //   https://en.cppreference.com/w/cpp/container/unordered_set/erase
-        // sadly, we cannot apply this solution.
-
-        auto coroutinees = std::move(coroutinees_);
-        for (auto coroutine: coroutinees) {
-            if (!coroutine->complete()) {
-                coroutine->interrupt(stopped_exception{});
-                coroutine->resume();
-            }
-        }
-
-        while (!tokens_.empty()) {
-            auto tkn = tokens_.top();
-            tokens_.pop();
-            tkn->unref();
-        }
+        reset();
     }
 
 private:

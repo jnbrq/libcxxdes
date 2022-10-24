@@ -259,22 +259,25 @@ TEST(ProcessTest, Interrupt) {
                 while (true)
                     co_await delay(1000);
             }
-            catch (interrupted_exception & /* ex */) {
+            catch (stopped_exception & /* ex */) {
                 flag = true;
                 co_return ;
             }
         }
 
         coroutine<> co_main() {
+            co_await async(foo());
+            co_await async(bar());
+            
             while (true) {
                 co_await delay(10);
             }
-            // co_await foo();
         }
     };
 
     environment env;
     test t{env};
     env.run_for(100);
+    env.reset();
     EXPECT_TRUE(t.flag);
 }
