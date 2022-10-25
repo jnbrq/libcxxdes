@@ -171,7 +171,7 @@ TEST(ProcessTest, Recursion) {
     test::run();
 }
 
-#if defined(CXXDES_SANITIZE_ADDRESS) && (!defined(__clang__) || !defined(_NDEBUG))
+#if defined(CXXDES_SANITIZE_ADDRESS) && !(defined(__clang__) && defined(NDEBUG))
 
 TEST(ProcessTest, DanglingReference1) {
     CXXDES_SIMULATION(test) {
