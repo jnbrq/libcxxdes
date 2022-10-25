@@ -94,7 +94,7 @@ struct environment {
         //   https://en.cppreference.com/w/cpp/container/unordered_set/erase
         // sadly, we cannot apply this solution.
 
-        auto coroutinees = std::move(coroutinees_);
+        auto coroutinees = std::move(coroutines_);
         for (auto coroutine: coroutinees) {
             if (!coroutine->complete()) {
                 coroutine->interrupt(stopped_exception{});
@@ -179,7 +179,7 @@ private:
     template <typename Derived>
     friend struct detail::await_ops_mixin;
 
-    std::unordered_set<memory::ptr<coroutine_data>> coroutinees_;
+    std::unordered_set<memory::ptr<coroutine_data>> coroutines_;
     coroutine_data_ptr current_coroutine_ = nullptr;
     util::source_location loc_;
 };
@@ -213,12 +213,12 @@ void coroutine_data::bind_(environment *env, priority_type priority) {
 
 inline
 void coroutine_data::manage_() {
-    env_->coroutinees_.insert(this);
+    env_->coroutines_.insert(this);
 }
 
 inline
 void coroutine_data::unmanage_() {
-    env_->coroutinees_.erase(this);
+    env_->coroutines_.erase(this);
 }
 
 namespace detail {
