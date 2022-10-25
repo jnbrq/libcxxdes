@@ -12,8 +12,7 @@
 #define CXXDES_CXXDES_HPP_INCLUDED
 
 // core
-#include <cxxdes/core/compositions.hpp>
-#include <cxxdes/core/timeout.hpp>
+#include <cxxdes/core/core.hpp>
 #include <cxxdes/core/simulation.hpp>
 
 // sync

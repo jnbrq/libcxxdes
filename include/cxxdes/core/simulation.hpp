@@ -15,11 +15,6 @@
 #include <cxxdes/sync/event.hpp>
 #include <cxxdes/core/core.hpp>
 
-#include <cxxdes/debug/helpers.hpp>
-#ifdef CXXDES_DEBUG_CORE_SIMULATION
-#   include <cxxdes/debug/begin.hpp>
-#endif
-
 namespace cxxdes {
 namespace core {
 
@@ -82,9 +77,5 @@ protected:
 
 } /* namespace core */
 } /* namespace cxxdes */
-
-#ifdef CXXDES_DEBUG_CORE_SIMULATION
-#   include <cxxdes/debug/end.hpp>
-#endif
 
 #endif /* CXXDES_CORE_SIMULATION_HPP_INCLUDED */

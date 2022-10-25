@@ -1,27 +1,3 @@
-/**
- * @file timeout.hpp
- * @author Canberk Sönmez (canberk.sonmez.409@gmail.com)
- * @brief Timeout object.
- * @date 2022-04-11
- * 
- * @copyright Copyright (c) Canberk Sönmez 2022
- * 
- */
-
-#ifndef CXXDES_CORE_TIMEOUT_HPP_INCLUDED
-#define CXXDES_CORE_TIMEOUT_HPP_INCLUDED
-
-#include <cxxdes/core/core.hpp>
-#include <cxxdes/misc/time.hpp>
-
-#include <cxxdes/debug/helpers.hpp>
-#ifdef CXXDES_DEBUG_CORE_TIMEOUT
-#   include <cxxdes/debug/begin.hpp>
-#endif
-
-namespace cxxdes {
-namespace core {
-
 template <typename Derived, bool Timeout = true>
 struct timeout_base {
     constexpr timeout_base(priority_type priority = priority_consts::inherit): priority_{priority} {
@@ -184,12 +160,3 @@ template <typename T>
 inline auto environment::timeout(T &&t) const noexcept {
     return delay(real_to_sim(t));
 }
-
-} /* namespace core */
-} /* namespace cxxdes */
-
-#ifdef CXXDES_DEBUG_CORE_TIMEOUT
-#   include <cxxdes/debug/end.hpp>
-#endif
-
-#endif /* CXXDES_CORE_TIMEOUT_HPP_INCLUDED */

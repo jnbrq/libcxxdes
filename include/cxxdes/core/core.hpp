@@ -88,9 +88,11 @@ struct subroutine;
 #include "impl/exception_container.ipp"
 #include "impl/coroutine_data.ipp"
 #include "impl/environment.ipp"
+#include "impl/timeout.ipp"
 #include "impl/await_transform.ipp"
 #include "impl/subroutine.ipp"
 #include "impl/coroutine.ipp"
+#include "impl/compositions.ipp"
 
 } /* namespace core */
 } /* namespace cxxdes */

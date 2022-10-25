@@ -12,7 +12,7 @@ CXXDES_SIMULATION(return_value_example) {
 
     coroutine<int> bar(coroutine<int> &&other) {
         auto r = co_await other;
-        std::cout << r << "\n";
+        fmt::print("{}\n", r);
         co_return r;
     }
     coroutine<int> test() {
@@ -21,7 +21,7 @@ CXXDES_SIMULATION(return_value_example) {
     }
 
     coroutine<> co_main() {
-        std::cout << co_await bar(foo()) << "!\n";
+        fmt::print("{}!\n", co_await bar(foo()));
         auto result = co_await test();
         fmt::print("now = {}, value = {}\n", now(), result);
     }

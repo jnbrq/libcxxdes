@@ -7,8 +7,6 @@ struct any_all_helper {
         environment *env = nullptr;
 
         void invoke(token *tkn) override {
-            CXXDES_DEBUG_MEMBER_FUNCTION;
-
             --remaining;
             
             if (completion_tkn && Condition::operator()(total, remaining)) {
@@ -35,8 +33,6 @@ struct any_all_helper {
         }
 
         void await_bind(environment *env, priority_type priority) {
-            CXXDES_DEBUG_MEMBER_FUNCTION;
-            
             env_ = env;
 
             if (priority_ == priority_consts::inherit)
@@ -53,8 +49,6 @@ struct any_all_helper {
         }
 
         void await_suspend(coroutine_data_ptr phandle) {
-            CXXDES_DEBUG_MEMBER_FUNCTION;
-
             tkn_ = new token(latency_, priority_, phandle);
 
             auto handler = new custom_handler;
@@ -75,7 +69,6 @@ struct any_all_helper {
         }
 
         void await_resume(no_return_value_tag = {}) {
-            CXXDES_DEBUG_MEMBER_FUNCTION;
             derived().apply([&](auto &a) { a.await_resume(no_return_value_tag{}); });
         }
     private:

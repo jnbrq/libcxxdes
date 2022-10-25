@@ -16,11 +16,6 @@
 #include <cxxdes/core/core.hpp>
 #include <cxxdes/sync/event.hpp>
 
-#include <cxxdes/debug/helpers.hpp>
-#ifdef CXXDES_DEBUG_SYNC_SEMAPHORE
-#   include <cxxdes/debug/begin.hpp>
-#endif
-
 namespace cxxdes {
 namespace sync {
 
@@ -72,9 +67,5 @@ protected:
 
 } /* namespace sync */
 } /* namespace cxxdes */
-
-#ifdef CXXDES_DEBUG_SYNC_SEMAPHORE
-#   include <cxxdes/debug/end.hpp>
-#endif
 
 #endif /* CXXDES_SYNC_SEMAPHORE_HPP_INCLUDED */
