@@ -71,7 +71,7 @@ libcxxdes tries to provide the complete feature set of SimPy, it currently suppo
 3. Interruptable coroutines which are useful for modelling preemptive resources.
 4. Priority-scheduling of events that take place at the same simulation time. `coroutine<T>` can be assigned priorities! (lower the number, higher the priority)
 5. `time_unit()` and `time_precision()` functions for mapping simulation time (integer) to real-world time.
-6. Synchronization primitives, such as `mutex`, `semaphore`, `queue<T>`s, and `event`.
+6. Synchronization primitives, such as `mutex`, `semaphore`, `queue<T>`, and `event`.
 7. RAII-style acquisition of resources using `co_with (resource) { /*  */ }` syntax.
 8. SimPy-compatible `resource`, `container` and `preemptive_resource`.
 9. Debugging facilities, such as getting the stack traces of `coroutine<T>`s.
