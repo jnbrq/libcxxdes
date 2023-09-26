@@ -88,6 +88,11 @@ struct coroutine_data: memory::reference_counted_base<coroutine_data> {
         return exception_.valid();
     }
 
+    [[nodiscard]]
+    bool bound() const noexcept {
+        return env_ != nullptr;
+    }
+
     virtual ~coroutine_data() = default;
 
 protected:
