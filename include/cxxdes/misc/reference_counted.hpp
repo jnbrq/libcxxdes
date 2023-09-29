@@ -124,6 +124,10 @@ struct ptr {
         return valid();
     }
 
+    bool operator==(std::nullptr_t) {
+        return !valid();
+    }
+
     T *get() noexcept {
         return ptr_;
     }
