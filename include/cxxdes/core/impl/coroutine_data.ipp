@@ -93,6 +93,14 @@ struct coroutine_data: memory::reference_counted_base<coroutine_data> {
         return env_ != nullptr;
     }
 
+    void kill() {
+        while (!call_stack_.empty()) {
+            // destroy the call stack
+            call_stack_.top().destroy();
+            call_stack_.pop();
+        }
+    }
+
     virtual ~coroutine_data() = default;
 
 protected:

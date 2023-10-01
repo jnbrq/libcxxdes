@@ -67,21 +67,41 @@ struct environment {
         if (tokens_.empty())
             return false;
         
-        auto tkn = tokens_.top();
+        auto tkn = memory::ptr{tokens_.top()};
+
+        tkn->unref() /* tkn already holds a reference now */;
         tokens_.pop();
 
         now_ = std::max(tkn->time, now_);
 
-        if (tkn->handler) {
-            tkn->handler->invoke(tkn);
+        try {
+            if (tkn->handler) {
+                tkn->handler->invoke(tkn);
+            }
+            else if (tkn->phandle) {
+                current_coroutine_ = tkn->phandle;
+                tkn->phandle->resume();
+                current_coroutine_ = nullptr;
+            }
         }
-        else if (tkn->phandle) {
-            current_coroutine_ = tkn->phandle;
-            tkn->phandle->resume();
-            current_coroutine_ = nullptr;
-        }
+        catch (...) {
+            /** In case of an unhandled exception, simply kill everything. */
 
-        tkn->unref();
+            auto coroutines = std::move(coroutines_);
+
+            for (auto coroutine: coroutines) {
+                if (!coroutine->complete())
+                    coroutine->kill();
+            }
+
+            while (!tokens_.empty()) {
+                auto tkn = tokens_.top();
+                tokens_.pop();
+                tkn->unref();
+            }
+
+            std::rethrow_exception(std::current_exception());
+        }
 
         return true;
     }
@@ -94,8 +114,8 @@ struct environment {
         //   https://en.cppreference.com/w/cpp/container/unordered_set/erase
         // sadly, we cannot apply this solution.
 
-        auto coroutinees = std::move(coroutines_);
-        for (auto coroutine: coroutinees) {
+        auto coroutines = std::move(coroutines_);
+        for (auto coroutine: coroutines) {
             if (!coroutine->complete()) {
                 coroutine->interrupt(stopped_exception{});
                 coroutine->resume();
