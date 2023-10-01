@@ -107,7 +107,7 @@ struct environment {
     }
 
     void reset() {
-        // it is not safe to iterate over the coroutinees while
+        // it is not safe to iterate over the coroutines while
         // individual coroutines might actively modify the
         // unoredered_set. move from it.
         // for a proper way to erase while iterating:
