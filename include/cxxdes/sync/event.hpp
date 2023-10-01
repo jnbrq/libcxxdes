@@ -60,7 +60,7 @@ struct wait_awaitable {
     }
 
     bool await_ready() const noexcept { return false; }
-    void await_suspend(coroutine_data_ptr phandle);
+    void await_suspend(coroutine_data_ptr coro_data);
     token *await_token() const noexcept { return tkn_; }
     void await_resume(no_return_value_tag = {}) const noexcept {  }
 
@@ -108,8 +108,8 @@ inline bool wake_awaitable::await_ready() {
     return true;
 }
 
-inline void wait_awaitable::await_suspend(coroutine_data_ptr phandle) {
-    tkn_ = new token(latency_, priority_, phandle);
+inline void wait_awaitable::await_suspend(coroutine_data_ptr coro_data) {
+    tkn_ = new token(latency_, priority_, coro_data);
     evt_->tokens_.push_back(tkn_);
 }
 

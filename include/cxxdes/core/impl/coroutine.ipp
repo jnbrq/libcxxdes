@@ -154,11 +154,11 @@ struct coroutine:
         return coro_data_->complete();
     }
 
-    void await_suspend(coroutine_data_ptr phandle) {
+    void await_suspend(coroutine_data_ptr coro_data) {
         if (completion_token_)
             throw std::runtime_error("coroutine<> is already being awaited!");
 
-        completion_token_ = new token{return_.latency, return_.priority, phandle};
+        completion_token_ = new token{return_.latency, return_.priority, coro_data};
         if (completion_token_->priority == priority_consts::inherit)
             completion_token_->priority = coro_data_->priority_;
         coro_data_->completion_token(completion_token_);

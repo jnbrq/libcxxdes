@@ -13,7 +13,7 @@ struct any_all_helper {
                 // inherit the output_event features
                 completion_tkn->time += tkn->time;
                 completion_tkn->priority = tkn->priority;
-                completion_tkn->phandle = tkn->phandle;
+                completion_tkn->coro_data = tkn->coro_data;
                 env->schedule_token(completion_tkn.get());
                 completion_tkn = nullptr;
             }
@@ -48,8 +48,8 @@ struct any_all_helper {
             return Condition::operator()(total, remaining_);
         }
 
-        void await_suspend(coroutine_data_ptr phandle) {
-            tkn_ = new token(latency_, priority_, phandle);
+        void await_suspend(coroutine_data_ptr coro_data) {
+            tkn_ = new token(latency_, priority_, coro_data);
 
             auto handler = new custom_handler;
             handler->total = derived().count();
@@ -58,7 +58,7 @@ struct any_all_helper {
             handler->completion_tkn = tkn_;
 
             derived().apply([&](auto &a) {
-                a.await_suspend(phandle);
+                a.await_suspend(coro_data);
                 if (a.await_token())
                     a.await_token()->handler = handler;
             });

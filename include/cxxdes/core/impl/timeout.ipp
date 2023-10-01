@@ -18,7 +18,7 @@ struct timeout_base {
             return env().now() >= derived().time();
     }
 
-    void await_suspend(coroutine_data_ptr phandle) {
+    void await_suspend(coroutine_data_ptr coro_data) {
         time_integral pt = 0;
 
         if constexpr (Timeout) {
@@ -28,7 +28,7 @@ struct timeout_base {
             pt = derived().time();
         }
 
-        env_->schedule_token(tkn_ = new token(pt, priority_, phandle));
+        env_->schedule_token(tkn_ = new token(pt, priority_, coro_data));
     }
 
     token *await_token() const noexcept {

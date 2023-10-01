@@ -2,20 +2,20 @@
 template <awaitable A>
 struct awaitable_wrapper {
     A a;
-    coroutine_data_ptr phandle_this = nullptr;
-    coroutine_data_ptr phandle_old = nullptr;
+    coroutine_data_ptr coro_data_this = nullptr;
+    coroutine_data_ptr coro_data_old = nullptr;
     
     bool await_ready() {
         return a.await_ready();
     }
     
     void await_suspend(coroutine_handle) {
-        a.await_suspend(phandle_old);
+        a.await_suspend(coro_data_old);
     }
 
     auto await_resume() {
-        if (phandle_this->interrupted())
-            phandle_this->raise_interrupt_();
+        if (coro_data_this->interrupted())
+            coro_data_this->raise_interrupt_();
         return a.await_resume();
     }
 };

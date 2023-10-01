@@ -78,9 +78,9 @@ struct environment {
             if (tkn->handler) {
                 tkn->handler->invoke(tkn);
             }
-            else if (tkn->phandle) {
-                current_coroutine_ = tkn->phandle;
-                tkn->phandle->resume();
+            else if (tkn->coro_data) {
+                current_coroutine_ = tkn->coro_data;
+                tkn->coro_data->resume();
                 current_coroutine_ = nullptr;
             }
         }
