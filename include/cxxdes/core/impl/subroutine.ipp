@@ -23,7 +23,7 @@ struct subroutine {
 
     void await_suspend(std::coroutine_handle<>) {
         auto &promise = h_.promise();
-        promise.cinfo->push_coro_(h_);
+        promise.coro_data->push_coro_(h_);
     }
 
     ReturnType await_resume() {
@@ -45,9 +45,9 @@ private:
     template <typename>
     friend struct detail::await_ops_mixin;
 
-    void bind_coroutine_(coroutine_data_ptr cinfo) {
+    void bind_coroutine_(coroutine_data_ptr coro_data) {
         auto &promise = h_.promise();
-        promise.cinfo = std::move(cinfo);
+        promise.coro_data = std::move(coro_data);
     }
 
     template <typename Derived>
@@ -78,7 +78,7 @@ public:
 
         std::coroutine_handle<promise_type> h = nullptr;
         std::exception_ptr eptr = nullptr;
-        coroutine_data_ptr cinfo = nullptr;
+        coroutine_data_ptr coro_data = nullptr;
 
         promise_type() {
             h = std::coroutine_handle<promise_type>::from_promise(*this);
@@ -91,15 +91,15 @@ public:
         auto initial_suspend() noexcept -> std::suspend_always { return {}; }
         auto final_suspend() noexcept {
             struct final_awaitable {
-                coroutine_data_ptr cinfo;
+                coroutine_data_ptr coro_data;
 
                 bool await_ready() noexcept { return false; }
                 void await_suspend(std::coroutine_handle<>) noexcept {
-                    cinfo->pop_coro_();
+                    coro_data->pop_coro_();
                 }
                 void await_resume() noexcept {  }
             };
-            return final_awaitable{cinfo};
+            return final_awaitable{coro_data};
         }
 
         auto unhandled_exception() {
@@ -120,7 +120,7 @@ namespace detail {
 template <typename Derived>
 template <typename ReturnType>
 auto &&await_ops_mixin<Derived>::await_transform(subroutine<ReturnType> &&a) {
-    a.bind_coroutine_(derived().cinfo.get());
+    a.bind_coroutine_(derived().coro_data.get());
     return std::move(a);
 }
 

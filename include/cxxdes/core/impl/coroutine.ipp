@@ -4,7 +4,7 @@ template <typename Derived, typename ReturnValue>
 struct coroutine_return_value_mixin {
     [[nodiscard]]
     ReturnValue const &return_value() const noexcept {
-        return static_cast<Derived const *>(this)->cinfo()->return_value();
+        return static_cast<Derived const *>(this)->coro_data()->return_value();
     }
 };
 
@@ -20,8 +20,8 @@ struct coroutine:
     using coroutine_data_type = coroutine_data_<ReturnType, Unique>;
 
     explicit
-    coroutine(memory::ptr<coroutine_data_type> cinfo = nullptr):
-        cinfo_{std::move(cinfo)} {
+    coroutine(memory::ptr<coroutine_data_type> coro_data = nullptr):
+        coro_data_{std::move(coro_data)} {
     }
 
     coroutine(coroutine const &other) requires (not Unique) {
@@ -30,7 +30,7 @@ struct coroutine:
 
     coroutine &operator=(coroutine const &other) requires (not Unique) {
         if (this != &other) {
-            cinfo_ = other.cinfo_;
+            coro_data_ = other.coro_data_;
             completion_token_ = nullptr;
             return_ = other.return_;
         }
@@ -46,7 +46,7 @@ struct coroutine:
 
     coroutine &operator=(coroutine &&other) {
         if (this != &other) {
-            cinfo_ = std::move(other.cinfo_);
+            coro_data_ = std::move(other.coro_data_);
             std::swap(completion_token_, other.completion_token_);
             std::swap(return_, other.return_);
         }
@@ -54,12 +54,12 @@ struct coroutine:
     }
 
     ~coroutine() {
-        if (cinfo_) cinfo_->destroy_if_not_started_();
+        if (coro_data_) coro_data_->destroy_if_not_started_();
     }
 
     [[nodiscard]]
     bool valid() const noexcept {
-        return cinfo_;
+        return coro_data_;
     }
 
     [[nodiscard]]
@@ -67,52 +67,52 @@ struct coroutine:
         return valid();
     }
 
-    coroutine_data_type const *cinfo() const noexcept {
-        return cinfo_.get();
+    coroutine_data_type const *coro_data() const noexcept {
+        return coro_data_.get();
     }
 
     [[nodiscard]]
     bool complete() const noexcept {
-        return cinfo_->complete();
+        return coro_data_->complete();
     }
 
     template <typename T = interrupted_exception>
     void interrupt(T &&t = interrupted_exception{}) noexcept {
-        cinfo_->interrupt(std::forward<T>(t));
+        coro_data_->interrupt(std::forward<T>(t));
     }
 
     [[nodiscard]]
     bool interrupted() const noexcept {
-        return cinfo_->interrupted();
+        return coro_data_->interrupted();
     }
 
     [[nodiscard]]
     priority_type priority() const noexcept {
-        return cinfo_->priority();
+        return coro_data_->priority();
     }
 
     auto &priority(priority_type priority) & noexcept {
-        cinfo_->priority(priority);
+        coro_data_->priority(priority);
         return *this;
     }
 
     auto &&priority(priority_type priority) && noexcept {
-        cinfo_->priority(priority);
+        coro_data_->priority(priority);
         return std::move(*this);
     }
 
     [[nodiscard]]
     time_integral latency() const noexcept {
-        return cinfo_->latency();
+        return coro_data_->latency();
     }
 
     auto &latency(time_integral latency) & noexcept {
-        cinfo_->latency(latency);
+        coro_data_->latency(latency);
         return *this;
     }
 
     auto &&latency(time_integral latency) && noexcept {
-        cinfo_->latency(latency);
+        coro_data_->latency(latency);
         return std::move(*this);
     }
 
@@ -147,11 +147,11 @@ struct coroutine:
     }
 
     void await_bind(environment *env, priority_type priority = 0) {
-        cinfo_->bind_(env, priority);
+        coro_data_->bind_(env, priority);
     }
 
     bool await_ready() const noexcept {
-        return cinfo_->complete();
+        return coro_data_->complete();
     }
 
     void await_suspend(coroutine_data_ptr phandle) {
@@ -160,8 +160,8 @@ struct coroutine:
 
         completion_token_ = new token{return_.latency, return_.priority, phandle};
         if (completion_token_->priority == priority_consts::inherit)
-            completion_token_->priority = cinfo_->priority_;
-        cinfo_->completion_token(completion_token_);
+            completion_token_->priority = coro_data_->priority_;
+        coro_data_->completion_token(completion_token_);
     }
 
     token *await_token() const noexcept {
@@ -174,10 +174,10 @@ struct coroutine:
         if constexpr (std::is_same_v<ReturnType, void>)
             return ;
         else {
-            if (!cinfo_->has_return_value())
+            if (!coro_data_->has_return_value())
                 throw std::runtime_error("no return value from the coroutine<T> [T != void]!");
 
-            return cinfo_->return_value();
+            return coro_data_->return_value();
         }
     }
 
@@ -187,10 +187,10 @@ struct coroutine:
         if constexpr (std::is_same_v<ReturnType, void>)
             return ;
         else {
-            if (!cinfo_->has_return_value())
+            if (!coro_data_->has_return_value())
                 throw std::runtime_error("no return value from the coroutine<T> [T != void]!");
 
-            return std::move(cinfo_->return_value());
+            return std::move(coro_data_->return_value());
         }
     }
 
@@ -199,7 +199,7 @@ struct coroutine:
     }
 
 private:
-    memory::ptr<coroutine_data_type> cinfo_ = nullptr;
+    memory::ptr<coroutine_data_type> coro_data_ = nullptr;
     token *completion_token_ = nullptr; // must be non-owning, in case of copies
 
     struct {
@@ -232,18 +232,18 @@ public:
             return_void_mixin<promise_type>,
             return_value_mixin<promise_type>
         >, detail::await_ops_mixin<promise_type> {
-        memory::ptr<coroutine_data_type> cinfo;
+        memory::ptr<coroutine_data_type> coro_data;
     
         template <typename ...Args>
         promise_type(Args && ...args) {
             auto loc = util::extract_first_type<util::source_location>(args...);
             auto coro = std::coroutine_handle<promise_type>::from_promise(*this);
-            cinfo = new coroutine_data_type(loc);
-            cinfo->push_coro_(coro);
+            coro_data = new coroutine_data_type(loc);
+            coro_data->push_coro_(coro);
         }
 
         coroutine get_return_object() {
-            return coroutine(cinfo);
+            return coroutine(coro_data);
         }
 
         auto initial_suspend() noexcept -> std::suspend_always { return {}; }
@@ -263,11 +263,11 @@ public:
 
         template <typename T>
         void emplace_return_value(T &&t) {
-            cinfo->emplace_return_value(std::forward<T>(t));
+            coro_data->emplace_return_value(std::forward<T>(t));
         }
 
         void do_return() {
-            cinfo->do_return();
+            coro_data->do_return();
         }
 
         ~promise_type() {

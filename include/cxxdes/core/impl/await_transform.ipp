@@ -36,13 +36,13 @@ struct await_ops_mixin {
         util::source_location const loc = util::source_location::current()) {
         auto result = awaitable_wrapper<std::remove_cvref_t<A>>{
             std::forward<A>(a),
-            derived().cinfo.get(),
-            derived().cinfo->env()->current_coroutine()
+            derived().coro_data.get(),
+            derived().coro_data->env()->current_coroutine()
         };
-        derived().cinfo->env()->loc_ = loc;
+        derived().coro_data->env()->loc_ = loc;
         result.a.await_bind(
-            derived().cinfo->env(),
-            derived().cinfo->priority());
+            derived().coro_data->env(),
+            derived().coro_data->priority());
         return result;
     }
 
@@ -53,15 +53,15 @@ struct await_ops_mixin {
     auto await_transform(
         await_transform_extender<T> const &a,
         util::source_location const loc = util::source_location::current()) {
-        return a.await_transform(derived().cinfo, loc);
+        return a.await_transform(derived().coro_data, loc);
     }
 
     auto await_transform(this_coroutine) noexcept {
-        return immediately_return{derived().cinfo};
+        return immediately_return{derived().coro_data};
     }
 
     auto await_transform(this_environment) noexcept {
-        return immediately_return{derived().cinfo->env()};
+        return immediately_return{derived().coro_data->env()};
     }
     
     template <awaitable A>

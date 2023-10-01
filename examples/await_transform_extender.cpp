@@ -11,9 +11,9 @@ namespace core {
 template <>
 struct await_transform_extender<_get_env_tag> {
     auto await_transform(
-        auto cinfo,
+        auto coro_data,
         [[maybe_unused]] util::source_location const loc = util::source_location::current()) const noexcept {
-        return immediately_return{cinfo->env()};
+        return immediately_return{coro_data->env()};
     }
 };
 
