@@ -62,8 +62,6 @@ struct immediately_return;
 struct interrupted_exception;
 struct stopped_exception;
 
-struct exception_container;
-
 struct coroutine_data;
 using coroutine_data_ptr = memory::ptr<coroutine_data>;
 using const_coroutine_data_ptr = memory::ptr<const coroutine_data>;
@@ -85,7 +83,6 @@ struct subroutine;
 #include "impl/token.ipp"
 #include "impl/immediately_return.ipp"
 #include "impl/exception_types.ipp"
-#include "impl/exception_container.ipp"
 #include "impl/coroutine_data.ipp"
 #include "impl/environment.ipp"
 #include "impl/timeout.ipp"

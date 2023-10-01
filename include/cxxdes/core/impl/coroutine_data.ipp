@@ -80,12 +80,12 @@ struct coroutine_data: memory::reference_counted_base<coroutine_data> {
 
     template <typename T = interrupted_exception>
     void interrupt(T &&t = interrupted_exception{}) noexcept {
-        exception_.assign(std::forward<T>(t));
+        exception_ = std::make_exception_ptr(std::forward<T>(t));
     }
 
     [[nodiscard]]
     bool interrupted() const noexcept {
-        return exception_.valid();
+        return (bool) exception_;
     }
 
     [[nodiscard]]
@@ -118,10 +118,13 @@ protected:
     void unmanage_();
 
     void raise_interrupt_() {
+        std::exception_ptr exception = exception_;
+        
         // clear exception_, the exception might be caught
         // we may need to interrupt again later
-        auto exception = std::move(exception_);
-        exception.raise();
+        exception_ = nullptr;
+
+        std::rethrow_exception(exception);
     }
 
     void push_coro_(coroutine_handle coro) {
@@ -157,7 +160,7 @@ protected:
     time_integral latency_ = 0;
     memory::ptr<coroutine_data> parent_;
     bool complete_ = false;
-    exception_container exception_;
+    std::exception_ptr exception_;
 };
 
 
