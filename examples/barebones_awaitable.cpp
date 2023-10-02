@@ -21,7 +21,7 @@ struct example {
     }
 
     void await_suspend(coroutine_data_ptr coro_data) {
-        tkn_ = new token(env_->now() + latency_, priority_, coro_data);
+        tkn_ = new token(env_->now() + latency_, priority_, coro_data, "example awaitable");
 
         // create a token and do something with it
         env_->schedule_token(tkn_); // like, scheduling it

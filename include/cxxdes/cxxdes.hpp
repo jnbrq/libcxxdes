@@ -8,8 +8,8 @@
  * 
  */
 
-#ifndef CXXDES_CXXDES_HPP_INCLUDED
-#define CXXDES_CXXDES_HPP_INCLUDED
+#ifndef CXXDES_HPP_INCLUDED
+#define CXXDES_HPP_INCLUDED
 
 // core
 #include <cxxdes/core/core.hpp>
@@ -22,4 +22,4 @@
 #include <cxxdes/sync/semaphore.hpp>
 #include <cxxdes/sync/resource.hpp>
 
-#endif /* CXXDES_CXXDES_HPP_INCLUDED */
+#endif /* CXXDES_HPP_INCLUDED */

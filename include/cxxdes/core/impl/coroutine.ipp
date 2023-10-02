@@ -148,14 +148,19 @@ struct coroutine:
         if (completion_token_)
             throw std::runtime_error("coroutine<> is already being awaited!");
 
-        completion_token_ = new token{return_.latency, return_.priority, coro_data};
+        completion_token_ = new token{
+            return_.latency,
+            return_.priority,
+            coro_data,
+            "coroutine completion"
+        };
         if (completion_token_->priority == priority_consts::inherit)
             completion_token_->priority = coro_data_->priority_;
         coro_data_->completion_token(completion_token_);
     }
 
-    token *await_token() const noexcept {
-        return completion_token_;
+    token *await_token() {
+        return completion_token_.get();
     }
 
     ReturnType await_resume() requires (not Unique) {
@@ -186,12 +191,12 @@ struct coroutine:
 
     void await_resume(no_return_value_tag) {
         if (completion_token_) {
+            completion_token_->attempt_access();
+
             auto tkn = completion_token_;
             completion_token_ = nullptr;
 
-            /* If coro_data is missing from the following condition,
-             * it fails segv. But this should not be the case. */
-            if (tkn->coro_data && tkn->eptr) {
+            if (tkn->eptr) {
                 std::rethrow_exception(tkn->eptr);
             }
         }
@@ -199,7 +204,7 @@ struct coroutine:
 
 private:
     memory::ptr<coroutine_data_type> coro_data_ = nullptr;
-    token *completion_token_ = nullptr; // must be non-owning, in case of copies
+    memory::ptr<token> completion_token_ = nullptr;
 
     struct {
         time_integral latency = 0;

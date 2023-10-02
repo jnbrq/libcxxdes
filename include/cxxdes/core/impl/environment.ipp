@@ -69,6 +69,7 @@ struct environment {
         
         auto tkn = memory::ptr{tokens_.top()};
         tkn->unref() /* tkn already holds a reference now */;
+        tkn->attempt_access();
         tokens_.pop();
 
         now_ = std::max(tkn->time, now_);
@@ -210,7 +211,8 @@ void coroutine_data::bind_(environment *env, priority_type priority) {
     auto start_token = new token{
         env_->now() + latency_,
         priority_,
-        this
+        this,
+        "coroutine start"
     };
 
     env_->schedule_token(start_token);

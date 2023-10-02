@@ -109,7 +109,7 @@ inline bool wake_awaitable::await_ready() {
 }
 
 inline void wait_awaitable::await_suspend(coroutine_data_ptr coro_data) {
-    tkn_ = new token(latency_, priority_, coro_data);
+    tkn_ = new token(latency_, priority_, coro_data, "woke up");
     evt_->tokens_.push_back(tkn_);
 }
 

@@ -28,14 +28,15 @@ struct timeout_base {
             pt = derived().time();
         }
 
-        env_->schedule_token(tkn_ = new token(pt, priority_, coro_data));
+        env_->schedule_token(tkn_ = new token(pt, priority_, coro_data, "timeout"));
     }
 
     token *await_token() const noexcept {
         return tkn_;
     }
 
-    void await_resume(no_return_value_tag = {}) const noexcept {
+    void await_resume(no_return_value_tag = {}) {
+        tkn_ = nullptr;
     }
 
     auto &env() const noexcept {

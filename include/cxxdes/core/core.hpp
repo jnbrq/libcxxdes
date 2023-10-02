@@ -11,6 +11,8 @@
 #ifndef CXXDES_CORE_CORE_HPP_INCLUDED
 #define CXXDES_CORE_CORE_HPP_INCLUDED
 
+#include <fmt/core.h>
+
 #include <type_traits>
 #include <concepts>
 #include <stdexcept>

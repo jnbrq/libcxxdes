@@ -55,7 +55,7 @@ struct any_all_helper {
         }
 
         void await_suspend(coroutine_data_ptr coro_data) {
-            tkn_ = new token(latency_, priority_, coro_data);
+            tkn_ = new token(latency_, priority_, coro_data, Condition::what);
 
             auto handler = new custom_handler;
             handler->total = derived().count();
@@ -202,12 +202,16 @@ struct any_all_helper {
 };
 
 struct any_of_condition {
+    static constexpr const char *what = "any_of";
+
     constexpr bool operator()(std::size_t total, std::size_t remaining) const {
         return remaining < total;
     }
 };
 
 struct all_of_condition {
+    static constexpr const char *what = "all_of";
+
     constexpr bool operator()(std::size_t /* total */, std::size_t remaining) const {
         return remaining == 0;
     }
