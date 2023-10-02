@@ -3,6 +3,12 @@
 
 using namespace cxxdes::core;
 
+coroutine<> longfn()
+{
+    co_await timeout(100);
+    co_return;
+}
+
 subroutine<> f()
 {
     throw std::runtime_error("f has thrown an exception!");
@@ -28,7 +34,7 @@ coroutine<> h()
     throw std::runtime_error("h has thrown an exception!");
 }
 
-coroutine<> co_main()
+coroutine<> co_main1()
 {
     try
     {
@@ -36,18 +42,34 @@ coroutine<> co_main()
     }
     catch (std::exception &ex)
     {
-        fmt::println("[co_main] Exception: {}", ex.what());
+        fmt::println("[co_main1] Exception: {}", ex.what());
     }
 
-    throw std::runtime_error("[co_main] co_main has thrown an exception!");
+    throw std::runtime_error("[co_main1] co_main has thrown an exception!");
 }
 
-void nestedExceptions()
+coroutine<> co_main2()
 {
-    fmt::println("test: nested exceptions");
+    co_await async(longfn());
+
+    try
+    {
+        co_await h();
+    }
+    catch (std::exception &ex)
+    {
+        fmt::println("[co_main2] Exception: {}", ex.what());
+    }
+
+    throw std::runtime_error("[co_main2] co_main has thrown an exception!");
+}
+
+void nestedExceptions1()
+{
+    fmt::println("test: nested exceptions 1");
 
     environment env;
-    env.bind(co_main());
+    env.bind(co_main1());
 
     try
     {
@@ -55,7 +77,24 @@ void nestedExceptions()
     }
     catch (std::exception &ex)
     {
-        fmt::println("[nestedExceptions] Exception: {}", ex.what());
+        fmt::println("[nestedExceptions1] Exception: {}", ex.what());
+    }
+}
+
+void nestedExceptions2()
+{
+    fmt::println("test: nested exceptions 2");
+
+    environment env;
+    env.bind(co_main2());
+
+    try
+    {
+        env.run();
+    }
+    catch (std::exception &ex)
+    {
+        fmt::println("[nestedExceptions2] Exception: {}", ex.what());
     }
 }
 
@@ -144,7 +183,8 @@ void asynchronous2()
 
 int main()
 {
-    nestedExceptions();
+    nestedExceptions1();
+    nestedExceptions2();
     stopping();
     asynchronous1();
     asynchronous2();

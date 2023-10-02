@@ -106,7 +106,10 @@ struct environment {
         auto coroutines = std::move(coroutines_);
 
         for (auto coroutine: coroutines) {
-            coroutine->kill();
+            if (!coroutine->complete()) {
+                coroutine->stop();
+                coroutine->resume();
+            }
         }
 
         while (!tokens_.empty()) {
@@ -156,7 +159,7 @@ struct environment {
     }
 
     ~environment() {
-        // reset();
+        reset();
     }
 
 private:
