@@ -22,5 +22,5 @@ struct token: memory::reference_counted_base<token> {
     memory::ptr<token_handler> handler = nullptr;
 
     // exception to be propagated
-    std::exception_ptr exception;
+    std::exception_ptr eptr = nullptr;
 };

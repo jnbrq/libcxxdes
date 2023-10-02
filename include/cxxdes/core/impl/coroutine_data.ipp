@@ -18,14 +18,12 @@ struct coroutine_data: memory::reference_counted_base<coroutine_data> {
     }
 
     void resume() {
-        if (complete_)
-            // a token might try to resume an interrupted coroutine
-            return ;
+        assert(!complete_);
 
         // note that coroutine<> does not pop the first coroutine
         do {
             should_continue_ = false;
-            auto top = call_stack_.top();
+            auto top = call_stack_.back();
             top.resume();
         } while (should_continue_);
     }
@@ -78,16 +76,6 @@ struct coroutine_data: memory::reference_counted_base<coroutine_data> {
         return complete_;
     }
 
-    template <typename T = interrupted_exception>
-    void interrupt(T &&t = interrupted_exception{}) noexcept {
-        exception_ = std::make_exception_ptr(std::forward<T>(t));
-    }
-
-    [[nodiscard]]
-    bool interrupted() const noexcept {
-        return (bool) exception_;
-    }
-
     [[nodiscard]]
     bool bound() const noexcept {
         return env_ != nullptr;
@@ -95,9 +83,8 @@ struct coroutine_data: memory::reference_counted_base<coroutine_data> {
 
     void kill() {
         while (!call_stack_.empty()) {
-            // destroy the call stack
-            call_stack_.top().destroy();
-            call_stack_.pop();
+            call_stack_.back().destroy();
+            call_stack_.pop_back();
         }
     }
 
@@ -116,28 +103,18 @@ protected:
     void bind_(environment *env, priority_type priority);
     void manage_();
     void unmanage_();
-
-    void raise_interrupt_() {
-        std::exception_ptr exception = exception_;
-        
-        // clear exception_, the exception might be caught
-        // we may need to interrupt again later
-        exception_ = nullptr;
-
-        std::rethrow_exception(exception);
-    }
-
+    
     void push_coro_(coroutine_handle coro) {
         // whenever there is a subroutine call, the
         // execution should keep moving further
-        call_stack_.push(coro);
+        call_stack_.push_back(coro);
         should_continue_ = true;
     }
 
     void pop_coro_() {
         // whenever a subroutine call returns, the
         // execution should keep moving further
-        call_stack_.pop();
+        call_stack_.pop_back();
         should_continue_ = true;
     }
 
@@ -146,13 +123,13 @@ protected:
             // if called, only two owners: (1) coroutine<T> and (2) promise_type
             // as the coroutine is not started yet, promise_type will never
             // get destroyed, resulting in a memory leak
-            call_stack_.top().destroy();
+            call_stack_.back().destroy();
         }
     }
 
 protected:
     environment *env_ = nullptr;
-    std::stack<coroutine_handle> call_stack_;
+    std::vector<coroutine_handle> call_stack_;
     bool should_continue_ = false;
     util::source_location created_;
     util::source_location awaited_;
@@ -160,7 +137,6 @@ protected:
     time_integral latency_ = 0;
     memory::ptr<coroutine_data> parent_;
     bool complete_ = false;
-    std::exception_ptr exception_;
 };
 
 
@@ -208,6 +184,11 @@ struct coroutine_data_completion_tokens_mixin {
         completion_tokens_.push_back(completion_token);
     }
 
+    void propagate_exception(std::exception_ptr exception) {
+        for (auto completion_token: completion_tokens_)
+            completion_token->eptr = exception;
+    }
+
 protected:
     void schedule_completion_(environment *env);
 
@@ -218,6 +199,10 @@ template <>
 struct coroutine_data_completion_tokens_mixin<true> {
     void completion_token(token *completion_token) {
         completion_token_ = completion_token;
+    }
+
+    void propagate_exception(std::exception_ptr exception) {
+        completion_token_->eptr = exception;
     }
 
 protected:

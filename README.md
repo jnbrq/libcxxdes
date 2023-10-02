@@ -68,7 +68,7 @@ libcxxdes tries to provide the complete feature set of SimPy, it currently suppo
     `co_await sequential(p1(), p2(), ...)`, `co_await (p1(), p2(), ...)`
     - Timeouts:
     `co_await delay(5)`, `co_await timeout(5_s)`
-3. Interruptable coroutines which are useful for modelling preemptive resources.
+3. Interruptable coroutines which are useful for modelling preemptive resources. --Not feasible to implement. Use || with a queue, same thing.
 4. Priority-scheduling of events that take place at the same simulation time. `coroutine<T>` can be assigned priorities! (lower the number, higher the priority)
 5. `time_unit()` and `time_precision()` functions for mapping simulation time (integer) to real-world time.
 6. Synchronization primitives, such as `mutex`, `semaphore`, `queue<T>`, and `event`.

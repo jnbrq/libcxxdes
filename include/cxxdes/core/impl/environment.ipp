@@ -68,41 +68,30 @@ struct environment {
             return false;
         
         auto tkn = memory::ptr{tokens_.top()};
-
         tkn->unref() /* tkn already holds a reference now */;
         tokens_.pop();
 
         now_ = std::max(tkn->time, now_);
 
-        try {
-            if (tkn->handler) {
+        if (tkn->handler) {
+            try {
                 tkn->handler->invoke(tkn);
             }
-            else if (tkn->coro_data) {
-                current_coroutine_ = tkn->coro_data;
-                tkn->coro_data->resume();
-                current_coroutine_ = nullptr;
+            catch (...) {
+                reset();
+                std::rethrow_exception(std::current_exception());
             }
         }
-        catch (...) {
-            /** In case of an unhandled exception, simply kill everything. */
-
-            auto coroutines = std::move(coroutines_);
-
-            for (auto coroutine: coroutines) {
-                if (!coroutine->complete())
-                    coroutine->kill();
-            }
-
-            while (!tokens_.empty()) {
-                auto tkn = tokens_.top();
-                tokens_.pop();
-                tkn->unref();
-            }
-
-            std::rethrow_exception(std::current_exception());
+        else if (tkn->coro_data) {
+            current_coroutine_ = tkn->coro_data;
+            tkn->coro_data->resume();
+            current_coroutine_ = nullptr;
         }
-
+        else if (tkn->eptr) {
+            reset();
+            std::rethrow_exception(tkn->eptr);
+        }
+        
         return true;
     }
 
@@ -113,13 +102,10 @@ struct environment {
         // for a proper way to erase while iterating:
         //   https://en.cppreference.com/w/cpp/container/unordered_set/erase
         // sadly, we cannot apply this solution.
-
         auto coroutines = std::move(coroutines_);
+
         for (auto coroutine: coroutines) {
-            if (!coroutine->complete()) {
-                coroutine->interrupt(stopped_exception{});
-                coroutine->resume();
-            }
+            coroutine->kill();
         }
 
         while (!tokens_.empty()) {
@@ -169,7 +155,7 @@ struct environment {
     }
 
     ~environment() {
-        reset();
+        // reset();
     }
 
 private:

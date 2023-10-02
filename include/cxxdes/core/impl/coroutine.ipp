@@ -76,16 +76,6 @@ struct coroutine:
         return coro_data_->complete();
     }
 
-    template <typename T = interrupted_exception>
-    void interrupt(T &&t = interrupted_exception{}) noexcept {
-        coro_data_->interrupt(std::forward<T>(t));
-    }
-
-    [[nodiscard]]
-    bool interrupted() const noexcept {
-        return coro_data_->interrupted();
-    }
-
     [[nodiscard]]
     priority_type priority() const noexcept {
         return coro_data_->priority();
@@ -194,8 +184,17 @@ struct coroutine:
         }
     }
 
-    void await_resume(no_return_value_tag) noexcept {
-        completion_token_ = nullptr;
+    void await_resume(no_return_value_tag) {
+        if (completion_token_) {
+            auto tkn = completion_token_;
+            completion_token_ = nullptr;
+
+            /* If coro_data is missing from the following condition,
+             * it fails segv. But this should not be the case. */
+            if (tkn->coro_data && tkn->eptr) {
+                std::rethrow_exception(tkn->eptr);
+            }
+        }
     }
 
 private:
@@ -250,15 +249,11 @@ public:
         auto final_suspend() noexcept -> std::suspend_never { return {}; }
 
         auto unhandled_exception() -> void {
-            try {
-                std::rethrow_exception(std::current_exception());
-            }
-            catch (stopped_exception & /* ex */) {
-                do_return();
-            }
-            catch (...) {
-                std::rethrow_exception(std::current_exception());
-            }
+            // update completion tokens with the current exception
+            coro_data->propagate_exception(std::current_exception());
+
+            // schedule the completion tokens
+            coro_data->do_return();
         }
 
         template <typename T>

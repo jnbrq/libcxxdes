@@ -104,6 +104,7 @@ public:
 
         auto unhandled_exception() {
             eptr = std::current_exception();
+            // after this, will call final_suspend() and finalize
         }
     };
 

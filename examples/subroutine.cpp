@@ -1,6 +1,6 @@
 #include <coroutine>
-#include <fmt/core.h>
 #include <stack>
+#include <fmt/core.h>
 
 std::stack<std::coroutine_handle<>> call_stack;
 

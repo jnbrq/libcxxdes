@@ -25,48 +25,6 @@ CXXDES_SIMULATION(pitfall) {
 
 #define _TrackLocation cxxdes::util::source_location const = cxxdes::util::source_location::current()
 
-CXXDES_SIMULATION(interrupts) {
-    using simulation::simulation;
-
-    coroutine<> foo(_TrackLocation) {
-        try {
-            while (true) {
-                fmt::print("now: {}\n", now());
-                co_await delay(1);
-            }
-        }
-        catch (interrupted_exception &err) {
-            fmt::print("exception: {}\n", err.what());
-            co_return ;
-        }
-    }
-
-    coroutine<> bar(_TrackLocation) {
-        try {
-            co_await delay(100);
-        }
-        catch (interrupted_exception &err) {
-            fmt::print("exception: {}\n", err.what());
-            co_return ;
-        }
-    }
-
-    coroutine<> co_main(_TrackLocation) {
-        {
-            coroutine<> h = co_await async(foo());
-            co_await delay(5);
-            h.interrupt();
-        }
-
-        {
-            coroutine<> h = co_await async(bar());
-            co_await delay(5);
-            h.interrupt(interrupted_exception("interrupted!"));
-            // h.interrupt(std::runtime_error("what?"));
-        }
-    }
-};
-
 CXXDES_SIMULATION(subroutines) {
     using simulation::simulation;
 
@@ -102,14 +60,8 @@ CXXDES_SIMULATION(subroutines2) {
     using simulation::simulation;
 
     subroutine<int> foo() {
-        try {
-            co_await delay(600);
-            co_await delay(600);
-        }
-        catch (cxxdes::core::stopped_exception &ex) {
-            fmt::print("exception: {}, now {}\n", ex.what(), now());
-            throw ex;
-        }
+        co_await delay(600);
+        co_await delay(600);
         co_return 20;
     }
 
@@ -164,9 +116,6 @@ CXXDES_SIMULATION(subroutines4) {
 int main() {
     fmt::print("pitfall\n");
     pitfall::run();
-
-    fmt::print("interrupts\n");
-    interrupts::run_for(500);
 
     fmt::print("subroutines\n");
     subroutines::run();

@@ -8,6 +8,12 @@ struct any_all_helper {
 
         void invoke(token *tkn) override {
             --remaining;
+        
+            if (tkn->eptr) {
+                // in case an argument of all/any of throws an exception
+                // this must be handled by main.
+                std::rethrow_exception(tkn->eptr);
+            }
             
             if (completion_tkn && Condition::operator()(total, remaining)) {
                 // inherit the output_event features

@@ -14,8 +14,6 @@ struct awaitable_wrapper {
     }
 
     auto await_resume() {
-        if (coro_data_this->interrupted())
-            coro_data_this->raise_interrupt_();
         return a.await_resume();
     }
 };

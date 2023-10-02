@@ -1,10 +1,6 @@
 #include <gtest/gtest.h>
 #include <vector>
 
-#ifndef CXXDES_INTERRUPTABLE
-#   define CXXDES_INTERRUPTABLE
-#endif
-// #define CXXDES_DEBUG_CORE_coroutine
 #include <cxxdes/cxxdes.hpp>
 
 using namespace cxxdes::core;
@@ -261,45 +257,3 @@ TEST(ProcessTest, Returncoroutine) {
     test::run();
 }
 
-TEST(ProcessTest, Interrupt) {
-    CXXDES_SIMULATION(test) {
-        using simulation::simulation;
-        
-        test(environment &env): simulation(env) {
-        }
-
-        bool flag = false;
-
-        coroutine<> foo() {
-            while (true) {
-                co_await delay(10);
-            }
-        }
-
-        coroutine<> bar() {
-            try {
-                while (true)
-                    co_await delay(1000);
-            }
-            catch (stopped_exception & /* ex */) {
-                flag = true;
-                co_return ;
-            }
-        }
-
-        coroutine<> co_main() {
-            co_await async(foo());
-            co_await async(bar());
-            
-            while (true) {
-                co_await delay(10);
-            }
-        }
-    };
-
-    environment env;
-    test t{env};
-    env.run_for(100);
-    env.reset();
-    EXPECT_TRUE(t.flag);
-}
