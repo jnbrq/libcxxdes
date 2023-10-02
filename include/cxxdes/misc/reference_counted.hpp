@@ -98,7 +98,7 @@ struct ptr {
         return ptr_;
     }
 
-    T const *operator->() const noexcept {
+    T *operator->() const noexcept {
         return ptr_;
     }
 
@@ -164,7 +164,7 @@ struct ptr {
         return { dynamic_cast<U const *>(ptr_) };
     }
 
-    memory::ptr<const T> constcast() const noexcept {
+    memory::ptr<const T> as_const() const noexcept {
         return { (const T *) ptr_ };
     }
 
