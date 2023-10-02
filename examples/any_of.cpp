@@ -18,6 +18,6 @@ CXXDES_SIMULATION(any_of_example) {
 };
 
 int main() {
-    any_of_example::run();
+    any_of_example{}.run();
     return 0;
 }

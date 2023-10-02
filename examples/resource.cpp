@@ -31,6 +31,6 @@ CXXDES_SIMULATION(resource_example) {
 };
 
 int main() {
-    resource_example::run();
+    resource_example{}.run();
     return 0;
 }

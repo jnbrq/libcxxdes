@@ -31,6 +31,6 @@ CXXDES_SIMULATION(queue_example) {
 };
 
 int main() {
-    queue_example::run();
+    queue_example{}.run();
     return 0;
 }

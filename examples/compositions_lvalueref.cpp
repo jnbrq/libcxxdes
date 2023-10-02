@@ -65,6 +65,6 @@ CXXDES_SIMULATION(async_example) {
 };
 
 int main() {
-    async_example::run();
+    async_example{}.run();
     return 0;
 }

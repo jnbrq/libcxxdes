@@ -28,6 +28,6 @@ CXXDES_SIMULATION(return_value_example) {
 };
 
 int main() {
-    return_value_example::run();
+    return_value_example{}.run();
     return 0;
 }

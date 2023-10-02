@@ -33,6 +33,6 @@ CXXDES_SIMULATION(debug_example) {
 };
 
 int main() {
-    debug_example::run();
+    debug_example{}.run();
     return 0;
 }

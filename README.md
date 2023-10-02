@@ -22,7 +22,10 @@ CXXDES_SIMULATION(producer_consumer_example) {
             co_await q.put(now_seconds());
 
             // models the arrival time (exponential random variable)
-            co_await timeout(lambda());
+            
+            // env.timeout ensures that lambda() is in time units of the
+            // environment. Equivalent to lambda() * 1_s in this case.
+            co_await env.timeout(lambda());
         }
     }
 
@@ -42,7 +45,7 @@ CXXDES_SIMULATION(producer_consumer_example) {
             }
             
             // models the service time (exponential random variable)
-            co_await timeout(mu());
+            co_await env.timeout(mu());
 
             total_latency += (now_seconds() - x);
         }

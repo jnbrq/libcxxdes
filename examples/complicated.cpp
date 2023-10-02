@@ -92,6 +92,6 @@ CXXDES_SIMULATION(complicated_example) {
 };
 
 int main() {
-    complicated_example::run();
+    complicated_example{}.run();
     return 0;
 }

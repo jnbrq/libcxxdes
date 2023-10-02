@@ -23,8 +23,7 @@ struct aloha_result {
 };
 
 CXXDES_SIMULATION(aloha) {
-    aloha(environment &env, aloha_config const &cfg):
-        simulation{env}, cfg_{cfg} {
+    aloha(aloha_config const &cfg): cfg_{cfg} {
         env.time_unit(1_s);
         env.time_precision(1_ms);
     }
@@ -58,7 +57,7 @@ private:
             active_transmissions_.insert(&collided);
 
             check_collisions();
-            co_await timeout(cfg_.frame_time);
+            co_await env.timeout(cfg_.frame_time);
 
             active_transmissions_.erase(&collided);
 
@@ -67,7 +66,7 @@ private:
             }
 
             auto wait_time = interarrival();
-            co_await timeout(wait_time);
+            co_await env.timeout(wait_time);
         }
     }
 
@@ -98,13 +97,12 @@ int main() {
 
         environment env;
         aloha experiment{
-            env,
             aloha_config{
                 .lambda = lambda, .packets_per_station = std::size_t(lambda * 1000)
             }
         };
 
-        env.run();
+        experiment.run();
         auto [g, s] = experiment.result();
 
         fmt::print("{}, {}\n", g, s);

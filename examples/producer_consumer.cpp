@@ -8,16 +8,15 @@ using namespace cxxdes::core::time_ops;
 
 CXXDES_SIMULATION(producer_consumer_example) {
     producer_consumer_example(
-        environment &env,
         double lambda,
         double mu,
-        std::size_t n_packets = 100000):
-        simulation{env},
+        std::size_t n_packets = 10000):
         n_packets{n_packets},
         lambda{ rand_seed() /* seed */, lambda /* lambda */},
         mu{ rand_seed() /* seed */, mu /* mu */ } {
         env.time_unit(1_s);
         env.time_precision(1_ms);
+        bind();
     }
 
     cxxdes::sync::queue<double> q;
@@ -32,7 +31,7 @@ CXXDES_SIMULATION(producer_consumer_example) {
     coroutine<> producer() {
         for (std::size_t i = 0; i < n_packets; ++i) {
             co_await q.put(now_seconds());
-            co_await timeout(lambda());
+            co_await env.timeout(lambda());
         }
     }
 
@@ -48,7 +47,7 @@ CXXDES_SIMULATION(producer_consumer_example) {
                 co_return ;
             }
             
-            co_await timeout(mu());
+            co_await env.timeout(mu());
 
             total_latency += (now_seconds() - x);
         }
@@ -68,9 +67,8 @@ int main() {
     fmt::print("{}, {}, {}, {}\n", "lambda", "mu", "rho", "avg_latency");
     for (std::size_t i = 0; i < n_steps; ++i) {
         double lambda = lambda_start + (lambda_end - lambda_start) * i / (n_steps - 1);
-        environment env;
-        auto sim = producer_consumer_example{env, lambda, mu};
-        env.run();
+        auto sim = producer_consumer_example{lambda, mu};
+        sim.run();
         fmt::print("{:.3f}, {:.3f}, {:.3f}, {:.3f}\n", lambda, mu, lambda / lambda_end, sim.avg_latency);
     }
     return 0;

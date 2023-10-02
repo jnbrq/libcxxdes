@@ -28,6 +28,6 @@ CXXDES_SIMULATION(this_out_scope) {
 };
 
 int main() {
-    this_out_scope::run();
+    this_out_scope{}.run();
     return 0;
 }

@@ -4,8 +4,7 @@
 using namespace cxxdes::core;
 
 CXXDES_SIMULATION(test) {
-    test(environment &env, std::size_t id):
-        simulation(env), test_id{id} {
+    test(std::size_t id): test_id{id} {
     }
 
     std::size_t test_id = 0;
@@ -31,8 +30,8 @@ CXXDES_SIMULATION(test) {
 };
 
 int main() {
-    test::run_for(100, 0);
-    test::run_for(100, 1);
-    test::run_for(100, 2);
+    test{0}.run_for(100);
+    test{1}.run_for(100);
+    test{2}.run_for(100);
     return 0;
 }

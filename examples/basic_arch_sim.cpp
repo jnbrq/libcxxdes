@@ -110,6 +110,6 @@ CXXDES_SIMULATION(memory_test) {
 };
 
 int main() {
-    memory_test::run();
+    memory_test{}.run();
     return 0;
 }

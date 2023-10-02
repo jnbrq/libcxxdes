@@ -115,19 +115,19 @@ CXXDES_SIMULATION(subroutines4) {
 
 int main() {
     fmt::print("pitfall\n");
-    pitfall::run();
+    pitfall{}.run();
 
     fmt::print("subroutines\n");
-    subroutines::run();
+    subroutines{}.run();
 
     fmt::print("subroutines2\n");
-    subroutines2::run_for(500);
+    subroutines2{}.run_for(500);
 
     fmt::print("subroutines3\n");
-    subroutines3::run_for(500);
+    subroutines3{}.run_for(500);
 
     fmt::print("subroutines4\n");
-    subroutines4::run();
+    subroutines4{}.run();
 
     return 0;
 }

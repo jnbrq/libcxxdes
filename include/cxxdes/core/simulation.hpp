@@ -20,43 +20,28 @@ namespace core {
 
 template <typename Derived>
 struct simulation {
-    simulation(environment &env): env_{env} {
-        env_.bind(derived().co_main());
-    }
-
     auto now() const noexcept {
-        return env_.now();
+        return env.now();
     }
 
     auto t() const noexcept {
-        return env_.t();
+        return env.t();
     }
 
     auto now_seconds() const noexcept {
-        return env_.now_seconds();
+        return env.now_seconds();
     }
 
-    auto &env() noexcept {
-        return env_;
-    }
+    environment env;
 
-    auto const& env() const noexcept {
-        return env_;
-    }
-
-    template <typename ...Args>
-    static void run(Args && ...args) {
-        environment env;
-        Derived s(env, std::forward<Args>(args)...);
-        (void) s;
+    void run() {
+        bind();
         env.run();
     }
 
-    template <typename T, typename ...Args>
-    static void run_for(T &&t, Args && ...args) {
-        environment env;
-        Derived s(env, std::forward<Args>(args)...);
-        (void) s;
+    template <typename T>
+    void run_for(T &&t) {
+        bind();
         env.run_for(std::forward<T>(t));
     }
     
@@ -69,8 +54,15 @@ private:
         return static_cast<Derived &>(*this);
     }
 
+    bool bound_ = false;
+
 protected:
-    environment &env_;
+    void bind() {
+        if (!bound_) {
+            env.bind(derived().co_main());
+            bound_ = true;
+        }
+    }
 };
 
 #define CXXDES_SIMULATION(name) struct name : cxxdes::core::simulation < name >
