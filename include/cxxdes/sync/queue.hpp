@@ -32,11 +32,8 @@ struct queue {
     template <typename ...Args>
     [[nodiscard("expected usage: co_await queue.put(args...)")]]
     subroutine<> put(Args && ...args) {
-        while (true) {
-            if (max_size_ == 0 || q_.size() < max_size_)
-                break ;
+        while (!can_put())
             co_await event_.wait();
-        }
         q_.emplace(std::forward<Args>(args)...);
         co_await event_.wake();
     }
@@ -44,22 +41,35 @@ struct queue {
 
     [[nodiscard("expected usage: co_await queue.pop()")]]
     subroutine<T> pop() {
-        while (true) {
-            if (q_.size() > 0)
-                break ;
+        while (!can_pop())
             co_await event_.wait();
-        }
         auto v = std::move(q_.front());
         q_.pop();
         co_await event_.wake();
         co_return v;
     }
 
-    std::size_t size() const {
+    std::size_t size() const noexcept {
         return q_.size();
     }
 
-    const std::queue<T> &underlying_queue() const {
+    std::size_t max_size() const noexcept {
+        return max_size_;
+    }
+
+    bool bounded() const noexcept {
+        return max_size() > 0;
+    }
+
+    bool can_put() const noexcept {
+        return !bounded() || (max_size() > size());
+    }
+
+    bool can_pop() const noexcept {
+        return size() > 0;
+    }
+
+    const std::queue<T> &underlying_queue() const noexcept {
         return q_;
     }
 private:
