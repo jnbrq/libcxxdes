@@ -84,10 +84,9 @@ struct coroutine_data: memory::reference_counted_base<coroutine_data> {
     void destroy() {
         complete_ = true;
         
-        while (!call_stack_.empty()) {
-            call_stack_.back().destroy();
-            call_stack_.pop_back();
-        }
+        // only destroy the first one, which will automatically destroy the rest
+        call_stack_.front().destroy();
+        call_stack_.clear();
     }
 
     virtual ~coroutine_data() = default;
