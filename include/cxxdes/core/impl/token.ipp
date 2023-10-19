@@ -39,7 +39,7 @@ struct token: memory::reference_counted_base<token> {
     const char *what = nullptr;
     #endif /* CXXDES_DEBUG_TOKEN */
 
-    void attempt_access() {
+    void attempt_access() const noexcept {
         debug("attempt_access()");
     }
 
@@ -48,7 +48,7 @@ struct token: memory::reference_counted_base<token> {
     }
 
 private:
-    void debug(__attribute__ ((__unused__)) const char * event) {
+    void debug(__attribute__ ((__unused__)) const char * event) const noexcept {
         #ifdef CXXDES_DEBUG_TOKEN
         fmt::println(
             "token@0x{}::{}: what = {}, ref_count = {}",
