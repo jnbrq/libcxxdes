@@ -79,7 +79,6 @@ struct environment {
                 tkn->handler->invoke(tkn);
             }
             catch (...) {
-                reset();
                 std::rethrow_exception(std::current_exception());
             }
         }
@@ -89,7 +88,6 @@ struct environment {
             current_coroutine_ = nullptr;
         }
         else if (tkn->eptr) {
-            reset();
             std::rethrow_exception(tkn->eptr);
         }
         
@@ -107,8 +105,7 @@ struct environment {
 
         for (auto coroutine: coroutines) {
             if (!coroutine->complete()) {
-                coroutine->stop();
-                coroutine->resume();
+                coroutine->destroy();
             }
         }
 

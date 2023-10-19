@@ -81,25 +81,18 @@ struct coroutine_data: memory::reference_counted_base<coroutine_data> {
         return env_ != nullptr;
     }
 
-    void stop() {
-        stopped_ = true;
-    }
-
-    [[nodiscard]]
-    bool stopped() {
-        return stopped_;
+    void destroy() {
+        complete_ = true;
+        
+        while (!call_stack_.empty()) {
+            call_stack_.back().destroy();
+            call_stack_.pop_back();
+        }
     }
 
     virtual ~coroutine_data() = default;
 
 protected:
-    // protected, so cannot be captured by user
-    struct stopped_exception: std::exception {
-        const char *what() const noexcept override {
-            return "stopped";
-        }
-    };
-
     template <awaitable A>
     friend struct awaitable_wrapper;
 
@@ -146,7 +139,6 @@ protected:
     time_integral latency_ = 0;
     memory::ptr<coroutine_data> parent_;
     bool complete_ = false;
-    bool stopped_ = false;
 };
 
 

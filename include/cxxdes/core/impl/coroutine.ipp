@@ -257,10 +257,6 @@ public:
             try {
                 std::rethrow_exception(std::current_exception());
             }
-            catch (coroutine_data::stopped_exception &) {
-                // do nothing, we do not need to propagate this exception
-                // other coroutines will be also stopped by the environment
-            }
             catch (...) {
                 // update completion tokens with the current exception
                 coro_data->propagate_exception(std::current_exception());

@@ -14,8 +14,6 @@ struct awaitable_wrapper {
     }
 
     auto await_resume() {
-        if (coro_data_this->stopped())
-            throw coroutine_data::stopped_exception{};
         return a.await_resume();
     }
 };
