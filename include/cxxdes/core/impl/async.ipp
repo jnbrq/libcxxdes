@@ -12,6 +12,10 @@ struct async_functor {
 
             void await_bind(environment *env, priority_type priority) {
                 p.await_bind(env, priority);
+                if (!p.await_ready())
+                    // make sure that the completion token is setup correctly
+                    // required to handle exceptions from async(...)
+                    p.await_suspend(nullptr);
             }
 
             bool await_ready() {
