@@ -168,10 +168,10 @@ private:
 
     struct token_comp {
         static bool has_priority(token *tkn) {
-            // this token can only be processed by step(), because
-            // no coroutine<> object references it.
             // it has an exception.
-            return tkn->coro_data == nullptr && tkn->eptr != nullptr;
+            // this token can only be processed by step(), because
+            // no coroutine<> or handler object reference it.
+            return tkn->coro_data == nullptr && tkn->handler == nullptr && tkn->eptr != nullptr;
         }
 
         bool operator()(token *tkn_a, token *tkn_b) const {
