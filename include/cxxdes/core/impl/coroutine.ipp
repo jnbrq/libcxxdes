@@ -254,16 +254,11 @@ public:
         auto final_suspend() noexcept -> std::suspend_never { return {}; }
 
         auto unhandled_exception() -> void {
-            try {
-                std::rethrow_exception(std::current_exception());
-            }
-            catch (...) {
-                // update completion tokens with the current exception
-                coro_data->propagate_exception(std::current_exception());
+            // update completion tokens with the current exception
+            coro_data->propagate_exception(std::current_exception());
 
-                // schedule the completion tokens
-                coro_data->do_return();
-            }
+            // schedule the completion tokens
+            coro_data->do_return();
         }
 
         template <typename T>

@@ -167,8 +167,17 @@ private:
     time prec_;
 
     struct token_comp {
+        static bool has_priority(token *tkn) {
+            // this token can only be processed by step(), because
+            // no coroutine<> object references it.
+            // it has an exception.
+            return tkn->coro_data == nullptr && tkn->eptr != nullptr;
+        }
+
         bool operator()(token *tkn_a, token *tkn_b) const {
-            return (tkn_a->time > tkn_b->time) ||
+            return
+                has_priority(tkn_b) ||
+                (tkn_a->time > tkn_b->time) ||
                 (tkn_a->time == tkn_b->time && tkn_a->priority > tkn_b->priority);
         }
     };
