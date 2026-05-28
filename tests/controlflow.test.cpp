@@ -122,3 +122,16 @@ TEST(ControlFlowTest, Compositions2) {
 
     test{}.run();
 }
+
+TEST(ControlFlowTest, AllOfDoesNotSuspendReadyChildren) {
+    CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+        
+        coroutine<> co_main() {
+            co_await all_of(until(0), delay(5));
+            EXPECT_EQ(now(), 5);
+        }
+    };
+
+    test{}.run();
+}

@@ -50,7 +50,16 @@ struct any_all_helper {
         bool await_ready() {
             auto total = derived().count();
             remaining_ = total;
-            derived().apply([&](auto &a) mutable { remaining_ -= (a.await_ready() ? 1 : 0); });
+
+            ready_.clear();
+            ready_.reserve(total);
+
+            derived().apply([&](auto &a) mutable {
+                auto ready = a.await_ready();
+                ready_.push_back(ready);
+                remaining_ -= (ready ? 1 : 0);
+            });
+            
             return Condition::operator()(total, remaining_);
         }
 
@@ -63,7 +72,11 @@ struct any_all_helper {
             handler->env = env_;
             handler->completion_tkn = tkn_;
 
+            std::size_t index = 0;
             derived().apply([&](auto &a) {
+                if (ready_[index++])
+                    return;
+
                 a.await_suspend(coro_data);
                 if (a.await_token())
                     a.await_token()->handler = handler;
@@ -79,6 +92,7 @@ struct any_all_helper {
         }
     private:
         std::size_t remaining_ = 0;
+        std::vector<bool> ready_;
 
         auto derived() -> auto & {
             return *(static_cast<Derived *>(this));

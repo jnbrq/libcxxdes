@@ -174,7 +174,7 @@ When the awaited coroutine returns, `coroutine_data::do_return()` schedules its 
 Compositions such as `any_of` and `all_of` use the same token mechanism, but they insert a handler between each child awaitable and the waiting coroutine.
 When the child awaitable is a `coroutine<T>`, that child token is the coroutine's completion token.
 When a composition suspends, it creates one output token for the coroutine that is awaiting the composition.
-It then suspends each child awaitable and installs a shared handler on each child token returned by `await_token()`.
+It then suspends each child awaitable that did not already report ready and installs a shared handler on each child token returned by `await_token()`.
 When a child token fires, the environment invokes the handler instead of directly resuming the original coroutine.
 The handler counts completions, checks for token exceptions, and schedules the composition's output token when the composition condition is satisfied.
 
