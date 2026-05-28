@@ -75,6 +75,9 @@ co_await bar(foo());
 
 In any case, `libcxxdes` is subject to the lifetime rules for coroutines; therefore, it is advisable to get familiar with [them](https://en.cppreference.com/w/cpp/language/coroutines#Execution).
 
+Some awaitables also depend on an external synchronization object.
+For the lifetime rules of `event`, `semaphore`, `queue`, `mutex`, and `resource`, see [sync_primitives.md](sync_primitives.md#lifetime-rule).
+
 ### Lifetimes of the Promise and Coroutine Objects
 
 Coroutine objects, such as `foo()` in the example above, outlive the [promise](https://en.cppreference.com/w/cpp/language/coroutines#Execution) objects.

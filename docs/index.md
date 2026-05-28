@@ -84,11 +84,12 @@ Legend:
 
 | Topic | Use this for | Files |
 | --- | --- | --- |
-| Event | Waiting until another process wakes all current waiters. | `[ex]` [event.cpp](../examples/event.cpp), `[lib]` [event.hpp](../include/cxxdes/sync/event.hpp) |
-| Semaphore | Counting permits with `up()` and `down()`. | `[ex]` [semaphore.cpp](../examples/semaphore.cpp), `[lib]` [semaphore.hpp](../include/cxxdes/sync/semaphore.hpp) |
-| Queue | Blocking producer/consumer queues with optional bounded capacity. | `[ex]` [queue.cpp](../examples/queue.cpp), `[lib]` [queue.hpp](../include/cxxdes/sync/queue.hpp) |
-| Mutex | Exclusive access through an acquired handle that must be released. | `[ex]` [mutex.cpp](../examples/mutex.cpp), `[lib]` [mutex.hpp](../include/cxxdes/sync/mutex.hpp) |
-| Resource | SimPy-style counted resource built on a semaphore. | `[ex]` [resource.cpp](../examples/resource.cpp), `[lib]` [resource.hpp](../include/cxxdes/sync/resource.hpp) |
+| Synchronization overview | Primitive behavior and lifetime rules for blocked waiters. | `[md]` [sync_primitives.md](sync_primitives.md) |
+| Event | Waiting until another process wakes all current waiters. | `[md]` [sync_primitives.md](sync_primitives.md#event), `[ex]` [event.cpp](../examples/event.cpp), `[lib]` [event.hpp](../include/cxxdes/sync/event.hpp) |
+| Semaphore | Counting permits with `up()` and `down()`. | `[md]` [sync_primitives.md](sync_primitives.md#semaphore), `[ex]` [semaphore.cpp](../examples/semaphore.cpp), `[lib]` [semaphore.hpp](../include/cxxdes/sync/semaphore.hpp) |
+| Queue | Blocking producer/consumer queues with optional bounded capacity. | `[md]` [sync_primitives.md](sync_primitives.md#queue), `[ex]` [queue.cpp](../examples/queue.cpp), `[lib]` [queue.hpp](../include/cxxdes/sync/queue.hpp) |
+| Mutex | Exclusive access through an acquired handle that must be released. | `[md]` [sync_primitives.md](sync_primitives.md#mutex), `[ex]` [mutex.cpp](../examples/mutex.cpp), `[lib]` [mutex.hpp](../include/cxxdes/sync/mutex.hpp) |
+| Resource | SimPy-style counted resource built on a semaphore. | `[md]` [sync_primitives.md](sync_primitives.md#resource), `[ex]` [resource.cpp](../examples/resource.cpp), `[lib]` [resource.hpp](../include/cxxdes/sync/resource.hpp) |
 
 ## Resource Acquisition Helpers
 
