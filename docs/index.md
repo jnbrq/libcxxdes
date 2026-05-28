@@ -63,6 +63,7 @@ Legend:
 | Topic | Use this for | Files |
 | --- | --- | --- |
 | Composition overview | Public helpers and operators: `all_of`, `any_of`, `sequential`, `async`, `&&`, `\|\|`, and `,`. | `[lib]` [compositions.ipp](../include/cxxdes/core/impl/compositions.ipp) |
+| Composition token model | How `any_of` and `all_of` use child completion tokens and handlers. | `[md]` [coroutine_model.md](coroutine_model.md), `[lib]` [any_of.ipp](../include/cxxdes/core/impl/any_of.ipp) |
 | Parallel composition | Waiting for the first or all awaitables to complete. | `[ex]` [any_of.cpp](../examples/any_of.cpp), `[lib]` [any_of.ipp](../include/cxxdes/core/impl/any_of.ipp) |
 | Sequential composition | Awaiting a group of awaitables in order. | `[lib]` [sequential.ipp](../include/cxxdes/core/impl/sequential.ipp) |
 | Async launch | Starting a coroutine and receiving it back without blocking the caller. | `[lib]` [async.ipp](../include/cxxdes/core/impl/async.ipp) |

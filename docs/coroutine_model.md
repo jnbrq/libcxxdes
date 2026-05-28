@@ -159,6 +159,37 @@ coroutine<> parent() {
 Return values are stored in coroutine data.
 For `coroutine<T>`, `co_await` returns the stored value; for `unique_coroutine<T>`, the value is moved out.
 
+## Completion Tokens And Composition
+
+Completion tokens are the bridge between ordinary coroutine awaiting and control-flow composition.
+When a coroutine awaits another `coroutine<T>`, the waiting coroutine creates a completion token in `coroutine<T>::await_suspend(...)`.
+That token points back to the waiting coroutine's `coroutine_data`.
+The awaited coroutine stores the token with `coroutine_data::completion_token(...)`.
+When the awaited coroutine returns, `coroutine_data::do_return()` schedules its stored completion tokens.
+
+Compositions such as `any_of` and `all_of` use the same token mechanism, but they insert a handler between each child awaitable and the waiting coroutine.
+When the child awaitable is a `coroutine<T>`, that child token is the coroutine's completion token.
+When a composition suspends, it creates one output token for the coroutine that is awaiting the composition.
+It then suspends each child awaitable and installs a shared handler on each child token returned by `await_token()`.
+When a child token fires, the environment invokes the handler instead of directly resuming the original coroutine.
+The handler counts completions, checks for token exceptions, and schedules the composition's output token when the composition condition is satisfied.
+
+For `any_of`, the condition is satisfied when at least one child completes.
+For `all_of`, the condition is satisfied when all children complete.
+The output token inherits timing and priority information from the child token that satisfied the condition.
+That scheduled output token is what finally resumes the coroutine waiting on the composition.
+
+This is why every libcxxdes awaitable exposes `await_token()`.
+Compositions need access to the token that represents each child awaitable's eventual completion.
+Awaitables that complete immediately may return `nullptr`, and the composition accounts for them through `await_ready()`.
+
+| Mechanism | Source |
+| --- | --- |
+| Coroutine completion token creation | [`coroutine<T>::await_suspend`](../include/cxxdes/core/impl/coroutine.ipp#L147) |
+| Completion token storage | [`coroutine_data::completion_token`](../include/cxxdes/core/impl/coroutine_data.ipp#L184) |
+| Completion token scheduling | [`schedule_completion_`](../include/cxxdes/core/impl/environment.ipp#L245) |
+| Composition token handlers | [`any_of.ipp`](../include/cxxdes/core/impl/any_of.ipp) |
+
 ## Subroutines
 
 `subroutine<T>` is different from `coroutine<T>`.
