@@ -104,6 +104,26 @@ TEST(ProcessTest, Latencies) {
     test{}.run();
 }
 
+TEST(ProcessTest, AsyncUniqueCoroutine) {
+    CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+
+        unique_coroutine<int> foo() {
+            co_await delay(5);
+            co_return 42;
+        }
+
+        coroutine<> co_main() {
+            auto p = co_await async(foo());
+            EXPECT_EQ(now(), 0);
+            EXPECT_EQ(co_await std::move(p), 42);
+            EXPECT_EQ(now(), 5);
+        }
+    };
+
+    test{}.run();
+}
+
 TEST(ProcessTest, RunForStopsBeforeFutureEvent) {
     CXXDES_SIMULATION(test) {
         using simulation::simulation;

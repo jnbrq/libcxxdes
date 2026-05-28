@@ -2,21 +2,21 @@
 /**
  * @brief Starts an awaitable without blocking the current process.
  *
- * For `coroutine<T>`, `async` binds and starts the process, then immediately
- * resumes the caller with the coroutine handle. Await the returned handle later
- * if the caller needs the result or exception.
+ * For `coroutine<T, Unique>`, `async` binds and starts the process, then
+ * immediately resumes the caller with the coroutine handle. Await the returned
+ * handle later if the caller needs the result or exception.
  */
 struct async_functor {
     /** @brief Starts @p p and returns it without waiting for completion. */
-    template <typename T>
-    [[nodiscard("expected usage: co_await async(coroutine<T>)")]]
-    constexpr auto operator()(coroutine<T> p) const {
-        // since coroutine<T> is a reference-counted object with a flexible
-        // lifetime, we can safely use coroutine<R> with async.
+    template <typename T, bool Unique>
+    [[nodiscard("expected usage: co_await async(coroutine<T, Unique>)")]]
+    constexpr auto operator()(coroutine<T, Unique> p) const {
+        // since coroutine<T, Unique> is a reference-counted object with a
+        // flexible lifetime, we can safely use coroutine<R, Unique> with async.
         // for other types of awaitables, they should be wrapped in
         // a coroutine to be used with async.
         struct async_awaitable {
-            coroutine<T> p;
+            coroutine<T, Unique> p;
 
             void await_bind(environment *env, priority_type priority) {
                 p.await_bind(env, priority);
@@ -24,6 +24,7 @@ struct async_functor {
                     // make sure that the completion token is setup correctly
                     // required to handle exceptions from async(...)
                     p.await_suspend(nullptr);
+                p.await_resume(no_return_value_tag{});
             }
 
             bool await_ready() {
@@ -37,14 +38,14 @@ struct async_functor {
                 return nullptr;
             }
 
-            auto await_resume() const noexcept {
-                return p;
+            auto await_resume() noexcept {
+                return std::move(p);
             }
 
             void await_resume(no_return_value_tag) const noexcept {  }
         };
 
-        return async_awaitable{p};
+        return async_awaitable{std::move(p)};
     }
 
     /** @brief Wraps a non-coroutine awaitable in a coroutine and starts it. */
