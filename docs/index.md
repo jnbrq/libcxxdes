@@ -30,7 +30,7 @@ Legend:
 
 | Topic | Use this for | Files |
 | --- | --- | --- |
-| Environment | Simulation time, event queue execution, `bind`, `run`, `run_for`, and `run_until`. | `[lib]` [environment.ipp](../include/cxxdes/core/impl/environment.ipp) |
+| Environment | Simulation time, event queue execution, `bind`, `run`, `run_for`, `run_until`, and deadline behavior. | `[lib]` [environment.ipp](../include/cxxdes/core/impl/environment.ipp) |
 | Coroutine process | The main process abstraction, return values, priorities, latency, and awaiting. | `[lib]` [coroutine.ipp](../include/cxxdes/core/impl/coroutine.ipp) |
 | Coroutine state | Internal state shared between coroutine handles, completion tokens, and parent links. | `[lib]` [coroutine_data.ipp](../include/cxxdes/core/impl/coroutine_data.ipp) |
 | Coroutine model | Narrative overview of process scheduling, coroutine data, tokens, and the subroutine stack. | `[md]` [coroutine_model.md](coroutine_model.md) |

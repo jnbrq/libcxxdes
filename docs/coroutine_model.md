@@ -96,6 +96,10 @@ A single step does the following:
 For normal coroutine execution, the token has a `coro_data` pointer.
 The environment temporarily records it as `current_coroutine_`, calls `coro_data->resume()`, then clears `current_coroutine_`.
 
+`run()` repeatedly calls `step()` until no scheduled tokens remain.
+`run_until(t)` and `run_for(dt)` are bounded forms: they only step tokens whose scheduled time is at or before the requested deadline.
+If the next token is later than the deadline, it remains queued and simulation time advances to the deadline without running that token.
+
 `coroutine_data::resume()` resumes the top coroutine handle in its explicit call stack:
 
 ```cpp

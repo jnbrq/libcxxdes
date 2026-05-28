@@ -104,6 +104,28 @@ TEST(ProcessTest, Latencies) {
     test{}.run();
 }
 
+TEST(ProcessTest, RunForStopsBeforeFutureEvent) {
+    CXXDES_SIMULATION(test) {
+        using simulation::simulation;
+
+        bool completed = false;
+
+        coroutine<> co_main() {
+            co_await delay(10);
+            completed = true;
+        }
+    };
+
+    test sim;
+    sim.run_for(5);
+    EXPECT_EQ(sim.now(), 5);
+    EXPECT_FALSE(sim.completed);
+
+    sim.run_for(5);
+    EXPECT_EQ(sim.now(), 10);
+    EXPECT_TRUE(sim.completed);
+}
+
 TEST(ProcessTest, Priorities) {
     CXXDES_SIMULATION(test) {
         using simulation::simulation;
@@ -256,4 +278,3 @@ TEST(ProcessTest, Returncoroutine) {
 
     test{}.run();
 }
-

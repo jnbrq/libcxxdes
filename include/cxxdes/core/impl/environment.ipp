@@ -124,7 +124,10 @@ struct environment {
     }
     
     auto &run_until(time_integral t) {
-        while (now() <= t && step()) ;
+        while (next_event() && next_event()->time <= t)
+            step();
+
+        now_ = std::max(now_, t);
         return *this;
     }
 
