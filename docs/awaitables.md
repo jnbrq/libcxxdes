@@ -1,6 +1,9 @@
 # Awaitables
 
-A type `T` and objects of type `T` are said to be _awaitable_ if `T` satisfies the requirements of the `cxxdes::core::awaitable` concept defined in `include/cxxdes/core/awaitable.hpp` as the following:
+[README](../README.md) | [Documentation index: Awaitables](index.md#awaitables)
+
+A type `T` is a libcxxdes awaitable if it satisfies the `cxxdes::core::awaitable` concept.
+The concept is defined in [awaitable.ipp](../include/cxxdes/core/impl/awaitable.ipp) and is included through [core.hpp](../include/cxxdes/core/core.hpp).
 
 ```cpp
 namespace cxxdes {
@@ -11,24 +14,28 @@ concept awaitable = requires(
     T t,
     environment *env,
     priority_type inherited_priority,
-    coroutine_handle current_coro) {
+    coroutine_data_ptr coro_data) {
     { t.await_bind(env, inherited_priority) };
     { t.await_ready() } -> std::same_as<bool>;
-    { t.await_suspend(current_coro) };
+    { t.await_suspend(coro_data) };
     { t.await_token() } -> std::same_as<token *>;
     { t.await_resume() };
+    { t.await_resume(no_return_value_tag {}) } -> std::same_as<void>;
 };
 
 } /* namespace core */
 } /* namespace cxxdes */
 ```
 
-Functions `bool T::await_ready()`, `void T::await_suspend()` and `void T::await_resume(coroutine_handle)` are the requirements of awaitables as defined by [the C++ standard](https://en.cppreference.com/w/cpp/language/coroutines), whereas `void T::await_bind(environment *, priority_type)` and `token *await_token()` are required by `libcxxdes`.
+The functions `await_ready`, `await_suspend`, and `await_resume` correspond to the usual C++ coroutine awaiter operations.
+The functions `await_bind` and `await_token` are libcxxdes-specific.
+The overload `await_resume(no_return_value_tag)` lets compositions resume or clean up an awaitable without consuming its normal return value.
 These functions are called in a sequence throughout the lifetime of an awaitable object.
 
 ## Lifetime
 
-The lifetime of an awaitable starts as soon as its constructor is called. Initially, the awaitable is not bound to an `environment`.
+The lifetime of an awaitable starts as soon as its constructor is called.
+Initially, the awaitable is not bound to an `environment`.
 `co_await` is the most common mechanism that triggers the interaction between an environment and an awaitable:
 
 ```cpp
@@ -70,34 +77,110 @@ In any case, `libcxxdes` is subject to the lifetime rules for coroutines; theref
 
 ### Lifetimes of the Promise and Coroutine Objects
 
-Coroutine objects, such as `foo()` in the example above, outlive the [promise](https://en.cppreference.com/w/cpp/language/coroutines#Execution) objects. Therefore, if a coroutine returns information back to the executor of the `co_await` expression, the return value must live as long as the coroutine object, not the promise object. Hence, return values should be stored by value inside the coroutine objects.
+Coroutine objects, such as `foo()` in the example above, outlive the [promise](https://en.cppreference.com/w/cpp/language/coroutines#Execution) objects.
+Therefore, if a coroutine returns information back to the executor of the `co_await` expression, the return value must live as long as the coroutine object, not the promise object.
+Return values should be stored by value inside the coroutine state.
 
 ## Awaitable Execution
 
 ### await_bind
 
-As the first step of awaitable execution, `void T::await_bind(environment *, priority_type)` is called. This function passes the context to the awaitable object, for example, the environment parameter enables scheduling tokens. This function also takes a priority variable, in case the awaitable object needs to inherit priorities from the calling coroutine.
+As the first step of awaitable execution, `void T::await_bind(environment *, priority_type)` is called.
+This function passes the current simulation context to the awaitable object.
+For example, the environment parameter enables the awaitable to schedule tokens.
+The priority parameter lets the awaitable inherit priority from the calling coroutine when appropriate.
 
-`await_bind()` is usually called by `<awaitable A> auto &&promise_type::await_transform(A &&a)` (defined in `include/cxxdes/core/coroutine.hpp`). `await_transform` is also used to implement the `this_coroutine` API, please check `include/cxxdes/core/coroutine.hpp` for details.
+`await_bind()` is usually called by `promise_type::await_transform(...)`, defined in [await_transform.ipp](../include/cxxdes/core/impl/await_transform.ipp).
+`await_transform` is also used to implement `this_coroutine`, `this_environment`, and extension hooks.
 
-In the later versions of the `libcxxdes`, additional information may be passed using the `await_bind` function. For example, it can be used to implement recoding stack traces for debugging.
+Additional context may be passed through this path in future versions.
+For example, the current implementation already records source locations for introspection.
 
 ### await_ready
 
-`bool T::await_ready()` determines whether the current coroutine should be suspended or not (it returns `false` if suspended). In most cases, `await_ready` returns `false`, that is, the control flow passes to another coroutine.
+`bool T::await_ready()` determines whether the current coroutine should suspend.
+It returns `false` when the coroutine should suspend.
+Most scheduling awaitables return `false`.
 
-`template <typename T> struct immediately_returning_awaitable` is an exceptional case which `await_ready()` returns `true`. In `libcxxdes`, `immediately_returning_awaitable` is used to return information regarding the current coroutine (like its inheritance priority, return priority and environment), **without interrupting the control flow**. Please see `examples/await_transform_extender.cpp` for an example use.
+`immediately_return` is an exception to that rule.
+It returns information such as the current coroutine or environment without interrupting control flow.
+See [await_transform_extender.cpp](../examples/await_transform_extender.cpp) for an example.
 
 ### await_suspend
 
-`void T::await_suspend(coroutine_handle)` is called in case the current coroutine is to be suspended. It usually creates a `token` object (with `new token{...}`) to resume the current coroutine, and it might also schedule it (as in the case of `cxxdes::core::timeout`). The newly created `token` object should be stored as part of the awaitable object to be returned later by `await_token`.
+`void T::await_suspend(coroutine_data_ptr)` is called when the current coroutine should suspend.
+It usually creates a `token` object that can resume the current coroutine later.
+It may also schedule that token immediately, as `cxxdes::core::timeout` does.
+The newly created token should be stored by the awaitable so `await_token()` can return it later.
+
+## A Minimal Timeout Awaitable
+
+The built-in timeout awaitables are defined in [timeout.ipp](../include/cxxdes/core/impl/timeout.ipp).
+A simplified relative timeout has the same basic shape:
+
+```cpp
+struct simple_timeout {
+    time_integral delay;
+    priority_type priority = priority_consts::inherit;
+
+    environment *env = nullptr;
+    token *tkn = nullptr;
+
+    void await_bind(environment *e, priority_type inherited_priority) noexcept {
+        env = e;
+
+        if (priority == priority_consts::inherit) {
+            priority = inherited_priority;
+        }
+    }
+
+    bool await_ready() const noexcept {
+        return false;
+    }
+
+    void await_suspend(coroutine_data_ptr coro_data) {
+        tkn = new token(
+            env->now() + delay,
+            priority,
+            coro_data,
+            "simple timeout"
+        );
+
+        env->schedule_token(tkn);
+    }
+
+    token *await_token() const noexcept {
+        return tkn;
+    }
+
+    void await_resume(no_return_value_tag = {}) noexcept {
+        tkn = nullptr;
+    }
+};
+```
+
+The important steps are:
+
+1. `await_bind(...)` receives the current `environment` and inherited priority.
+2. `await_ready()` returns `false`, so the current coroutine suspends.
+3. `await_suspend(...)` creates a token scheduled at `env->now() + delay`.
+4. `env->schedule_token(...)` inserts that token into the environment's event queue.
+5. `await_token()` exposes the token to composition helpers such as `any_of` and `all_of`.
+6. `await_resume(...)` runs when the environment later resumes the coroutine from that token.
+
+The production implementation generalizes this pattern for relative timeouts, absolute deadlines, real-time expressions, lazy deadlines, inherited priorities, and `yield()`.
 
 ### await_token
 
-`token *T::await_token()` returns the `token` object created by `await_suspend` to resume the current coroutine. For compositions, such as `any_of` and `all_of`, this token is modified to implement the desired functionality. See `include/cxxdes/core/compositions.hpp` for details.
+`token *T::await_token()` returns the token created by `await_suspend`.
+Compositions such as `any_of` and `all_of` inspect or modify these tokens to implement control-flow behavior.
+See [compositions.ipp](../include/cxxdes/core/impl/compositions.ipp) and [any_of.ipp](../include/cxxdes/core/impl/any_of.ipp).
 
 ### await_resume
 
-`R T::await_resume()` is called when the coroutine that the awaitable had suspended is resumed. The return value of this function is the result of the `co_await` expression. The lifetime of the coroutine object ends after this point; therefore, `await_resume` should not return a reference to an object inside the coroutine object.
+`R T::await_resume()` is called when the coroutine that the awaitable suspended is resumed.
+The return value of this function is the result of the `co_await` expression.
+The awaitable may be destroyed after the `co_await` expression completes, so `await_resume` should not return a reference to state owned only by the awaitable.
 
-`await_resume` is not called in case the return value cannot be returned. For example, compositions do not call `await_resume` of the wrapped handlers.
+`void T::await_resume(no_return_value_tag)` is used when the caller needs completion behavior without consuming the normal return value.
+For example, compositions use this path for wrapped awaitables.

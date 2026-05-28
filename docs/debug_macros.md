@@ -1,6 +1,9 @@
 # Debug Message Macros
 
-All components of the library can be configured to have separate levels of warning/debug messages. This is possible thanks to the extensive, macro-based debugging infrastructure.
+[README](../README.md) | [Documentation index: Debugging And Introspection](index.md#debugging-and-introspection)
+
+All components of the library can be configured to have separate levels of warning/debug messages.
+This is possible thanks to the extensive, macro-based debugging infrastructure.
 
 Newly added modules should use the following template to benefit from configurable debugging message levels:
 
@@ -27,7 +30,8 @@ Newly added modules should use the following template to benefit from configurab
 #endif // NEW_COMPONENT_INCLUDED
 ```
 
-To print the debug message from this module, simply define `CXXDES_DEBUG_NEW_COMPONENT` before including the header file (or, define that macro in the `CMakeLists.txt`):
+To print the debug message from this module, define `CXXDES_DEBUG_NEW_COMPONENT` before including the header file.
+You can also define that macro in `CMakeLists.txt`.
 
 ```cpp
 #define CXXDES_DEBUG_NEW_COMPONENT

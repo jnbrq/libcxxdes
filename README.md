@@ -1,8 +1,14 @@
 # libcxxdes
 
-libcxxdes is a C++20 Discrete Event Simulation library inspired by [SimPy](https://simpy.readthedocs.io/en/latest/). Just like Simpy, libcxxdes models discrete-event systems using processes and control-flow expressions. While its API feels familiar to SimPy users, being written in C++, it offers up to a few orders of magnitude performance improvement. Furthermore, discrete-event systems modeled using libcxxdes can be later integrated into other DES simulators whose kernels are written in C or C++, such as [SystemC](https://systemc.org/), [gem5](https://www.gem5.org/) or [OMNET++](https://omnetpp.org/). 
+[Documentation index](docs/index.md)
 
-What sets libcxxdes apart from these simulators is its use of modern C++ features to facilitate system modeling, most prominently the newly introduced [coroutine](https://en.cppreference.com/w/cpp/language/coroutines) support.
+libcxxdes is a C++20 discrete event simulation library inspired by [SimPy](https://simpy.readthedocs.io/en/latest/).
+Like SimPy, libcxxdes models discrete-event systems using processes and control-flow expressions.
+Because it is written in C++, libcxxdes can integrate with other C and C++ simulation kernels such as [SystemC](https://systemc.org/), [gem5](https://www.gem5.org/), or [OMNET++](https://omnetpp.org/).
+
+The library uses C++20 [coroutines](https://en.cppreference.com/w/cpp/language/coroutines) to express simulation processes directly in C++ control flow.
+
+For a navigable map of the current documentation and examples, see [docs/index.md](docs/index.md).
 
 ## A Quick Example (`producer_consumer.cpp`)
 
@@ -23,8 +29,8 @@ CXXDES_SIMULATION(producer_consumer_example) {
 
             // models the arrival time (exponential random variable)
             
-            // env.timeout ensures that lambda() is in time units of the
-            // environment. Equivalent to lambda() * 1_s in this case.
+            // env.timeout ensures that lambda() is in time units of the environment.
+            // It is equivalent to lambda() * 1_s in this case.
             co_await env.timeout(lambda());
         }
     }
@@ -60,7 +66,7 @@ CXXDES_SIMULATION(producer_consumer_example) {
 
 ## Features
 
-libcxxdes tries to provide the complete feature set of SimPy, it currently supports/provides:
+libcxxdes currently supports:
 
 1. Processes modeled using `coroutine<T>`s.
 2. Control flow expressions:
@@ -71,12 +77,10 @@ libcxxdes tries to provide the complete feature set of SimPy, it currently suppo
     `co_await sequential(p1(), p2(), ...)`, `co_await (p1(), p2(), ...)`
     - Timeouts:
     `co_await delay(5)`, `co_await timeout(5_s)`
-3. Interruptable coroutines which are useful for modelling preemptive resources. --Not feasible to implement. Use || with a queue, same thing.
-4. Priority-scheduling of events that take place at the same simulation time. `coroutine<T>` can be assigned priorities! (lower the number, higher the priority)
-5. `time_unit()` and `time_precision()` functions for mapping simulation time (integer) to real-world time.
-6. Synchronization primitives, such as `mutex`, `semaphore`, `queue<T>`, and `event`.
-7. RAII-style acquisition of resources using `co_with (resource) { /*  */ }` syntax.
-8. SimPy-compatible `resource`, `container` and `preemptive_resource`.
-9. Debugging facilities, such as getting the stack traces of `coroutine<T>`s.
-10. A template-metaprogramming-based DSL to describe time accurately without suffering from the quirks of the floating-point aritmetic. `1_s + 500_ms + 100_us` is mapped to `1'500'100` simulation if the precision is set to `1_us` or to `1'500` for a precision of `1_ms`.
-11. A CMake-based build system to facilitate integrating withn other projects.
+3. Priority scheduling for events that take place at the same simulation time.
+4. `time_unit()` and `time_precision()` functions for mapping integer simulation time to real-world units.
+5. Synchronization primitives, including `event`, `semaphore`, `queue<T>`, `mutex`, and `resource`.
+6. Resource acquisition helpers using `_Co_with(resource) { ... }`.
+7. Debugging and introspection facilities, including coroutine stack traces.
+8. A template-metaprogramming-based time DSL for expressions such as `1_s + 500_ms + 100_us`.
+9. A CMake interface target for integrating the library into other projects.
