@@ -56,6 +56,13 @@ protected:
 
 template <bool Timeout>
 struct timeout_functor {
+    /**
+     * @brief Creates a timeout awaitable from a time-expression node.
+     *
+     * For `timeout`/`delay`, @p t is relative to the current time. For
+     * `instant`/`until`, @p t is an absolute simulation timestamp after
+     * conversion through the current environment.
+     */
     template <cxxdes::time_utils::node T>
     constexpr auto operator()(T &&t, priority_type priority = priority_consts::inherit) const noexcept {
         struct [[nodiscard]] result: timeout_base<result, Timeout> {
@@ -71,6 +78,12 @@ struct timeout_functor {
         return result{ { priority }, std::forward<T>(t) };
     }
 
+    /**
+     * @brief Creates a timeout awaitable from a raw simulation tick count.
+     *
+     * For `timeout`/`delay`, @p t is a relative delay. For `instant`/`until`,
+     * @p t is an absolute simulation timestamp.
+     */
     constexpr auto operator()(time_integral t, priority_type priority = priority_consts::inherit) const noexcept {
         struct [[nodiscard]] result: timeout_base<result, Timeout> {
             time_integral t;
@@ -84,7 +97,10 @@ struct timeout_functor {
     }
 };
 
+/** @brief Relative-delay awaitable factory. */
 inline constexpr timeout_functor<true> timeout, delay;
+
+/** @brief Absolute-time awaitable factory. */
 inline constexpr timeout_functor<false> instant, until;
 
 template <typename Derived>
@@ -115,6 +131,12 @@ protected:
 };
 
 struct lazy_timeout_functor {
+    /**
+     * @brief Captures an absolute deadline when awaited and returns `instant`.
+     *
+     * Awaiting the returned object does not suspend. Its result is an absolute
+     * timeout awaitable whose time is computed as current time plus @p t.
+     */
     template <typename T>
     constexpr auto operator()(T &&t, priority_type priority = priority_consts::inherit) const noexcept {
         struct [[nodiscard]] result: lazy_timeout_base<result> {
@@ -151,8 +173,10 @@ struct lazy_timeout_functor {
     }
 };
 
+/** @brief Lazy relative-deadline factory. */
 inline constexpr lazy_timeout_functor lazy_timeout, lazy_delay;
 
+/** @brief Yields to other events scheduled at the current simulation time. */
 inline constexpr auto yield() noexcept {
     return delay(0);
 }

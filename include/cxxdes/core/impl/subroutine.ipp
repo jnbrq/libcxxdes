@@ -1,3 +1,12 @@
+/**
+ * @brief Coroutine helper that runs inside the currently scheduled process.
+ *
+ * Unlike `coroutine<T>`, a subroutine is not an independently scheduled process.
+ * Awaiting it pushes its coroutine frame onto the current process call stack and
+ * execution continues within the same `coroutine_data`.
+ *
+ * @tparam ReturnType Value returned to the caller, or `void`.
+ */
 template <typename ReturnType = void>
 struct subroutine {
     struct promise_type;
@@ -16,16 +25,23 @@ struct subroutine {
         return *this;
     }
 
+    /** @brief Returns true if there is no frame to run or the frame is done. */
     bool await_ready() {
         if (h_) return h_.done();
         return true;
     }
 
+    /** @brief Pushes this subroutine frame onto the current coroutine stack. */
     void await_suspend(std::coroutine_handle<>) {
         auto &promise = h_.promise();
         promise.coro_data->push_coro_(h_);
     }
 
+    /**
+     * @brief Returns the subroutine result after completion.
+     *
+     * @note Exceptions thrown inside the subroutine body are rethrown here.
+     */
     ReturnType await_resume() {
         auto &promise = h_.promise();
         if (promise.eptr)
@@ -35,6 +51,7 @@ struct subroutine {
             return std::move(*promise.ret);
     }
 
+    /** @brief Wraps this subroutine as an independently schedulable coroutine. */
     unique_coroutine<ReturnType> as_coroutine() &&;
 
     ~subroutine() {

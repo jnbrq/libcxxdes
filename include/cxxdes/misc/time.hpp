@@ -21,6 +21,7 @@
 namespace cxxdes {
 namespace time_utils {
 
+/** @brief Physical time units supported by libcxxdes time quantities. */
 enum class time_unit_type {
     seconds = 0,
     milliseconds,
@@ -30,14 +31,27 @@ enum class time_unit_type {
     count
 };
 
+/**
+ * @brief Integral time quantity tagged with a physical unit.
+ *
+ * `time<Integer>` stores a count and a unit. Its `count()` member converts the
+ * quantity to integer simulation ticks for a requested precision, truncating
+ * according to integer division.
+ *
+ * @tparam Integer Integral storage type for the count.
+ */
 template <std::integral Integer = std::intmax_t>
 struct time {
     struct node_tag {  };
     using integer_type = Integer;
 
+    /** @brief Stored count in units of `u`. */
     integer_type t = 0;
+
+    /** @brief Unit associated with `t`. */
     time_unit_type u = time_unit_type::seconds;
 
+    /** @brief Constructs a time quantity from a count and unit. */
     template <std::integral I>
     constexpr time(I tt, time_unit_type uu = time_unit_type::seconds):
         t{(Integer) tt}, u{uu} {  }
@@ -51,6 +65,12 @@ struct time {
         *this = other;
     }
 
+    /**
+     * @brief Converts this quantity to ticks of @p precision.
+     *
+     * The @p unit parameter is accepted for compatibility with expression nodes
+     * and is not used by this overload.
+     */
     template <typename I1, typename I2 = int>
     constexpr auto count(time<I1> const &precision, time<I2> const & /* unit */ = time<I2>(1)) const noexcept {
         constexpr Integer conv [(int) time_unit_type::count] = {
@@ -95,6 +115,7 @@ struct time {
         return *this;
     }
 
+    /** @brief Converts this quantity to seconds as `RealType`. */
     template <typename RealType = double>
     constexpr auto seconds() const noexcept -> RealType {
         constexpr RealType conv [(int) time_unit_type::count] = {
@@ -104,9 +125,16 @@ struct time {
     }
 };
 
+/** @brief One-second value for the requested integer representation. */
 template <typename Integer>
 constexpr auto one_second = time<Integer>((Integer) 1, time_unit_type::seconds);
 
+/**
+ * @brief Unitless model time converted using an environment's configured unit.
+ *
+ * A value of `3_x`, for example, means three model units. The environment maps
+ * model units to physical time through `environment::time_unit()`.
+ */
 template <typename Integer>
 struct unitless_time {
     struct node_tag {  };
@@ -120,17 +148,20 @@ struct unitless_time {
     }
 };
 
+/** @brief Concept satisfied by time-expression nodes. */
 template <typename T>
 concept node = requires {
     { std::declval<typename std::remove_cvref_t<T>::node_tag>() };
 };
 
+/** @brief Concept satisfied by arithmetic scalar values usable in expressions. */
 template <typename T>
 concept scalar =
     std::floating_point<std::remove_cvref_t<T>> || std::integral<std::remove_cvref_t<T>>;
 
 namespace ops {
 
+/** @brief Binary expression node used by time arithmetic operators. */
 template <typename A, typename B, typename Operation>
 struct binary_node {
     struct node_tag {  };
@@ -145,6 +176,7 @@ struct binary_node {
     }
 };
 
+/** @brief Unary expression node used by time arithmetic operators. */
 template <typename A, typename Operation>
 struct unary_node {
     struct node_tag {  };
@@ -247,32 +279,45 @@ constexpr auto operator/(A &&a, B &&b) {
         });
 }
 
+/** @brief Seconds literal for time expressions. */
 constexpr auto operator ""_s(unsigned long long x) {
     return time<std::intmax_t>{ (std::intmax_t) x, time_unit_type::seconds };
 }
 
+/** @brief Milliseconds literal for time expressions. */
 constexpr auto operator ""_ms(unsigned long long x) {
     return time<std::intmax_t>{ (std::intmax_t) x, time_unit_type::milliseconds };
 }
 
+/** @brief Microseconds literal for time expressions. */
 constexpr auto operator ""_us(unsigned long long x) {
     return time<std::intmax_t>{ (std::intmax_t) x, time_unit_type::microseconds };
 }
 
+/** @brief Nanoseconds literal for time expressions. */
 constexpr auto operator ""_ns(unsigned long long x) {
     return time<std::intmax_t>{ (std::intmax_t) x, time_unit_type::nanoseconds };
 }
 
+/** @brief Picoseconds literal for time expressions. */
 constexpr auto operator ""_ps(unsigned long long x) {
     return time<std::intmax_t>{ (std::intmax_t) x, time_unit_type::picoseconds };
 }
 
+/** @brief Unitless model-time literal converted using `time_unit()`. */
 constexpr auto operator ""_x(unsigned long long x) {
     return unitless_time<std::intmax_t>{ (std::intmax_t) x };
 }
 
 } /* namespace ops */
 
+/**
+ * @brief Type-erased time expression.
+ *
+ * This type stores any time-expression node or scalar and evaluates it later
+ * against a precision and model unit. A default-constructed expression is
+ * invalid and counts as zero.
+ */
 template <
     std::integral Iprecision = std::intmax_t,
     std::integral Iunit = Iprecision,

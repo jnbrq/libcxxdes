@@ -54,24 +54,41 @@ namespace detail {
     struct await_ops_mixin;
 }
 
+/** @brief Base interface for token handlers used by control-flow composition. */
 struct token_handler;
+
+/** @brief Scheduled resume point owned through intrusive reference counting. */
 struct token;
 
 template <typename T>
 struct immediately_return;
 
+/** @brief Shared state behind one schedulable coroutine process. */
 struct coroutine_data;
+
+/** @brief Intrusive pointer to mutable coroutine state. */
 using coroutine_data_ptr = memory::ptr<coroutine_data>;
+
+/** @brief Intrusive pointer to const coroutine state. */
 using const_coroutine_data_ptr = memory::ptr<const coroutine_data>;
 
+/** @brief Simulation environment that owns time and the event queue. */
 struct environment;
 
+/**
+ * @brief Schedulable coroutine process handle.
+ *
+ * @tparam ReturnType Value produced by the coroutine, or `void`.
+ * @tparam Unique Whether awaiting moves the stored return value.
+ */
 template <typename ReturnType = void, bool Unique = false>
 struct coroutine;
 
+/** @brief Move-only coroutine process handle with single-consumer return values. */
 template <typename ReturnValue = void>
 using unique_coroutine = coroutine<ReturnValue, true>;
 
+/** @brief Coroutine helper frame that runs inside the current process. */
 template <typename ReturnType>
 struct subroutine;
 

@@ -1,20 +1,45 @@
+/**
+ * @brief Owns simulation time and the scheduled event queue.
+ *
+ * An environment binds coroutine processes, schedules their resume tokens, and
+ * advances simulated time by executing tokens in timestamp/priority order. Time
+ * values passed as time expressions are converted using the configured
+ * `time_unit()` and `time_precision()`.
+ *
+ * The environment owns scheduled coroutine state after binding. It is not
+ * thread-safe.
+ */
 struct environment {
+    /**
+     * @brief Constructs an empty environment.
+     *
+     * @param unit Real-world unit represented by a unitless model value.
+     * @param prec Real-world duration represented by one simulation tick.
+     */
     environment(time const &unit = one_second, time const &prec = one_second):
         now_{(time_integral) 0}, unit_{unit}, prec_{prec} {
     }
 
+    /** @brief Returns the current simulation timestamp in precision ticks. */
     time_integral now() const noexcept {
         return now_;
     }
 
+    /** @brief Returns the current simulation time as a physical time quantity. */
     time t() const noexcept {
         return { now() * prec_.t, prec_.u };
     }
 
+    /** @brief Returns the current simulation time converted to seconds. */
     real_type now_seconds() const noexcept {
         return t().seconds<real_type>();
     }
 
+    /**
+     * @brief Sets the model unit used to convert unitless time expressions.
+     *
+     * @throws std::runtime_error If any token has already been scheduled.
+     */
     void time_unit(time x) {
         if (used_)
             throw std::runtime_error("cannot call time_unit(time x) on a used environment!");
@@ -22,10 +47,16 @@ struct environment {
         unit_ = x;
     }
 
+    /** @brief Returns the model unit used for unitless time expressions. */
     time time_unit() const noexcept {
         return unit_;
     }
 
+    /**
+     * @brief Sets the physical duration represented by one simulation tick.
+     *
+     * @throws std::runtime_error If any token has already been scheduled.
+     */
     void time_precision(time x) {
         if (used_)
             throw std::runtime_error("cannot call time_precision(time x) on a used environment!");
@@ -33,29 +64,40 @@ struct environment {
         prec_ = x;
     }
 
+    /** @brief Returns the physical duration represented by one simulation tick. */
     time time_precision() const noexcept {
         return prec_;
     }
 
+    /** @brief Converts a time-expression node to simulation ticks. */
     template <cxxdes::time_utils::node Node>
     time_integral real_to_sim(Node const &n) const noexcept {
         return n.count(time_precision(), time_unit());
     }
 
+    /** @brief Converts a scalar model value to simulation ticks using `time_unit()`. */
     template <cxxdes::time_utils::scalar Scalar>
     time_integral real_to_sim(Scalar const &s) const noexcept {
         return unitless_time<Scalar>{s}.count(time_precision(), time_unit());
     }
 
+    /** @brief Returns a relative timeout awaitable after converting @p t to ticks. */
     template <typename T>
     auto timeout(T &&t) const noexcept;
 
+    /**
+     * @brief Schedules a resume token.
+     *
+     * The environment takes a reference to @p tkn until the token is popped or
+     * cleared by `reset()`.
+     */
     void schedule_token(token *tkn) {
         used_ = true;
         tkn->ref();
         tokens_.push(tkn);
     }
 
+    /** @brief Returns the next scheduled token without removing it, or null. */
     [[nodiscard]]
     token *next_event() const noexcept {
         if (tokens_.size() > 0)
@@ -63,6 +105,15 @@ struct environment {
         return nullptr;
     }
 
+    /**
+     * @brief Executes the next scheduled event.
+     *
+     * @retval true A token was popped and processed.
+     * @retval false No token was available.
+     *
+     * @note Exceptions propagated by token handlers or exception tokens are
+     *       rethrown to the caller.
+     */
     bool step() {
         if (tokens_.empty())
             return false;
@@ -94,6 +145,12 @@ struct environment {
         return true;
     }
 
+    /**
+     * @brief Destroys incomplete managed coroutines and clears scheduled tokens.
+     *
+     * Simulation time is reset to zero. The configured time unit and precision
+     * are left unchanged.
+     */
     void reset() {
         // it is not safe to iterate over the coroutines while
         // individual coroutines might actively modify the
@@ -118,11 +175,18 @@ struct environment {
         now_ = 0;
     }
 
+    /** @brief Runs scheduled events until the queue is empty. */
     auto &run() {
         while (step());
         return *this;
     }
     
+    /**
+     * @brief Runs all events scheduled at or before @p t.
+     *
+     * If the next event is later than @p t, it remains scheduled and time still
+     * advances to @p t.
+     */
     auto &run_until(time_integral t) {
         while (next_event() && next_event()->time <= t)
             step();
@@ -131,28 +195,39 @@ struct environment {
         return *this;
     }
 
+    /** @brief Converts @p t to ticks and runs until that absolute timestamp. */
     auto &run_until(time_expr t) {
         run_until(real_to_sim(t));
         return *this;
     }
 
+    /** @brief Runs for @p t simulation ticks relative to `now()`. */
     auto &run_for(time_integral t) {
         run_until(now() + t);
         return *this;
     }
 
+    /** @brief Converts @p t to ticks and runs for that relative duration. */
     auto &run_for(time_expr t) {
         run_until(now() + real_to_sim(t));
         return *this;
     }
 
+    /**
+     * @brief Binds a coroutine process to this environment.
+     *
+     * Binding schedules the process start token if the process has not already
+     * been bound. Rebinding the same process to another environment throws.
+     */
     template <typename ReturnType, bool Unique>
     void bind(coroutine<ReturnType, Unique> p);
 
+    /** @brief Returns the coroutine currently being resumed, or null. */
     coroutine_data_ptr current_coroutine() const noexcept {
         return current_coroutine_;
     }
 
+    /** @brief Returns the source location recorded by the current await transform. */
     [[nodiscard]]
     util::source_location const &loc() const noexcept {
         return loc_;

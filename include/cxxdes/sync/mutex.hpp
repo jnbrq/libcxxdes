@@ -21,7 +21,19 @@ namespace sync {
 
 using namespace cxxdes::core;
 
+/**
+ * @brief Non-recursive mutex for exclusive access between simulation processes.
+ *
+ * `acquire()` suspends until the mutex is free and returns a move-only handle.
+ * The handle must be released with `co_await handle.release()`; destroying the
+ * handle does not release the mutex.
+ */
 struct mutex {
+    /**
+     * @brief Move-only token representing ownership of a `mutex`.
+     *
+     * A valid handle borrows the mutex object and must not outlive it.
+     */
     struct handle {
         handle() = delete;
 
@@ -37,16 +49,23 @@ struct mutex {
             return *this;
         }
 
+        /** @brief Returns whether this handle currently owns a mutex. */
         [[nodiscard]]
         bool valid() const noexcept {
             return x_ != nullptr;
         }
 
+        /** @brief Equivalent to `valid()`. */
         [[nodiscard]]
         operator bool() const noexcept {
             return valid();
         }
 
+        /**
+         * @brief Releases the owned mutex and wakes waiters.
+         *
+         * @throws std::runtime_error If the handle is invalid.
+         */
         [[nodiscard("expected usage: co_await handle.release()")]]
         subroutine<> release() {
             if (!valid())
@@ -67,6 +86,7 @@ struct mutex {
         mutex *x_ = nullptr;
     };
 
+    /** @brief Waits until the mutex is free and returns an ownership handle. */
     [[nodiscard("expected usage: co_await mtx.acquire()")]]
     subroutine<handle> acquire() {
         while (true) {
@@ -78,6 +98,7 @@ struct mutex {
         co_return handle(this);
     }
 
+    /** @brief Returns whether the mutex is currently acquired. */
     [[nodiscard]]
     bool is_acquired() const {
         return owned_;

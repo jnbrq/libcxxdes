@@ -52,3 +52,26 @@ The handle must be released with `co_await handle.release()`.
 
 `resource` is a counted resource implemented on top of a semaphore.
 `acquire()` returns a move-only handle, and the handle must be released with `co_await resource_handle.release()`.
+
+## `_Co_with` Macro Syntax
+
+The `_Co_with(resource) { ... }` helper is a macro around the lower-level acquire/body/release helper in [co_with.ipp](../include/cxxdes/core/impl/co_with.ipp).
+Its expansion intentionally starts with `co_yield`:
+
+```cpp
+#define _Co_with(x) co_yield (x) + [&]() mutable -> cxxdes::core::subroutine<void>
+```
+
+The reason is C++ operator precedence.
+`co_await x + body` would parse as `(co_await x) + body`, because `co_await` behaves like a unary operator.
+`co_yield x + body` is a yield expression whose operand is the whole `x + body` expression, so the overloaded `operator+` can first build the acquire/body/release coroutine and then pass it through the coroutine promise's `yield_value`.
+
+In normal user code this is just an implementation detail of `_Co_with`; write:
+
+```cpp
+_Co_with(resource) {
+    co_await delay(5);
+};
+```
+
+The trailing semicolon is still required because the macro expands to a coroutine statement.

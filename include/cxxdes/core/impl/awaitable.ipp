@@ -1,5 +1,13 @@
+/** @brief Tag used to resume an awaitable without consuming its normal result. */
 struct no_return_value_tag {  };
 
+/**
+ * @brief Concept implemented by awaitables that participate in libcxxdes scheduling.
+ *
+ * In addition to the usual coroutine awaiter operations, a libcxxdes awaitable
+ * must accept an environment through `await_bind()` and expose the token created
+ * by `await_suspend()` through `await_token()`.
+ */
 template <typename T>
 concept awaitable = requires(
     T t,

@@ -18,9 +18,18 @@ struct awaitable_wrapper {
     }
 };
 
+/** @brief Awaitable tag that returns the current coroutine state. */
 struct this_coroutine {  };
+
+/** @brief Awaitable tag that returns the current environment. */
 struct this_environment {  };
 
+/**
+ * @brief Extension point for custom `co_await` tags.
+ *
+ * Specialize or define a compatible type whose `await_transform` member can
+ * produce an awaitable from the current `coroutine_data` and source location.
+ */
 template <typename T>
 struct await_transform_extender;
 

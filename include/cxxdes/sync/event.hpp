@@ -73,12 +73,37 @@ private:
     priority_type priority_;
 };
 
+/**
+ * @brief One-shot wake-up point for coroutines currently waiting on it.
+ *
+ * `wait()` suspends the current process until a later `wake()` schedules all
+ * waiters currently registered with the event. A wake does not persist; a
+ * process that starts waiting after a wake must wait for a later wake.
+ *
+ * The event owns waiter tokens while processes are blocked on it, so the event
+ * must outlive all blocked waiters unless the whole environment is being torn
+ * down.
+ */
 struct event {
+    /**
+     * @brief Returns an awaitable that wakes all current waiters.
+     *
+     * The waiters are scheduled relative to the current environment time using
+     * the latency and priority captured by each `wait()` call.
+     */
     [[nodiscard("expected usage: co_await event.wake()")]]
     auto wake() {
         return wake_awaitable(this);
     }
 
+    /**
+     * @brief Returns an awaitable that waits for the next wake.
+     *
+     * @param latency Additional delay, in simulation ticks, applied after the
+     *        wake time before this waiter resumes.
+     * @param priority Resume priority for this waiter, or
+     *        `priority_consts::inherit`.
+     */
     [[nodiscard("expected usage: co_await event.wait()")]]
     auto wait(time_integral latency = 0, priority_type priority = priority_consts::inherit) {
         return wait_awaitable(this, latency, priority);

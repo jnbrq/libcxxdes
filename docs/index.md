@@ -95,7 +95,7 @@ Legend:
 
 | Topic | Use this for | Files |
 | --- | --- | --- |
-| `_Co_with` helper | Concise acquire/body/release syntax for acquirable objects. | `[lib]` [co_with.ipp](../include/cxxdes/core/impl/co_with.ipp) |
+| `_Co_with` helper | Concise acquire/body/release syntax for acquirable objects; see the sync primitive notes for why the macro uses `co_yield`. | `[md]` [sync_primitives.md](sync_primitives.md#_co_with-macro-syntax), `[lib]` [co_with.ipp](../include/cxxdes/core/impl/co_with.ipp) |
 | `_Coroutine` helper | Inline anonymous `coroutine<void>` creation. | `[lib]` [under_coroutine.ipp](../include/cxxdes/core/impl/under_coroutine.ipp) |
 | Resource helper example | Using `_Co_with` with `resource`. | `[ex]` [raii_trick.cpp](../examples/raii_trick.cpp) |
 | Shared-resource model | Using `_Co_with` to model shared memory bandwidth. | `[ex]` [basic_arch_sim.cpp](../examples/basic_arch_sim.cpp) |

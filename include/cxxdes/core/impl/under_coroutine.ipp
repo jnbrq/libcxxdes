@@ -13,4 +13,5 @@ auto operator+(cxxdes::core::detail::under_helper, F f) {
     return f();
 }
 
+/** @brief Creates an inline anonymous `coroutine<void>` from a lambda body. */
 #define _Coroutine(...) cxxdes::core::detail::under_helper{} + [&](__VA_ARGS__) -> coroutine<void>

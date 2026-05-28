@@ -161,36 +161,46 @@ struct any_all_helper {
     };
 
     struct functor {
+        /** @brief Returns the default composition for the supplied awaitables. */
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await any_of(awaitables...) or all_of(awaitables...)")]]
         constexpr auto operator()(Ts && ...ts) const {
             return by_value(std::forward<Ts>(ts)...);
         }
 
+        /** @brief Stores decayed copies/moves of the supplied awaitables. */
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await {any_of, all_of}.by_value(awaitables...)")]]
         constexpr auto by_value(Ts && ...ts) const {
             return tuple_based<std::remove_cvref_t<Ts>...>{ std::forward<Ts>(ts)... };
         }
 
+        /**
+         * @brief Stores references to the supplied awaitables.
+         *
+         * The referenced awaitables must outlive the returned composition.
+         */
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await {any_of, all_of}.by_reference(awaitables...)")]]
         constexpr auto by_reference(Ts && ...ts) const {
             return tuple_based<Ts &&...>{ std::forward<Ts>(ts)... };
         }
 
+        /** @brief Copies rvalues instead of decaying them through `remove_cvref_t`. */
         template <typename ...Ts>
         [[nodiscard("expected usage: co_await {any_of, all_of}.copy_rvalues(awaitables...)")]]
         constexpr auto copy_rvalues(Ts && ...ts) const {
             return tuple_based<Ts...>{ std::forward<Ts>(ts)... };
         }
 
+        /** @brief Stores a copied vector of awaitables from an iterator range. */
         template <typename Iterator>
         [[nodiscard("expected usage: co_await {any_of, all_of}.range(begin, end)")]]
         constexpr auto range(Iterator first, Iterator last) const {
             return range_copy(first, last);
         }
 
+        /** @brief Stores a copied vector of awaitables from an iterator range. */
         template <typename Iterator>
         [[nodiscard("expected usage: co_await {any_of, all_of}.range_copy(begin, end)")]]
         constexpr auto range_copy(Iterator first, Iterator last) const {
@@ -198,6 +208,11 @@ struct any_all_helper {
             return vector_based<value_type>(first, last);
         }
 
+        /**
+         * @brief Stores only iterators for a range of awaitables.
+         *
+         * The range and its elements must outlive the returned composition.
+         */
         template <typename Iterator>
         [[nodiscard("expected usage: co_await {any_of, all_of}.range_no_copy(begin, end)")]]
         constexpr auto range_no_copy(Iterator first, Iterator last) const {
@@ -231,5 +246,8 @@ struct all_of_condition {
     }
 };
 
+/** @brief Awaitable composition that resumes after the first child completes. */
 inline constexpr any_all_helper<any_of_condition>::functor any_of;
+
+/** @brief Awaitable composition that resumes after all children complete. */
 inline constexpr any_all_helper<all_of_condition>::functor all_of;

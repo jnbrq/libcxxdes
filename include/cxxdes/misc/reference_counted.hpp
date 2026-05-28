@@ -18,7 +18,10 @@ namespace cxxdes {
 namespace memory {
 
 /**
- * @brief Makes a type reference counted (not thread safe).
+ * @brief Intrusive reference-counting base class.
+ *
+ * Derived objects are deleted when `unref()` decrements the count to zero.
+ * Reference counts are mutable and not atomic; this type is not thread-safe.
  * 
  * @tparam Derived CRTP parameter.
  */
@@ -33,10 +36,16 @@ protected:
     reference_counted_base(reference_counted_base &&) = delete;
     reference_counted_base &operator=(reference_counted_base &&) = delete;
 public:
+    /** @brief Increments the intrusive reference count. */
     void ref() const noexcept {
         ++count_;
     }
 
+    /**
+     * @brief Decrements the reference count and deletes the object at zero.
+     *
+     * Debug builds assert if the count is already zero.
+     */
     void unref() const {
         assert(count_ > 0 && "object is already destroyed.");
         if (--count_ == 0) {
@@ -44,6 +53,7 @@ public:
         }
     }
 
+    /** @brief Returns the current intrusive reference count. */
     std::size_t ref_count() const noexcept {
         return count_;
     }
@@ -59,9 +69,12 @@ private:
 };
 
 /**
- * @brief Pointer type to be used with reference counted objects.
+ * @brief Owning pointer for objects derived from `reference_counted_base`.
+ *
+ * Copying increments the pointee's reference count. Destroying or reassigning a
+ * non-null pointer decrements it. This pointer does not use atomic operations.
  * 
- * @tparam T 
+ * @tparam T Referenced object type.
  */
 template <typename T>
 struct ptr {
@@ -116,10 +129,12 @@ struct ptr {
 
 #undef REFERENCE_COUNTED_PTR_IMPLEMENT_REL_OP
 
+    /** @brief Returns whether this pointer is non-null. */
     bool valid() const noexcept {
         return ptr_ != nullptr;
     }
 
+    /** @brief Equivalent to `valid()`. */
     operator bool() const noexcept {
         return valid();
     }
@@ -128,10 +143,12 @@ struct ptr {
         return !valid();
     }
 
+    /** @brief Returns the raw pointer. */
     T *get() noexcept {
         return ptr_;
     }
 
+    /** @brief Returns the raw pointer. */
     T const *get() const noexcept {
         return ptr_;
     }
@@ -144,26 +161,31 @@ struct ptr {
         return get();
     }
 
+    /** @brief Returns a pointer after `static_cast` to `U`. */
     template <typename U>
     memory::ptr<U> cast() noexcept {
         return { static_cast<U *>(ptr_) };
     }
 
+    /** @brief Returns a const pointer after `static_cast` to `U`. */
     template <typename U>
     memory::ptr<const U> cast() const noexcept {
         return { static_cast<U const *>(ptr_) };
     }
 
+    /** @brief Returns a pointer after `dynamic_cast` to `U`. */
     template <typename U>
     memory::ptr<U> dyncast() noexcept {
         return { dynamic_cast<U *>(ptr_) };
     }
 
+    /** @brief Returns a const pointer after `dynamic_cast` to `U`. */
     template <typename U>
     memory::ptr<const U> dyncast() const noexcept {
         return { dynamic_cast<U const *>(ptr_) };
     }
 
+    /** @brief Returns a const-qualified pointer to the same object. */
     memory::ptr<const T> as_const() const noexcept {
         return { (const T *) ptr_ };
     }
