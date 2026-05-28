@@ -1,4 +1,5 @@
 #include <coroutine>
+#include <exception>
 #include <fmt/core.h>
 
 template <typename T = int>
